@@ -198,64 +198,57 @@ const highlightSyntax = (value) => {
 
 .search-input :deep(input) {
   position: relative;
-  color: rgba(0, 0, 0, 0.87) !important;
+  color: transparent !important;
   background: transparent !important;
   caret-color: black;
   z-index: 2;
+  padding-left: 5 !important; /* Remove input padding */
 }
 
 .syntax-highlight {
   position: absolute;
   top: 12px;
-  left: 14px;  
-  right: 16px;
+  left: 15px;  /* Fine-tuned positioning */
+  right: 13px;
   pointer-events: none;
   font-family: inherit;
   font-size: inherit;
   white-space: pre;
   z-index: 1;
-  mix-blend-mode: darken;
+  color: rgba(0, 0, 0, 0.87);
+  mix-blend-mode: normal;
+  letter-spacing: normal; /* Ensure normal letter spacing */
+  padding-left: 5 !important; /* Remove input padding */
 }
 
-.syntax-highlight span {
-  opacity: 1;
-  background-color: transparent;
-}
-
-/* Syntax highlighting colors */
+/* Remove background colors from syntax highlighting */
 .syntax-highlight :deep(.operator) {
   color: #d32f2f;
-  background-color: rgba(211, 47, 47, 0.1);
-  border-radius: 3px;
-  padding: 0 2px;
+  background-color: transparent;
+  padding: 0;
 }
 
 .syntax-highlight :deep(.number) {
   color: #1976d2;
-  background-color: rgba(25, 118, 210, 0.1);
-  border-radius: 3px;
-  padding: 0 2px;
+  background-color: transparent;
+  padding: 0;
 }
 
 .syntax-highlight :deep(.field) {
   color: #2e7d32;
-  background-color: rgba(46, 125, 50, 0.1);
-  border-radius: 3px;
-  padding: 0 2px;
+  background-color: transparent;
+  padding: 0;
 }
 
 .syntax-highlight :deep(.function) {
   color: #7b1fa2;
-  background-color: rgba(123, 31, 162, 0.1);
-  border-radius: 3px;
-  padding: 0 2px;
-  font-weight: 500;
+  background-color: transparent;
+  padding: 0;
 }
 
 .syntax-highlight :deep(.comparison) {
   color: #e64a19;
-  background-color: rgba(230, 74, 25, 0.1);
-  border-radius: 3px;
-  padding: 0 2px;
+  background-color: transparent;
+  padding: 0;
 }
 </style>
