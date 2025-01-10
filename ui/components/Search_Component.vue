@@ -67,6 +67,10 @@ const handleKeyDown = (event) => {
 
 onMounted(() => {
   window.addEventListener('keydown', handleKeyDown);
+  // Initialize syntax highlighting if there's an initial search query
+  if (props.searchQuery) {
+    highlightSyntax(props.searchQuery);
+  }
 });
 
 onUnmounted(() => {
