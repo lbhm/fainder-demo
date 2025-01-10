@@ -6,13 +6,20 @@
     <v-container :class="{ 'pa-2': inline }">
       <v-row :class="{ 'inline-layout': inline }">
         <v-col :cols="inline ? 10 : 12">
-          <v-text-field
-            v-model="searchQuery"
-            label="Search by percentile predicates and keywords"
-            variant="outlined"
-            density="comfortable"
-            hide-details
-          />
+          <div class="input-wrapper">
+            <v-text-field
+              v-model="searchQuery"
+              label="Search by percentile predicates and keywords"
+              variant="outlined"
+              density="comfortable"
+              :rules="[validateSyntax]"
+              :error-messages="syntaxError"
+              @update:model-value="highlightSyntax"
+              hide-details="auto"
+              class="search-input"
+            />
+            <div class="syntax-highlight" v-html="highlightedQuery"></div>
+          </div>
         </v-col>
 
         <v-col :cols="inline ? 2 : 12">
@@ -35,7 +42,9 @@
 
 
 <script setup>
-import { onMounted, onUnmounted, ref } from 'vue';
+import { onMounted, onUnmounted, ref, computed } from 'vue';
+import Prism from 'prismjs';
+import 'prismjs/themes/prism.css';
 
 const props = defineProps({
   searchQuery: String,
@@ -47,6 +56,8 @@ const props = defineProps({
 const emit = defineEmits(['searchData']);
 
 const searchQuery = ref(props.searchQuery);
+const syntaxError = ref('');
+const highlightedQuery = ref('');
 
 const handleKeyDown = (event) => {
   if (event.key === 'Enter') {
@@ -67,6 +78,94 @@ async function searchData() {
     query: searchQuery.value
   });
 }
+
+const validateSyntax = (value) => {
+  if (!value) return true;
+  
+  let isValid = true;
+  syntaxError.value = '';
+
+  try {
+    // Match percentile function patterns
+    const percentilePattern = /(?:pp|percentile)\s*\(\s*(\d+(?:\.\d+)?)\s*;\s*(ge|gt|le|lt)\s*;\s*(\d+(?:\.\d+)?)\s*(?:;\s*([a-zA-Z0-9_]+))?\s*\)/gi;
+    
+    // Match keyword function patterns
+    const keywordPattern = /(?:kw|keyword)\s*\(\s*([^)]+)\s*\)/gi;
+    
+    // Check for at least one pp/percentile or kw/keyword function
+    const fullQuery = value.trim();
+    const hasPercentile = percentilePattern.test(fullQuery);
+    // Reset the regex lastIndex after first test
+    percentilePattern.lastIndex = 0;
+    const hasKeyword = keywordPattern.test(fullQuery);
+    // Reset the regex lastIndex after first test
+    keywordPattern.lastIndex = 0;
+
+    if (!hasPercentile && !hasKeyword) {
+      isValid = false;
+      syntaxError.value = 'Query must contain at least one percentile (pp) or keyword (kw) function';
+      return false;
+    }
+    
+    // Match operators
+    const operatorPattern = /\b(AND|OR|XOR|NOT)\b/gi;
+    
+    // Check balanced parentheses
+    const openParens = (fullQuery.match(/\(/g) || []).length;
+    const closeParens = (fullQuery.match(/\)/g) || []).length;
+    
+    if (openParens !== closeParens) {
+      isValid = false;
+      syntaxError.value = 'Unbalanced parentheses';
+      return false;
+    }
+
+    // Split query into terms
+    const terms = fullQuery.split(/\b(AND|OR|XOR)\b/i);
+    
+    for (const term of terms) {
+      const trimmedTerm = term.trim();
+      if (!trimmedTerm || operatorPattern.test(trimmedTerm)) continue;
+      
+      // Check if term is a valid percentile or keyword function
+      const isPercentile = percentilePattern.test(trimmedTerm);
+      const isKeyword = keywordPattern.test(trimmedTerm);
+      
+      if (!isPercentile && !isKeyword && trimmedTerm !== 'NOT') {
+        isValid = false;
+        syntaxError.value = `Invalid term: ${trimmedTerm}`;
+        break;
+      }
+    }
+
+  } catch (e) {
+    isValid = false;
+    syntaxError.value = 'Invalid query syntax';
+  }
+
+  return isValid;
+};
+
+const highlightSyntax = (value) => {
+  if (!value) {
+    highlightedQuery.value = '';
+    return;
+  }
+
+  let highlighted = value
+    // Highlight functions
+    .replace(/(pp|percentile|kw|keyword)\s*\(/gi, '<span class="function">$1</span>(')
+    // Highlight operators
+    .replace(/\b(AND|OR|XOR|NOT)\b/gi, '<span class="operator">$1</span>')
+    // Highlight comparison operators
+    .replace(/\b(ge|gt|le|lt)\b/gi, '<span class="comparison">$1</span>')
+    // Highlight numbers
+    .replace(/\b(\d+(\.\d+)?)\b/g, '<span class="number">$1</span>')
+    // Highlight identifiers in percentile functions
+    .replace(/;\s*([a-zA-Z0-9_]+)\s*\)/g, ';<span class="field">$1</span>)');
+
+  highlightedQuery.value = highlighted;
+};
 </script>
 
 <style scoped>
@@ -79,15 +178,84 @@ async function searchData() {
 }
 
 .search-btn {
-  height: 48px; /* Match comfortable input height */
-}
-
-.v-btn {
+  height: 48px;
   font-weight: 500;
   letter-spacing: 0.5px;
   text-transform: none;
   border-radius: 8px;
   display: flex;
   align-items: center;
+}
+
+.input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.search-input {
+  position: relative;
+}
+
+.search-input :deep(input) {
+  position: relative;
+  color: rgba(0, 0, 0, 0.87) !important;
+  background: transparent !important;
+  caret-color: black;
+  z-index: 2;
+}
+
+.syntax-highlight {
+  position: absolute;
+  top: 12px;
+  left: 14px;  
+  right: 16px;
+  pointer-events: none;
+  font-family: inherit;
+  font-size: inherit;
+  white-space: pre;
+  z-index: 1;
+  mix-blend-mode: darken;
+}
+
+.syntax-highlight span {
+  opacity: 1;
+  background-color: transparent;
+}
+
+/* Syntax highlighting colors */
+.syntax-highlight :deep(.operator) {
+  color: #d32f2f;
+  background-color: rgba(211, 47, 47, 0.1);
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+.syntax-highlight :deep(.number) {
+  color: #1976d2;
+  background-color: rgba(25, 118, 210, 0.1);
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+.syntax-highlight :deep(.field) {
+  color: #2e7d32;
+  background-color: rgba(46, 125, 50, 0.1);
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+.syntax-highlight :deep(.function) {
+  color: #7b1fa2;
+  background-color: rgba(123, 31, 162, 0.1);
+  border-radius: 3px;
+  padding: 0 2px;
+  font-weight: 500;
+}
+
+.syntax-highlight :deep(.comparison) {
+  color: #e64a19;
+  background-color: rgba(230, 74, 25, 0.1);
+  border-radius: 3px;
+  padding: 0 2px;
 }
 </style>
