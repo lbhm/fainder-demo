@@ -79,9 +79,9 @@ def generate_indices(base_path: Path) -> None:
     # cluster the histograms
     quantile_range = (0.25, 0.75)
     algorithm: Literal["agglomerative", "hdbscan", "kmeans"] = "kmeans"
-    n_cluster_range = (2, 5)
+    n_cluster_range = (30, 30)
     bin_budget = 1000
-    alpha = 0.0
+    alpha = 1.0
     seed = 42
     # TODO: None does not work
     transform: Literal["standard", "robust", "quantile", "power"] = "standard"
