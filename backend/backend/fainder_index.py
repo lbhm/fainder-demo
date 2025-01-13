@@ -1,4 +1,5 @@
 from pathlib import Path
+import numpy as np
 
 from fainder.execution.runner import run
 from fainder.typing import PercentileIndex, PercentileQuery
@@ -50,13 +51,16 @@ class FainderIndex:
             else:
                 hist_filter = hist_ids
 
+        # Convert hist_filter to uint32 if it exists
+        uint32_hist_filter = {np.uint32(h) for h in hist_filter} if hist_filter is not None else None
+
         # Predicate evaluation
         query: PercentileQuery = (percentile, comparison, reference)  # type: ignore
         results, runtime = run(
             self.index,
             queries=[query],
             input_type="index",
-            hist_filter=list(hist_filter) if hist_filter else None,
+            hist_filter=uint32_hist_filter,
         )
         result = results[0]
         logger.info(f"Query '{query}' returned {len(result)} histograms in {runtime:.2f} seconds.")
