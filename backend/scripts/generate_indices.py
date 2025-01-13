@@ -40,12 +40,15 @@ def generate_indices(base_path: Path) -> None:
             with open(file, "r") as f:
                 metadata = json.load(f)
 
+            if "jsonld" in metadata:
+                metadata = metadata["jsonld"]
+            
             metadata["id"] = record_number
             # replace the file with the updated metadata
             with open(file, "w") as f:
                 json.dump(metadata, f)
 
-            metadata = metadata["jsonld"]
+            
 
             doc_ids.add(record_number)
             doc_to_hists[record_number] = set()

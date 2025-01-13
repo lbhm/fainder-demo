@@ -55,8 +55,8 @@ page
           >
             <template v-for="result in results" :key="result.id">
               <v-card @click="selectResult(result)" :height="100">
-                <v-card-title>{{ result.jsonld.name }}</v-card-title>
-                <v-card-subtitle>{{ result.jsonld.alternateName }}</v-card-subtitle>
+                <v-card-title>{{ result.name }}</v-card-title>
+                <v-card-subtitle>{{ result.alternateName }}</v-card-subtitle>
               </v-card>
             </template>
           </v-infinite-scroll>
@@ -147,7 +147,7 @@ console.log(query.value);
 const selectResult = (result) => {
   const index = results.value.indexOf(result);
   selectedIndex.value = index;
-  selectedResult.value = result.jsonld;
+  selectedResult.value = result;
 
   if (result.recordSet) {
     descriptionPanel.value = [0];
