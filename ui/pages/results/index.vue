@@ -51,13 +51,12 @@ page
           <!-- Results list -->
           <v-infinite-scroll
             v-if="!isLoading && !error && results && results.length > 0"
-            :height="300"
             mode="manual"
           >
             <template v-for="result in results" :key="result.id">
               <v-card @click="selectResult(result)" :height="100">
-                <v-card-title>{{ result.name }}</v-card-title>
-                <v-card-subtitle>{{ result.alternateName }}</v-card-subtitle>
+                <v-card-title>{{ result.jsonld.name }}</v-card-title>
+                <v-card-subtitle>{{ result.jsonld.alternateName }}</v-card-subtitle>
               </v-card>
             </template>
           </v-infinite-scroll>
@@ -148,7 +147,7 @@ console.log(query.value);
 const selectResult = (result) => {
   const index = results.value.indexOf(result);
   selectedIndex.value = index;
-  selectedResult.value = result;
+  selectedResult.value = result.jsonld;
 
   if (result.recordSet) {
     descriptionPanel.value = [0];
@@ -278,8 +277,8 @@ const chartColors = [
 const getChartData = (field, index) => {
   if (!field.histogram) return null;
 
-  const binEdges = field.histogram.bin_edges;
-  const counts = field.histogram.histogram;
+  const binEdges = field.histogram.bins;
+  const counts = field.histogram.densities;
 
   // Create array of bar objects with correct positioning and width
   const bars = counts.map((count, i) => ({
