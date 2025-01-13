@@ -28,7 +28,7 @@ def generate_indices(base_path: Path) -> None:
 
     # read hists from croissant directory and update the mappings
 
-    hist_id = 0
+    column_id = 0
 
     hists: list[tuple[np.uint32, Histogram]] = []
 
@@ -57,20 +57,20 @@ def generate_indices(base_path: Path) -> None:
                 # loop through all the files
                 for record_set in metadata["recordSet"]:
                     for column in record_set["field"]:
+                        column_name = column["name"]
+                        column_to_hists[column_name].add(column_id)
+                        doc_to_hists[record_number].add(column_id)
+                        hist_to_doc[column_id] = record_number
                         if "histogram" in column:
-                            column_name = column["name"]
-                            column_to_hists[column_name].add(hist_id)
-                            doc_to_hists[record_number].add(hist_id)
-                            hist_to_doc[hist_id] = record_number
-                            hist_id += 1
-
                             bins = column["histogram"]["bins"]
                             densities = column["histogram"]["densities"]
 
                             bins = np.array(bins, dtype=np.float64)
                             densities = np.array(densities, dtype=np.float32)
 
-                            hists.append((np.uint32(record_number), (densities, bins)))
+                            hists.append((np.uint32(column_id), (densities, bins)))
+
+                    column_id += 1
             except KeyError:
                 logger.error(f"KeyError reading file {file}")
 
