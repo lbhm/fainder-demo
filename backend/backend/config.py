@@ -11,7 +11,7 @@ class Metadata(BaseModel):
     doc_ids: set[int]
     column_to_hists: dict[str, set[int]]
     hist_to_doc: dict[int, int]
-    # TODO: We also need doc_to_hists: dict[int, set[int]]
+    doc_to_hists: dict[int, set[int]]  # TODO: Update names and type to uint32 if possible
 
 
 class Settings(BaseSettings):
@@ -69,6 +69,10 @@ class Settings(BaseSettings):
 
 
 class PredicateError(Exception):
+    pass
+
+
+class ColumnSearchError(Exception):
     pass
 
 

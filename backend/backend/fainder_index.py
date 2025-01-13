@@ -1,6 +1,6 @@
 from pathlib import Path
-import numpy as np
 
+import numpy as np
 from fainder.execution.runner import run
 from fainder.typing import PercentileIndex, PercentileQuery
 from fainder.utils import load_input
@@ -17,31 +17,19 @@ class FainderIndex:
         self.hist_to_doc = hist_to_doc
         self.column_to_hists = column_to_hists
 
-        # TODO: Move this to the offline index building process
-        self.doc_to_hists: dict[int, set[int]] = {}
-        for hist, doc in hist_to_doc.items():
-            if doc not in self.doc_to_hists:
-                self.doc_to_hists[doc] = set()
-            self.doc_to_hists[doc].add(hist)
-
     def search(
         self,
         percentile: float,
         comparison: str,
         reference: float,
         identifier: str | None = None,
-        doc_filter: set[int] | None = None,
-    ) -> set[int]:
+        hist_filter: set[np.uint32] | None = None,
+    ) -> set[np.uint32]:
         # Data validation
         if not (0 < percentile <= 1) or comparison not in ["ge", "gt", "le", "lt"]:
             raise PredicateError(f"{percentile};{comparison};{reference};{identifier}")
 
         # Filter creation
-        hist_filter: set[int] | None = None
-        if doc_filter:
-            if len(doc_filter) == 0:
-                return set()
-            hist_filter = {hist for doc in doc_filter for hist in self.doc_to_hists[doc]}
         if identifier:
             hist_ids = self._get_matching_histograms(identifier)
             if hist_ids is None:
@@ -52,7 +40,9 @@ class FainderIndex:
                 hist_filter = hist_ids
 
         # Convert hist_filter to uint32 if it exists
-        uint32_hist_filter = {np.uint32(h) for h in hist_filter} if hist_filter is not None else None
+        uint32_hist_filter = (
+            {np.uint32(h) for h in hist_filter} if hist_filter is not None else None
+        )
 
         # Predicate evaluation
         query: PercentileQuery = (percentile, comparison, reference)  # type: ignore
@@ -65,9 +55,10 @@ class FainderIndex:
         result = results[0]
         logger.info(f"Query '{query}' returned {len(result)} histograms in {runtime:.2f} seconds.")
 
-        return {self.hist_to_doc[int(hist)] for hist in result}
+        return result
 
-    def _get_matching_histograms(self, identifier: str) -> set[int] | None:
+    def _get_matching_histograms(self, identifier: str) -> set[np.uint32] | None:
         """Return the set of histogram IDs whose column name matches the given identifier."""
         # TODO: Add fuzzy and semantic search functionality to this function
-        return self.column_to_hists.get(identifier, None)
+        hist_set = self.column_to_hists.get(identifier, None)
+        return {np.uint32(h) for h in hist_set} if hist_set is not None else None

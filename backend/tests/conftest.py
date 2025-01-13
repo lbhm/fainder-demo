@@ -6,6 +6,7 @@ from typing import Any
 import pytest
 from loguru import logger
 
+from backend.column_search import ColumnSearch
 from backend.config import Settings
 from backend.fainder_index import FainderIndex
 from backend.lucene_connector import LuceneConnector
@@ -42,4 +43,7 @@ def evaluator() -> QueryEvaluator:
     conversion_index = FainderIndex(
         settings.conversion_index_path, metadata.hist_to_doc, metadata.column_to_hists
     )
-    return QueryEvaluator(metadata.doc_ids, lucene_connector, rebinning_index, conversion_index)
+    column_search = ColumnSearch(metadata.column_to_hists)
+    return QueryEvaluator(
+        lucene_connector, rebinning_index, conversion_index, column_search, metadata
+    )

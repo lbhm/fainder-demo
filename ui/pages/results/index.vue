@@ -280,6 +280,8 @@ const getChartData = (field, index) => {
   const binEdges = field.histogram.bins;
   const counts = field.histogram.densities;
 
+  if (counts == null || binEdges == null) return null;
+
   // Create array of bar objects with correct positioning and width
   const bars = counts.map((count, i) => ({
     x0: binEdges[i],         // Start of bin

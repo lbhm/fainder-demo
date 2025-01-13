@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from lark import UnexpectedInput
 from loguru import logger
 
+from backend.column_search import ColumnSearch
 from backend.config import PredicateError, QueryRequest, QueryResponse, Settings
 from backend.croissant_store import CroissantStore
 from backend.fainder_index import FainderIndex
@@ -34,8 +35,9 @@ rebinning_index = FainderIndex(
 conversion_index = FainderIndex(
     settings.conversion_index_path, metadata.hist_to_doc, metadata.column_to_hists
 )
+column_search = ColumnSearch(metadata.column_to_hists)
 query_evaluator = QueryEvaluator(
-    metadata.doc_ids, lucene_connector, rebinning_index, conversion_index
+    lucene_connector, rebinning_index, conversion_index, column_search, metadata
 )
 
 cors_origins = [
