@@ -8,10 +8,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Metadata(BaseModel):
-    doc_ids: set[int]
-    column_to_hists: dict[str, set[int]]
-    hist_to_doc: dict[int, int]
-    # TODO: We also need doc_to_hists: dict[int, set[int]]
+    doc_to_cols: dict[int, set[int]]
+    col_to_doc: dict[int, int]
+    col_to_hist: dict[int, int]
+    hist_to_col: dict[int, int]
+    name_to_vector: dict[str, int]
+    vector_to_cols: dict[int, set[int]]
 
 
 class Settings(BaseSettings):

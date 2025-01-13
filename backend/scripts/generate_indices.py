@@ -1,10 +1,4 @@
-# Fainder (rebinning and coversion)
-# Mappings from metadata.json
-# HNSW index and column name embeddings
-
 import argparse
-
-# hists: dict[int, Any] maps to fileID and columnName
 import json
 import os
 from collections import defaultdict
@@ -15,160 +9,196 @@ import numpy as np
 from fainder.preprocessing.clustering import cluster_histograms
 from fainder.preprocessing.percentile_index import create_index
 from fainder.typing import Histogram
-from fainder.utils import save_output, unlink_pointers
+from fainder.utils import configure_run, save_output
 from loguru import logger
 
 
-def generate_indices(base_path: Path) -> None:
-    doc_ids: set[int] = set()
-    column_to_hists: dict[str, set[int]] = defaultdict(set)
-    hist_to_doc: dict[int, int] = {}
-    doc_to_hists: dict[int, set[int]] = defaultdict(set)
-    path = base_path / "croissant"
+def load_metadata(base_path: Path) -> tuple[list[tuple[np.uint32, Histogram]], dict[str, int]]:
+    """Load Croissant files and generate metadata.
 
-    # read hists from croissant directory and update the mappings
+    While loading the files, assign unique IDs to documents and columns. The function also creates
+    and stores mappings between document IDs, columns IDs, and column names that are needed for
+    downstream processing.
+    """
+    croissant_dir = base_path / "croissant"
+    metadata_file = base_path / "metadata.json"
 
-    column_id = 0
+    # Initialize mappings
+    # NOTE: We need the vector_id intermediate step because annoy and faiss require integer IDs
+    doc_to_cols: dict[int, set[int]] = defaultdict(set)
+    col_to_doc: dict[int, int] = {}
+    col_to_hist: dict[int, int] = {}
+    hist_to_col: dict[int, int] = {}
+    name_to_vector: dict[str, int] = {}
+    vector_to_cols: dict[int, set[int]] = defaultdict(set)
 
+    # Ingest Croissant files and assign unique ids to datasets and columns
     hists: list[tuple[np.uint32, Histogram]] = []
+    col_id = 0
+    hist_id = 0
+    vector_id = 0
 
     logger.info("Reading histograms")
+    # NOTE: Remove the sorting if it becomes a bottleneck
+    for doc_id, path in enumerate(sorted(croissant_dir.iterdir())):
+        if path.is_file():
+            # Read the file and add a document ID to it
+            with path.open("r") as file:
+                metadata = json.load(file)
 
-    for record_number, file in enumerate(sorted(path.iterdir())):
-        if file.is_file():
-            # read the file and add record_number as id to it
-            with open(file, "r") as f:
-                metadata = json.load(f)
+            metadata["id"] = doc_id
 
-            if "jsonld" in metadata:
-                metadata = metadata["jsonld"]
-            
-            metadata["id"] = record_number
-            # replace the file with the updated metadata
-            with open(file, "w") as f:
-                json.dump(metadata, f)
-
-            
-
-            doc_ids.add(record_number)
-            doc_to_hists[record_number] = set()
-
+            # Ingest histograms and assign unique ids to columns
             try:
-                # loop through all the files
                 for record_set in metadata["recordSet"]:
-                    for column in record_set["field"]:
-                        column_name = column["name"]
-                        column_to_hists[column_name].add(column_id)
-                        doc_to_hists[record_number].add(column_id)
-                        hist_to_doc[column_id] = record_number
-                        if "histogram" in column:
-                            bins = column["histogram"]["bins"]
-                            densities = column["histogram"]["densities"]
+                    for col in record_set["field"]:
+                        col_name = col["name"]
+                        doc_to_cols[doc_id].add(col_id)
+                        col_to_doc[col_id] = doc_id
+                        col["id"] = col_id
 
-                            bins = np.array(bins, dtype=np.float64)
-                            densities = np.array(densities, dtype=np.float32)
+                        if "histogram" in col:
+                            densities = np.array(col["histogram"]["densities"], dtype=np.float32)
+                            bins = np.array(col["histogram"]["bins"], dtype=np.float64)
 
-                            hists.append((np.uint32(column_id), (densities, bins)))
+                            hists.append((np.uint32(hist_id), (densities, bins)))
+                            col_to_hist[col_id] = hist_id
+                            hist_to_col[hist_id] = col_id
+                            col["histogram"]["id"] = hist_id
+                            hist_id += 1
 
-                    column_id += 1
-            except KeyError:
-                logger.error(f"KeyError reading file {file}")
+                        if col_name not in name_to_vector:
+                            name_to_vector[col_name] = vector_id
+                            vector_id += 1
+                        vector_to_cols[name_to_vector[col_name]].add(col_id)
 
-    logger.info(f"Clustering histograms: {len(hists)}")
+                        col_id += 1
+            except KeyError as e:
+                logger.error(f"KeyError {e} reading file {path}")
 
-    # cluster the histograms
-    quantile_range = (0.25, 0.75)
-    algorithm: Literal["agglomerative", "hdbscan", "kmeans"] = "kmeans"
-    n_cluster_range = (30, 30)
-    bin_budget = 1000
-    alpha = 1.0
-    seed = 42
-    # TODO: None does not work
-    transform: Literal["standard", "robust", "quantile", "power"] = "standard"
-    clustered_hists, cluster_bins, features = cluster_histograms(
-        hists,
-        transform,
-        quantile_range,
-        True,
-        algorithm,
-        n_cluster_range,
-        bin_budget,
-        alpha,
-        seed,
-        os.cpu_count(),
-        True,
-    )
+            # Replace the file with the updated metadata
+            with path.open("w") as file:
+                json.dump(metadata, file)
 
-    # create the rebinning index
-    rebinning: Literal["rebinning", "rebinning-shm", "conversion", "conversion-shm"] = "rebinning"
-    conversion: Literal["rebinning", "rebinning-shm", "conversion", "conversion-shm"] = (
-        "conversion"
-    )
-    index_precision: Literal["float16", "float32", "float64", "float128"] = "float16"
-    bin_estimation: Literal["continuous_value", "cubic_spline"] = "continuous_value"
-    try:
-        pctl_index_rebinning, _, shm_pointers = create_index(
-            clustered_hists,
-            cluster_bins,
-            rebinning,
-            index_precision,
-            bin_estimation,
-            os.cpu_count(),
-        )
-
-        pctl_index_conversion, _, shm_pointers2 = create_index(
-            clustered_hists,
-            cluster_bins,
-            conversion,
-            index_precision,
-            bin_estimation,
-            os.cpu_count(),
-        )
-
-    finally:
-        if shm_pointers is not None:
-            unlink_pointers(shm_pointers)
-
-        if shm_pointers2 is not None:
-            unlink_pointers(shm_pointers2)
-
-    # save the mappings and indices
-    with open(base_path / "metadata.json", "w") as f:
-        new_column_to_hists = {k: list(v) for k, v in column_to_hists.items()}
-        new_doc_to_hists = {k: list(v) for k, v in doc_to_hists.items()}
-
+    # Save the mappings and indices
+    logger.info("Saving metadata")
+    with metadata_file.open("w") as file:
         json.dump(
             {
-                "doc_ids": list(doc_ids),
-                "column_to_hists": new_column_to_hists,
-                "hist_to_doc": hist_to_doc,
-                "doc_to_hists": new_doc_to_hists,
+                "doc_to_cols": {k: list(v) for k, v in doc_to_cols.items()},
+                "col_to_doc": col_to_doc,
+                "col_to_hist": col_to_hist,
+                "hist_to_col": hist_to_col,
+                "name_to_vector": name_to_vector,
+                "vector_to_cols": {k: list(v) for k, v in vector_to_cols.items()},
             },
-            f,
+            file,
         )
 
-    save_output(
-        base_path / "fainder" / "conversion.zst",
-        (pctl_index_rebinning, cluster_bins),
-        name="index",
+    return hists, name_to_vector
+
+
+def generate_fainder_indices(
+    hists: list[tuple[np.uint32, Histogram]],
+    output_path: Path,
+    n_clusters: int = 15,
+    bin_budget: int = 100,
+    alpha: float = 1,
+    transform: Literal["standard", "robust", "quantile", "power"] = "quantile",
+    algorithm: Literal["agglomerative", "hdbscan", "kmeans"] = "kmeans",
+    seed: int = 42,
+    workers: int | None = os.cpu_count(),
+) -> None:
+    logger.info("Starting Fainder index generation")
+
+    logger.info(f"Clustering {len(hists)} histograms")
+    clustered_hists, cluster_bins, _ = cluster_histograms(
+        hists=hists,
+        transform=transform,
+        quantile_range=(0.25, 0.75),
+        use_umap=False,
+        algorithm=algorithm,
+        n_cluster_range=(n_clusters, n_clusters),
+        n_global_bins=bin_budget,
+        alpha=alpha,
+        seed=seed,
+        workers=workers,
+        verbose=False,
+    )
+
+    logger.info("Creating rebinning index")
+    rebinning_index, _, _ = create_index(
+        clustered_hists=clustered_hists,
+        cluster_bins=cluster_bins,
+        index_method="rebinning",
+        workers=workers,
+    )
+
+    logger.info("Creating conversion index")
+    conversion_index, _, _ = create_index(
+        clustered_hists=clustered_hists,
+        cluster_bins=cluster_bins,
+        index_method="conversion",
+        workers=workers,
     )
 
     save_output(
-        base_path / "fainder" / "rebinning.zst",
-        (pctl_index_conversion, cluster_bins),
-        name="index",
+        output_path / "rebinning.zst",
+        (rebinning_index, cluster_bins),
+        name="rebinning index",
     )
+    save_output(
+        output_path / "conversion.zst",
+        (conversion_index, cluster_bins),
+        name="conversion index",
+    )
+
+
+def generate_embedding_index(name_to_vector: dict[str, int], output_path: Path):
+    pass
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Generate indices for the histograms")
-    parser.add_argument(
-        "-p", "--path", type=Path, help="Path to the directory containing the croissant directory"
+    parser = argparse.ArgumentParser(
+        description="Generate metadata and indices for a collection of dataset profiles"
     )
+    parser.add_argument(
+        "-p", "--path", type=Path, help="Path to the root directory of a dataset collection"
+    )
+    parser.add_argument(
+        "--no-fainder",
+        action="store_true",
+        help="Skip generating Fainder indices",
+    )
+    parser.add_argument(
+        "--no-embeddigs",
+        action="store_true",
+        help="Skip generating embedding index",
+    )
+    parser.add_argument(
+        "--log-level",
+        default="INFO",
+        type=str,
+        choices=["DEBUG", "INFO", "WARNING"],
+        help="Set the logging level",
+    )
+
+    # TODO: add more params: bin budget, n_clusters, alpha, seed, workers, etc
+    # TODO: Add HNSW index and column name embeddings
+
     return parser.parse_args()
 
 
 if __name__ == "__main__":
-    # read path from
     args = parse_args()
-    generate_indices(args.path)
+    configure_run(args.log_level)
+    hists, name_to_vector = load_metadata(args.path)
+
+    if not args.no_fainder:
+        generate_fainder_indices(
+            hists=hists,
+            output_path=args.path / "fainder",
+        )
+
+    if not args.no_embeddigs:
+        generate_embedding_index(name_to_vector, output_path=args.path / "embeddings")

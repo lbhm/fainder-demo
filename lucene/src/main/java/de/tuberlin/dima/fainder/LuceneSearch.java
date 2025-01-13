@@ -68,7 +68,7 @@ public class LuceneSearch {
             }
 
             Query parsedQuery = queryBuilder.build();
-            logger.debug("Executing query {}", parsedQuery);
+            logger.info("Executing query {}", parsedQuery);
 
             ScoreDoc[] hits = searcher.search(parsedQuery, maxResults).scoreDocs;
             StoredFields storedFields = searcher.storedFields();
@@ -77,7 +77,7 @@ public class LuceneSearch {
             for (ScoreDoc scoreDoc : hits) {
                 int docId = scoreDoc.doc;
                 Document doc = storedFields.document(docId);
-                logger.debug("Hit {}: {} (Score: {})", docId, doc.get("name"), scoreDoc.score);
+                logger.info("Hit {}: {} (Score: {})", docId, doc.get("name"), scoreDoc.score);
                 int result = Integer.parseInt(doc.get("id"));
 
                 if (minScore == null || scoreDoc.score >= minScore) {
@@ -98,7 +98,7 @@ public class LuceneSearch {
     }
 
     private Query createDocFilter(List<Integer> docIds) {
-        // TODO: Improve efficiency off this
+        // TODO: Improve efficiency of this
         // just or TermQueries for id in filter
         BooleanQuery.Builder builder = new BooleanQuery.Builder();
         for (int docId : docIds) {

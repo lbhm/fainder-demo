@@ -1,1 +1,818 @@
-{"id": 2, "@context": {"@language": "en", "@vocab": "https://schema.org/", "citeAs": "cr:citeAs", "column": "cr:column", "conformsTo": "dct:conformsTo", "cr": "http://mlcommons.org/croissant/", "data": {"@id": "cr:data", "@type": "@json"}, "dataBiases": "cr:dataBiases", "dataCollection": "cr:dataCollection", "dataType": {"@id": "cr:dataType", "@type": "@vocab"}, "dct": "http://purl.org/dc/terms/", "extract": "cr:extract", "field": "cr:field", "fileProperty": "cr:fileProperty", "fileObject": "cr:fileObject", "fileSet": "cr:fileSet", "format": "cr:format", "includes": "cr:includes", "isEnumeration": "cr:isEnumeration", "jsonPath": "cr:jsonPath", "key": "cr:key", "md5": "cr:md5", "parentField": "cr:parentField", "path": "cr:path", "personalSensitiveInformation": "cr:personalSensitiveInformation", "recordSet": "cr:recordSet", "references": "cr:references", "regex": "cr:regex", "repeated": "cr:repeated", "replace": "cr:replace", "sc": "https://schema.org/", "separator": "cr:separator", "source": "cr:source", "subField": "cr:subField", "transform": "cr:transform", "wd": "https://www.wikidata.org/wiki/"}, "alternateName": "Metadata on ~5,000 movies from TMDb", "conformsTo": "http://mlcommons.org/croissant/1.0", "license": {"@type": "sc:CreativeWork", "name": "Other (specified in description)"}, "distribution": [{"contentUrl": "https://www.kaggle.com/api/v1/datasets/download/tmdb/tmdb-movie-metadata?datasetVersionNumber=2", "contentSize": "8.886 MB", "md5": "HtHt4F6lelD426elCLnLVg==", "encodingFormat": "application/zip", "@id": "archive.zip", "@type": "cr:FileObject", "name": "archive.zip", "description": "Archive containing all the contents of the TMDB 5000 Movie Dataset dataset"}, {"contentUrl": "tmdb_5000_credits.csv", "containedIn": {"@id": "archive.zip"}, "encodingFormat": "text/csv", "@id": "tmdb_5000_credits.csv_fileobject", "@type": "cr:FileObject", "name": "tmdb_5000_credits.csv", "description": "movies and credits card datatsets"}, {"contentUrl": "tmdb_5000_movies.csv", "containedIn": {"@id": "archive.zip"}, "encodingFormat": "text/csv", "@id": "tmdb_5000_movies.csv_fileobject", "@type": "cr:FileObject", "name": "tmdb_5000_movies.csv", "description": "Movie credits data"}], "recordSet": [{"field": [{"dataType": ["sc:Text"], "source": {"fileObject": {"@id": "tmdb_5000_credits.csv_fileobject"}, "extract": {"column": "movie_id"}}, "@id": "tmdb_5000_credits.csv/movie_id", "@type": "cr:Field", "name": "movie_id", "histogram": {"histogram": [0.6879034042358398, 0.12179887294769287, 0.03955860808491707, 0.02581719681620598, 0.0237351655960083, 0.02581719681620598, 0.030605871230363846, 0.02665000967681408, 0.012492191977798939, 0.00437226751819253, 0.0012492192909121513], "bin_edges": [5.0, 41776.181818181816, 83547.36363636363, 125318.54545454544, 167089.72727272726, 208860.9090909091, 250632.09090909088, 292403.2727272727, 334174.45454545453, 375945.63636363635, 417716.8181818182, 459488.0]}}, {"dataType": ["sc:Text"], "source": {"fileObject": {"@id": "tmdb_5000_credits.csv_fileobject"}, "extract": {"column": "title"}}, "@id": "tmdb_5000_credits.csv/title", "@type": "cr:Field", "name": "title"}, {"dataType": ["sc:Text"], "source": {"fileObject": {"@id": "tmdb_5000_credits.csv_fileobject"}, "extract": {"column": "cast"}}, "@id": "tmdb_5000_credits.csv/cast", "@type": "cr:Field", "name": "cast"}, {"dataType": ["sc:Text"], "source": {"fileObject": {"@id": "tmdb_5000_credits.csv_fileobject"}, "extract": {"column": "crew"}}, "@id": "tmdb_5000_credits.csv/crew", "@type": "cr:Field", "name": "crew"}], "@id": "tmdb_5000_credits.csv", "@type": "cr:RecordSet", "name": "tmdb_5000_credits.csv", "description": "movies and credits card datatsets"}, {"field": [{"dataType": ["sc:Integer"], "source": {"fileObject": {"@id": "tmdb_5000_movies.csv_fileobject"}, "extract": {"column": "budget"}}, "@id": "tmdb_5000_movies.csv/budget", "@type": "cr:Field", "name": "budget", "histogram": {"histogram": [0.6429315209388733, 0.1721840500831604, 0.08182386308908463, 0.04497189074754715, 0.015615240670740604, 0.02102852426469326, 0.008119924925267696, 0.007703518494963646, 0.0018738288199529052, 0.0020820321515202522, 0.0010410160757601261, 0.00041640640120022, 0.0, 0.0, 0.00020820320060011], "bin_edges": [0.0, 25333333.333333332, 50666666.666666664, 76000000.0, 101333333.33333333, 126666666.66666666, 152000000.0, 177333333.3333333, 202666666.66666666, 228000000.0, 253333333.3333333, 278666666.6666666, 304000000.0, 329333333.3333333, 354666666.6666666, 380000000.0]}}, {"dataType": ["sc:Text"], "source": {"fileObject": {"@id": "tmdb_5000_movies.csv_fileobject"}, "extract": {"column": "genres"}}, "@id": "tmdb_5000_movies.csv/genres", "@type": "cr:Field", "name": "genres"}, {"dataType": ["sc:Text", "sc:URL"], "source": {"fileObject": {"@id": "tmdb_5000_movies.csv_fileobject"}, "extract": {"column": "homepage"}}, "@id": "tmdb_5000_movies.csv/homepage", "@type": "cr:Field", "name": "homepage"}, {"dataType": ["sc:Text"], "source": {"fileObject": {"@id": "tmdb_5000_movies.csv_fileobject"}, "extract": {"column": "id"}}, "@id": "tmdb_5000_movies.csv/id", "@type": "cr:Field", "name": "id", "histogram": {"histogram": [0.6495940089225769, 0.12679575383663177, 0.05788049101829529, 0.026025401428341866, 0.020403914153575897, 0.020612116903066635, 0.021653134375810623, 0.024984383955597878, 0.023318758234381676, 0.016239849850535393, 0.009785550646483898, 0.00166562560480088, 0.0010410160757601261], "bin_edges": [5.0, 35349.846153846156, 70694.69230769231, 106039.53846153847, 141384.38461538462, 176729.23076923078, 212074.07692307694, 247418.9230769231, 282763.76923076925, 318108.6153846154, 353453.46153846156, 388798.30769230775, 424143.1538461539, 459488.0]}}, {"dataType": ["sc:Text"], "source": {"fileObject": {"@id": "tmdb_5000_movies.csv_fileobject"}, "extract": {"column": "keywords"}}, "@id": "tmdb_5000_movies.csv/keywords", "@type": "cr:Field", "name": "keywords"}, {"dataType": ["sc:Text"], "source": {"fileObject": {"@id": "tmdb_5000_movies.csv_fileobject"}, "extract": {"column": "original_language"}}, "@id": "tmdb_5000_movies.csv/original_language", "@type": "cr:Field", "name": "original_language"}, {"dataType": ["sc:Text"], "source": {"fileObject": {"@id": "tmdb_5000_movies.csv_fileobject"}, "extract": {"column": "original_title"}}, "@id": "tmdb_5000_movies.csv/original_title", "@type": "cr:Field", "name": "original_title"}, {"dataType": ["sc:Text"], "source": {"fileObject": {"@id": "tmdb_5000_movies.csv_fileobject"}, "extract": {"column": "overview"}}, "@id": "tmdb_5000_movies.csv/overview", "@type": "cr:Field", "name": "overview"}, {"dataType": ["sc:Float"], "source": {"fileObject": {"@id": "tmdb_5000_movies.csv_fileobject"}, "extract": {"column": "popularity"}}, "@id": "tmdb_5000_movies.csv/popularity", "@type": "cr:Field", "name": "popularity", "histogram": {"histogram": [0.8986050486564636, 0.08119925111532211, 0.016031647101044655, 0.00166562560480088, 0.00083281280240044, 0.00041640640120022, 0.0, 0.0, 0.00041640640120022, 0.00020820320060011, 0.00020820320060011, 0.0, 0.0, 0.0, 0.00020820320060011, 0.0, 0.0, 0.00020820320060011], "bin_edges": [0.0, 48.64340555555556, 97.28681111111112, 145.9302166666667, 194.57362222222224, 243.2170277777778, 291.8604333333334, 340.50383888888894, 389.1472444444445, 437.79065, 486.4340555555556, 535.0774611111111, 583.7208666666668, 632.3642722222223, 681.0076777777779, 729.6510833333334, 778.294488888889, 826.9378944444445, 875.5813]}}, {"dataType": ["sc:Text"], "source": {"fileObject": {"@id": "tmdb_5000_movies.csv_fileobject"}, "extract": {"column": "production_companies"}}, "@id": "tmdb_5000_movies.csv/production_companies", "@type": "cr:Field", "name": "production_companies"}, {"dataType": ["sc:Text"], "source": {"fileObject": {"@id": "tmdb_5000_movies.csv_fileobject"}, "extract": {"column": "production_countries"}}, "@id": "tmdb_5000_movies.csv/production_countries", "@type": "cr:Field", "name": "production_countries"}, {"dataType": ["sc:Date"], "source": {"fileObject": {"@id": "tmdb_5000_movies.csv_fileobject"}, "extract": {"column": "release_date"}}, "@id": "tmdb_5000_movies.csv/release_date", "@type": "cr:Field", "name": "release_date"}, {"dataType": ["sc:Integer"], "source": {"fileObject": {"@id": "tmdb_5000_movies.csv_fileobject"}, "extract": {"column": "revenue"}}, "@id": "tmdb_5000_movies.csv/revenue", "@type": "cr:Field", "name": "revenue", "histogram": {"histogram": [0.9121382236480713, 0.058088693767786026, 0.016864459961652756, 0.00874453503638506, 0.002706641796976328, 0.0010410160757601261, 0.0, 0.00020820320060011, 0.0, 0.0, 0.00020820320060011], "bin_edges": [0.0, 253451371.54545453, 506902743.09090906, 760354114.6363636, 1013805486.1818181, 1267256857.7272727, 1520708229.2727273, 1774159600.8181818, 2027610972.3636363, 2281062343.909091, 2534513715.4545455, 2787965087.0]}}, {"dataType": ["sc:Integer"], "source": {"fileObject": {"@id": "tmdb_5000_movies.csv_fileobject"}, "extract": {"column": "runtime"}}, "@id": "tmdb_5000_movies.csv/runtime", "@type": "cr:Field", "name": "runtime", "histogram": {"histogram": [0.007706727832555771, 0.0010414497228339314, 0.05727973207831383, 0.6098729372024536, 0.26515308022499084, 0.04207456856966019, 0.012705686502158642, 0.0024994793348014355, 0.0010414497228339314, 0.0004165798891335726, 0.0, 0.0002082899445667863], "bin_edges": [0.0, 28.166666666666668, 56.333333333333336, 84.5, 112.66666666666667, 140.83333333333334, 169.0, 197.16666666666669, 225.33333333333334, 253.5, 281.6666666666667, 309.83333333333337, 338.0]}}, {"dataType": ["sc:Text"], "source": {"fileObject": {"@id": "tmdb_5000_movies.csv_fileobject"}, "extract": {"column": "spoken_languages"}}, "@id": "tmdb_5000_movies.csv/spoken_languages", "@type": "cr:Field", "name": "spoken_languages"}, {"dataType": ["sc:Text"], "source": {"fileObject": {"@id": "tmdb_5000_movies.csv_fileobject"}, "extract": {"column": "status"}}, "@id": "tmdb_5000_movies.csv/status", "@type": "cr:Field", "name": "status"}, {"dataType": ["sc:Text"], "source": {"fileObject": {"@id": "tmdb_5000_movies.csv_fileobject"}, "extract": {"column": "tagline"}}, "@id": "tmdb_5000_movies.csv/tagline", "@type": "cr:Field", "name": "tagline"}, {"dataType": ["sc:Text"], "source": {"fileObject": {"@id": "tmdb_5000_movies.csv_fileobject"}, "extract": {"column": "title"}}, "@id": "tmdb_5000_movies.csv/title", "@type": "cr:Field", "name": "title"}, {"dataType": ["sc:Float"], "source": {"fileObject": {"@id": "tmdb_5000_movies.csv_fileobject"}, "extract": {"column": "vote_average"}}, "@id": "tmdb_5000_movies.csv/vote_average", "@type": "cr:Field", "name": "vote_average", "histogram": {"histogram": [0.01332500483840704, 0.00041640640120022, 0.00020820320060011, 0.0022902353666722775, 0.008952737785875797, 0.010618363507091999, 0.03872579708695412, 0.10701645165681839, 0.19966687262058258, 0.2996044158935547, 0.2263168841600418, 0.07516136020421982, 0.01644805260002613, 0.00020820320060011, 0.0010410160757601261], "bin_edges": [0.0, 0.6666666666666666, 1.3333333333333333, 2.0, 2.6666666666666665, 3.333333333333333, 4.0, 4.666666666666666, 5.333333333333333, 6.0, 6.666666666666666, 7.333333333333333, 8.0, 8.666666666666666, 9.333333333333332, 10.0]}}, {"dataType": ["sc:Integer"], "source": {"fileObject": {"@id": "tmdb_5000_movies.csv_fileobject"}, "extract": {"column": "vote_count"}}, "@id": "tmdb_5000_movies.csv/vote_count", "@type": "cr:Field", "name": "vote_count", "histogram": {"histogram": [0.8586300015449524, 0.08140745013952255, 0.030605871230363846, 0.014782427810132504, 0.007703518494963646, 0.0029148447792977095, 0.0022902353666722775, 0.00083281280240044, 0.0006246096454560757, 0.00020820320060011], "bin_edges": [0.0, 1375.2, 2750.4, 4125.6, 5500.8, 6876.0, 8251.2, 9626.4, 11001.6, 12376.800000000001, 13752.0]}}], "@id": "tmdb_5000_movies.csv", "@type": "cr:RecordSet", "name": "tmdb_5000_movies.csv", "description": "Movie credits data"}], "version": 2, "keywords": ["subject > arts and entertainment > movies and tv shows", "subject > arts and entertainment"], "isAccessibleForFree": true, "includedInDataCatalog": {"@type": "sc:DataCatalog", "name": "Kaggle", "url": "https://www.kaggle.com"}, "creator": {"@type": "sc:Organization", "name": "The Movie Database (TMDb)", "url": "/organizations/tmdb", "image": "https://storage.googleapis.com/kaggle-organizations/1030/thumbnail.png%3Fr=355"}, "publisher": {"@type": "sc:Organization", "name": "Kaggle", "url": "https://www.kaggle.com/organizations/kaggle", "image": "https://storage.googleapis.com/kaggle-organizations/4/thumbnail.png"}, "thumbnailUrl": "https://storage.googleapis.com/kaggle-datasets-images/138/287/229bfb5d3dd1a49cc5ac899c45ca2213/dataset-card.png", "dateModified": "2017-09-28T01:09:12.897", "datePublished": "2016-08-30T03:36:42.723", "@type": "sc:Dataset", "name": "TMDB 5000 Movie Dataset", "url": "https://www.kaggle.com/datasets/tmdb/tmdb-movie-metadata/versions/2", "description": "### Background\nWhat can we say about the success of a movie before it is released? Are there certain companies (Pixar?) that have found a consistent formula? Given that major films costing over $100 million to produce can still flop, this question is more important than ever to the industry. Film aficionados might have different interests. Can we predict which films will be highly rated, whether or not they are a commercial success?\n\nThis is a great place to start digging in to those questions, with data on the plot, cast, crew, budget, and revenues of several thousand films.\n\n### Data Source Transfer Summary\nWe (Kaggle) have removed the original version of this dataset per a [DMCA](https://en.wikipedia.org/wiki/Digital_Millennium_Copyright_Act) takedown request from IMDB. In order to minimize the impact, we're replacing it with a similar set of films and data fields from [The Movie Database (TMDb)](themoviedb.org) in accordance with [their terms of use](https://www.themoviedb.org/documentation/api/terms-of-use). The bad news is that kernels built on the old dataset will most likely no longer work.\n\nThe good news is that:\n\n- You can port your existing kernels over with a bit of editing. [This kernel](https://www.kaggle.com/sohier/getting-imdb-kernels-working-with-tmdb-data/) offers functions and examples for doing so. You can also find [a general introduction to the new format here](https://www.kaggle.com/sohier/tmdb-format-introduction).\n\n- The new dataset contains full credits for both the cast and the crew, rather than just the first three actors.\n\n- Actor and actresses are now listed in the order they appear in the credits. It's unclear what ordering the original dataset used; for the movies I spot checked it didn't line up with either the credits order or IMDB's stars order.\n\n- The revenues appear to be more current. For example, IMDB's figures for Avatar seem to be from 2010 and understate the film's global revenues by over $2 billion.\n\n- Some of the movies that we weren't able to port over (a couple of hundred) were just bad entries. For example, [this IMDB entry](http://www.imdb.com/title/tt5289954/?ref_=fn_t...) has basically no accurate information at all. It lists Star Wars Episode VII as a documentary.\n\n### Data Source Transfer Details\n\n- Several of the new columns contain json. You can save a bit of time by porting the load data functions [from this kernel]().\n\n- Even in simple fields like runtime may not be consistent across versions. For example, previous dataset shows the duration for Avatar's extended cut while TMDB shows the time for the original version.\n\n- There's now a separate file containing the full credits for both the cast and crew.\n\n- All fields are filled out by users so don't expect them to agree on keywords, genres, ratings, or the like.\n\n- Your existing kernels will continue to render normally until they are re-run.\n\n- If you are curious about how this dataset was prepared, the code to access TMDb's API is posted [here](https://gist.github.com/SohierDane/4a84cb96d220fc4791f52562be37968b).\n\nNew columns:\n\n- homepage\n\n- id\n\n- original_title\n\n- overview\n\n- popularity\n\n- production_companies\n\n- production_countries\n\n- release_date\n\n- spoken_languages\n\n- status\n\n- tagline\n\n- vote_average\n\nLost columns:\n\n- actor_1_facebook_likes\n\n- actor_2_facebook_likes\n\n- actor_3_facebook_likes\n\n- aspect_ratio\n\n- cast_total_facebook_likes\n\n- color\n\n- content_rating\n\n- director_facebook_likes\n\n- facenumber_in_poster\n\n- movie_facebook_likes\n\n- movie_imdb_link\n\n- num_critic_for_reviews\n\n- num_user_for_reviews\n\n### Open Questions About the Data\nThere are some things we haven't had a chance to confirm about the new dataset. If you have any insights, please let us know in the forums!\n\n- Are the budgets and revenues all in US dollars? Do they consistently show the global revenues?\n\n- This dataset hasn't yet gone through a data quality analysis. Can you find any obvious corrections? For example, in the IMDb version it was necessary to treat values of zero in the budget field as missing. Similar findings would be very helpful to your fellow Kagglers! (It's probably a good idea to keep treating zeros as missing, with the caveat that missing budgets much more likely to have been from small budget films in the first place).\n\n### Inspiration\n\n- Can you categorize the films by type, such as animated or not? We don't have explicit labels for this, but it should be possible to build them from the crew's job titles.\n\n- How sharp is the divide between major film studios and the independents? Do those two groups fall naturally out of a clustering analysis or is something more complicated going on?\n\n### Acknowledgements\nThis dataset was generated from [The Movie Database](themoviedb.org) API. This product uses the TMDb API but is not endorsed or certified by TMDb.\nTheir API also provides access to data on many additional movies, actors and actresses, crew members, and TV shows. You can [try it for yourself here](https://www.themoviedb.org/documentation/api).\n\n![](https://www.themoviedb.org/assets/static_cache/9b3f9c24d9fd5f297ae433eb33d93514/images/v4/logos/408x161-powered-by-rectangle-green.png)\n\n"}
+{
+    "id": 2,
+    "@context": {
+        "@language": "en",
+        "@vocab": "https://schema.org/",
+        "citeAs": "cr:citeAs",
+        "column": "cr:column",
+        "conformsTo": "dct:conformsTo",
+        "cr": "http://mlcommons.org/croissant/",
+        "data": {
+            "@id": "cr:data",
+            "@type": "@json"
+        },
+        "dataBiases": "cr:dataBiases",
+        "dataCollection": "cr:dataCollection",
+        "dataType": {
+            "@id": "cr:dataType",
+            "@type": "@vocab"
+        },
+        "dct": "http://purl.org/dc/terms/",
+        "extract": "cr:extract",
+        "field": "cr:field",
+        "fileProperty": "cr:fileProperty",
+        "fileObject": "cr:fileObject",
+        "fileSet": "cr:fileSet",
+        "format": "cr:format",
+        "includes": "cr:includes",
+        "isEnumeration": "cr:isEnumeration",
+        "jsonPath": "cr:jsonPath",
+        "key": "cr:key",
+        "md5": "cr:md5",
+        "parentField": "cr:parentField",
+        "path": "cr:path",
+        "personalSensitiveInformation": "cr:personalSensitiveInformation",
+        "recordSet": "cr:recordSet",
+        "references": "cr:references",
+        "regex": "cr:regex",
+        "repeated": "cr:repeated",
+        "replace": "cr:replace",
+        "sc": "https://schema.org/",
+        "separator": "cr:separator",
+        "source": "cr:source",
+        "subField": "cr:subField",
+        "transform": "cr:transform",
+        "wd": "https://www.wikidata.org/wiki/"
+    },
+    "alternateName": "Metadata on ~5,000 movies from TMDb",
+    "conformsTo": "http://mlcommons.org/croissant/1.0",
+    "license": {
+        "@type": "sc:CreativeWork",
+        "name": "Other (specified in description)"
+    },
+    "distribution": [
+        {
+            "contentUrl": "https://www.kaggle.com/api/v1/datasets/download/tmdb/tmdb-movie-metadata?datasetVersionNumber=2",
+            "contentSize": "8.886 MB",
+            "md5": "HtHt4F6lelD426elCLnLVg==",
+            "encodingFormat": "application/zip",
+            "@id": "archive.zip",
+            "@type": "cr:FileObject",
+            "name": "archive.zip",
+            "description": "Archive containing all the contents of the TMDB 5000 Movie Dataset dataset"
+        },
+        {
+            "contentUrl": "tmdb_5000_credits.csv",
+            "containedIn": {
+                "@id": "archive.zip"
+            },
+            "encodingFormat": "text/csv",
+            "@id": "tmdb_5000_credits.csv_fileobject",
+            "@type": "cr:FileObject",
+            "name": "tmdb_5000_credits.csv",
+            "description": "movies and credits card datatsets"
+        },
+        {
+            "contentUrl": "tmdb_5000_movies.csv",
+            "containedIn": {
+                "@id": "archive.zip"
+            },
+            "encodingFormat": "text/csv",
+            "@id": "tmdb_5000_movies.csv_fileobject",
+            "@type": "cr:FileObject",
+            "name": "tmdb_5000_movies.csv",
+            "description": "Movie credits data"
+        }
+    ],
+    "recordSet": [
+        {
+            "field": [
+                {
+                    "dataType": [
+                        "sc:Text"
+                    ],
+                    "source": {
+                        "fileObject": {
+                            "@id": "tmdb_5000_credits.csv_fileobject"
+                        },
+                        "extract": {
+                            "column": "movie_id"
+                        }
+                    },
+                    "@id": "tmdb_5000_credits.csv/movie_id",
+                    "@type": "cr:Field",
+                    "name": "movie_id",
+                    "histogram": {
+                        "densities": [
+                            0.6879034042358398,
+                            0.12179887294769287,
+                            0.03955860808491707,
+                            0.02581719681620598,
+                            0.0237351655960083,
+                            0.02581719681620598,
+                            0.030605871230363846,
+                            0.02665000967681408,
+                            0.012492191977798939,
+                            0.00437226751819253,
+                            0.0012492192909121513
+                        ],
+                        "bins": [
+                            5.0,
+                            41776.181818181816,
+                            83547.36363636363,
+                            125318.54545454544,
+                            167089.72727272726,
+                            208860.9090909091,
+                            250632.09090909088,
+                            292403.2727272727,
+                            334174.45454545453,
+                            375945.63636363635,
+                            417716.8181818182,
+                            459488.0
+                        ],
+                        "id": 19
+                    },
+                    "id": 24
+                },
+                {
+                    "dataType": [
+                        "sc:Text"
+                    ],
+                    "source": {
+                        "fileObject": {
+                            "@id": "tmdb_5000_credits.csv_fileobject"
+                        },
+                        "extract": {
+                            "column": "title"
+                        }
+                    },
+                    "@id": "tmdb_5000_credits.csv/title",
+                    "@type": "cr:Field",
+                    "name": "title",
+                    "id": 25
+                },
+                {
+                    "dataType": [
+                        "sc:Text"
+                    ],
+                    "source": {
+                        "fileObject": {
+                            "@id": "tmdb_5000_credits.csv_fileobject"
+                        },
+                        "extract": {
+                            "column": "cast"
+                        }
+                    },
+                    "@id": "tmdb_5000_credits.csv/cast",
+                    "@type": "cr:Field",
+                    "name": "cast",
+                    "id": 26
+                },
+                {
+                    "dataType": [
+                        "sc:Text"
+                    ],
+                    "source": {
+                        "fileObject": {
+                            "@id": "tmdb_5000_credits.csv_fileobject"
+                        },
+                        "extract": {
+                            "column": "crew"
+                        }
+                    },
+                    "@id": "tmdb_5000_credits.csv/crew",
+                    "@type": "cr:Field",
+                    "name": "crew",
+                    "id": 27
+                }
+            ],
+            "@id": "tmdb_5000_credits.csv",
+            "@type": "cr:RecordSet",
+            "name": "tmdb_5000_credits.csv",
+            "description": "movies and credits card datatsets"
+        },
+        {
+            "field": [
+                {
+                    "dataType": [
+                        "sc:Integer"
+                    ],
+                    "source": {
+                        "fileObject": {
+                            "@id": "tmdb_5000_movies.csv_fileobject"
+                        },
+                        "extract": {
+                            "column": "budget"
+                        }
+                    },
+                    "@id": "tmdb_5000_movies.csv/budget",
+                    "@type": "cr:Field",
+                    "name": "budget",
+                    "histogram": {
+                        "densities": [
+                            0.6429315209388733,
+                            0.1721840500831604,
+                            0.08182386308908463,
+                            0.04497189074754715,
+                            0.015615240670740604,
+                            0.02102852426469326,
+                            0.008119924925267696,
+                            0.007703518494963646,
+                            0.0018738288199529052,
+                            0.0020820321515202522,
+                            0.0010410160757601261,
+                            0.00041640640120022,
+                            0.0,
+                            0.0,
+                            0.00020820320060011
+                        ],
+                        "bins": [
+                            0.0,
+                            25333333.333333332,
+                            50666666.666666664,
+                            76000000.0,
+                            101333333.33333333,
+                            126666666.66666666,
+                            152000000.0,
+                            177333333.3333333,
+                            202666666.66666666,
+                            228000000.0,
+                            253333333.3333333,
+                            278666666.6666666,
+                            304000000.0,
+                            329333333.3333333,
+                            354666666.6666666,
+                            380000000.0
+                        ],
+                        "id": 20
+                    },
+                    "id": 28
+                },
+                {
+                    "dataType": [
+                        "sc:Text"
+                    ],
+                    "source": {
+                        "fileObject": {
+                            "@id": "tmdb_5000_movies.csv_fileobject"
+                        },
+                        "extract": {
+                            "column": "genres"
+                        }
+                    },
+                    "@id": "tmdb_5000_movies.csv/genres",
+                    "@type": "cr:Field",
+                    "name": "genres",
+                    "id": 29
+                },
+                {
+                    "dataType": [
+                        "sc:Text",
+                        "sc:URL"
+                    ],
+                    "source": {
+                        "fileObject": {
+                            "@id": "tmdb_5000_movies.csv_fileobject"
+                        },
+                        "extract": {
+                            "column": "homepage"
+                        }
+                    },
+                    "@id": "tmdb_5000_movies.csv/homepage",
+                    "@type": "cr:Field",
+                    "name": "homepage",
+                    "id": 30
+                },
+                {
+                    "dataType": [
+                        "sc:Text"
+                    ],
+                    "source": {
+                        "fileObject": {
+                            "@id": "tmdb_5000_movies.csv_fileobject"
+                        },
+                        "extract": {
+                            "column": "id"
+                        }
+                    },
+                    "@id": "tmdb_5000_movies.csv/id",
+                    "@type": "cr:Field",
+                    "name": "id",
+                    "histogram": {
+                        "densities": [
+                            0.6495940089225769,
+                            0.12679575383663177,
+                            0.05788049101829529,
+                            0.026025401428341866,
+                            0.020403914153575897,
+                            0.020612116903066635,
+                            0.021653134375810623,
+                            0.024984383955597878,
+                            0.023318758234381676,
+                            0.016239849850535393,
+                            0.009785550646483898,
+                            0.00166562560480088,
+                            0.0010410160757601261
+                        ],
+                        "bins": [
+                            5.0,
+                            35349.846153846156,
+                            70694.69230769231,
+                            106039.53846153847,
+                            141384.38461538462,
+                            176729.23076923078,
+                            212074.07692307694,
+                            247418.9230769231,
+                            282763.76923076925,
+                            318108.6153846154,
+                            353453.46153846156,
+                            388798.30769230775,
+                            424143.1538461539,
+                            459488.0
+                        ],
+                        "id": 21
+                    },
+                    "id": 31
+                },
+                {
+                    "dataType": [
+                        "sc:Text"
+                    ],
+                    "source": {
+                        "fileObject": {
+                            "@id": "tmdb_5000_movies.csv_fileobject"
+                        },
+                        "extract": {
+                            "column": "keywords"
+                        }
+                    },
+                    "@id": "tmdb_5000_movies.csv/keywords",
+                    "@type": "cr:Field",
+                    "name": "keywords",
+                    "id": 32
+                },
+                {
+                    "dataType": [
+                        "sc:Text"
+                    ],
+                    "source": {
+                        "fileObject": {
+                            "@id": "tmdb_5000_movies.csv_fileobject"
+                        },
+                        "extract": {
+                            "column": "original_language"
+                        }
+                    },
+                    "@id": "tmdb_5000_movies.csv/original_language",
+                    "@type": "cr:Field",
+                    "name": "original_language",
+                    "id": 33
+                },
+                {
+                    "dataType": [
+                        "sc:Text"
+                    ],
+                    "source": {
+                        "fileObject": {
+                            "@id": "tmdb_5000_movies.csv_fileobject"
+                        },
+                        "extract": {
+                            "column": "original_title"
+                        }
+                    },
+                    "@id": "tmdb_5000_movies.csv/original_title",
+                    "@type": "cr:Field",
+                    "name": "original_title",
+                    "id": 34
+                },
+                {
+                    "dataType": [
+                        "sc:Text"
+                    ],
+                    "source": {
+                        "fileObject": {
+                            "@id": "tmdb_5000_movies.csv_fileobject"
+                        },
+                        "extract": {
+                            "column": "overview"
+                        }
+                    },
+                    "@id": "tmdb_5000_movies.csv/overview",
+                    "@type": "cr:Field",
+                    "name": "overview",
+                    "id": 35
+                },
+                {
+                    "dataType": [
+                        "sc:Float"
+                    ],
+                    "source": {
+                        "fileObject": {
+                            "@id": "tmdb_5000_movies.csv_fileobject"
+                        },
+                        "extract": {
+                            "column": "popularity"
+                        }
+                    },
+                    "@id": "tmdb_5000_movies.csv/popularity",
+                    "@type": "cr:Field",
+                    "name": "popularity",
+                    "histogram": {
+                        "densities": [
+                            0.8986050486564636,
+                            0.08119925111532211,
+                            0.016031647101044655,
+                            0.00166562560480088,
+                            0.00083281280240044,
+                            0.00041640640120022,
+                            0.0,
+                            0.0,
+                            0.00041640640120022,
+                            0.00020820320060011,
+                            0.00020820320060011,
+                            0.0,
+                            0.0,
+                            0.0,
+                            0.00020820320060011,
+                            0.0,
+                            0.0,
+                            0.00020820320060011
+                        ],
+                        "bins": [
+                            0.0,
+                            48.64340555555556,
+                            97.28681111111112,
+                            145.9302166666667,
+                            194.57362222222224,
+                            243.2170277777778,
+                            291.8604333333334,
+                            340.50383888888894,
+                            389.1472444444445,
+                            437.79065,
+                            486.4340555555556,
+                            535.0774611111111,
+                            583.7208666666668,
+                            632.3642722222223,
+                            681.0076777777779,
+                            729.6510833333334,
+                            778.294488888889,
+                            826.9378944444445,
+                            875.5813
+                        ],
+                        "id": 22
+                    },
+                    "id": 36
+                },
+                {
+                    "dataType": [
+                        "sc:Text"
+                    ],
+                    "source": {
+                        "fileObject": {
+                            "@id": "tmdb_5000_movies.csv_fileobject"
+                        },
+                        "extract": {
+                            "column": "production_companies"
+                        }
+                    },
+                    "@id": "tmdb_5000_movies.csv/production_companies",
+                    "@type": "cr:Field",
+                    "name": "production_companies",
+                    "id": 37
+                },
+                {
+                    "dataType": [
+                        "sc:Text"
+                    ],
+                    "source": {
+                        "fileObject": {
+                            "@id": "tmdb_5000_movies.csv_fileobject"
+                        },
+                        "extract": {
+                            "column": "production_countries"
+                        }
+                    },
+                    "@id": "tmdb_5000_movies.csv/production_countries",
+                    "@type": "cr:Field",
+                    "name": "production_countries",
+                    "id": 38
+                },
+                {
+                    "dataType": [
+                        "sc:Date"
+                    ],
+                    "source": {
+                        "fileObject": {
+                            "@id": "tmdb_5000_movies.csv_fileobject"
+                        },
+                        "extract": {
+                            "column": "release_date"
+                        }
+                    },
+                    "@id": "tmdb_5000_movies.csv/release_date",
+                    "@type": "cr:Field",
+                    "name": "release_date",
+                    "id": 39
+                },
+                {
+                    "dataType": [
+                        "sc:Integer"
+                    ],
+                    "source": {
+                        "fileObject": {
+                            "@id": "tmdb_5000_movies.csv_fileobject"
+                        },
+                        "extract": {
+                            "column": "revenue"
+                        }
+                    },
+                    "@id": "tmdb_5000_movies.csv/revenue",
+                    "@type": "cr:Field",
+                    "name": "revenue",
+                    "histogram": {
+                        "densities": [
+                            0.9121382236480713,
+                            0.058088693767786026,
+                            0.016864459961652756,
+                            0.00874453503638506,
+                            0.002706641796976328,
+                            0.0010410160757601261,
+                            0.0,
+                            0.00020820320060011,
+                            0.0,
+                            0.0,
+                            0.00020820320060011
+                        ],
+                        "bins": [
+                            0.0,
+                            253451371.54545453,
+                            506902743.09090906,
+                            760354114.6363636,
+                            1013805486.1818181,
+                            1267256857.7272727,
+                            1520708229.2727273,
+                            1774159600.8181818,
+                            2027610972.3636363,
+                            2281062343.909091,
+                            2534513715.4545455,
+                            2787965087.0
+                        ],
+                        "id": 23
+                    },
+                    "id": 40
+                },
+                {
+                    "dataType": [
+                        "sc:Integer"
+                    ],
+                    "source": {
+                        "fileObject": {
+                            "@id": "tmdb_5000_movies.csv_fileobject"
+                        },
+                        "extract": {
+                            "column": "runtime"
+                        }
+                    },
+                    "@id": "tmdb_5000_movies.csv/runtime",
+                    "@type": "cr:Field",
+                    "name": "runtime",
+                    "histogram": {
+                        "densities": [
+                            0.007706727832555771,
+                            0.0010414497228339314,
+                            0.05727973207831383,
+                            0.6098729372024536,
+                            0.26515308022499084,
+                            0.04207456856966019,
+                            0.012705686502158642,
+                            0.0024994793348014355,
+                            0.0010414497228339314,
+                            0.0004165798891335726,
+                            0.0,
+                            0.0002082899445667863
+                        ],
+                        "bins": [
+                            0.0,
+                            28.166666666666668,
+                            56.333333333333336,
+                            84.5,
+                            112.66666666666667,
+                            140.83333333333334,
+                            169.0,
+                            197.16666666666669,
+                            225.33333333333334,
+                            253.5,
+                            281.6666666666667,
+                            309.83333333333337,
+                            338.0
+                        ],
+                        "id": 24
+                    },
+                    "id": 41
+                },
+                {
+                    "dataType": [
+                        "sc:Text"
+                    ],
+                    "source": {
+                        "fileObject": {
+                            "@id": "tmdb_5000_movies.csv_fileobject"
+                        },
+                        "extract": {
+                            "column": "spoken_languages"
+                        }
+                    },
+                    "@id": "tmdb_5000_movies.csv/spoken_languages",
+                    "@type": "cr:Field",
+                    "name": "spoken_languages",
+                    "id": 42
+                },
+                {
+                    "dataType": [
+                        "sc:Text"
+                    ],
+                    "source": {
+                        "fileObject": {
+                            "@id": "tmdb_5000_movies.csv_fileobject"
+                        },
+                        "extract": {
+                            "column": "status"
+                        }
+                    },
+                    "@id": "tmdb_5000_movies.csv/status",
+                    "@type": "cr:Field",
+                    "name": "status",
+                    "id": 43
+                },
+                {
+                    "dataType": [
+                        "sc:Text"
+                    ],
+                    "source": {
+                        "fileObject": {
+                            "@id": "tmdb_5000_movies.csv_fileobject"
+                        },
+                        "extract": {
+                            "column": "tagline"
+                        }
+                    },
+                    "@id": "tmdb_5000_movies.csv/tagline",
+                    "@type": "cr:Field",
+                    "name": "tagline",
+                    "id": 44
+                },
+                {
+                    "dataType": [
+                        "sc:Text"
+                    ],
+                    "source": {
+                        "fileObject": {
+                            "@id": "tmdb_5000_movies.csv_fileobject"
+                        },
+                        "extract": {
+                            "column": "title"
+                        }
+                    },
+                    "@id": "tmdb_5000_movies.csv/title",
+                    "@type": "cr:Field",
+                    "name": "title",
+                    "id": 45
+                },
+                {
+                    "dataType": [
+                        "sc:Float"
+                    ],
+                    "source": {
+                        "fileObject": {
+                            "@id": "tmdb_5000_movies.csv_fileobject"
+                        },
+                        "extract": {
+                            "column": "vote_average"
+                        }
+                    },
+                    "@id": "tmdb_5000_movies.csv/vote_average",
+                    "@type": "cr:Field",
+                    "name": "vote_average",
+                    "histogram": {
+                        "densities": [
+                            0.01332500483840704,
+                            0.00041640640120022,
+                            0.00020820320060011,
+                            0.0022902353666722775,
+                            0.008952737785875797,
+                            0.010618363507091999,
+                            0.03872579708695412,
+                            0.10701645165681839,
+                            0.19966687262058258,
+                            0.2996044158935547,
+                            0.2263168841600418,
+                            0.07516136020421982,
+                            0.01644805260002613,
+                            0.00020820320060011,
+                            0.0010410160757601261
+                        ],
+                        "bins": [
+                            0.0,
+                            0.6666666666666666,
+                            1.3333333333333333,
+                            2.0,
+                            2.6666666666666665,
+                            3.333333333333333,
+                            4.0,
+                            4.666666666666666,
+                            5.333333333333333,
+                            6.0,
+                            6.666666666666666,
+                            7.333333333333333,
+                            8.0,
+                            8.666666666666666,
+                            9.333333333333332,
+                            10.0
+                        ],
+                        "id": 25
+                    },
+                    "id": 46
+                },
+                {
+                    "dataType": [
+                        "sc:Integer"
+                    ],
+                    "source": {
+                        "fileObject": {
+                            "@id": "tmdb_5000_movies.csv_fileobject"
+                        },
+                        "extract": {
+                            "column": "vote_count"
+                        }
+                    },
+                    "@id": "tmdb_5000_movies.csv/vote_count",
+                    "@type": "cr:Field",
+                    "name": "vote_count",
+                    "histogram": {
+                        "densities": [
+                            0.8586300015449524,
+                            0.08140745013952255,
+                            0.030605871230363846,
+                            0.014782427810132504,
+                            0.007703518494963646,
+                            0.0029148447792977095,
+                            0.0022902353666722775,
+                            0.00083281280240044,
+                            0.0006246096454560757,
+                            0.00020820320060011
+                        ],
+                        "bins": [
+                            0.0,
+                            1375.2,
+                            2750.4,
+                            4125.6,
+                            5500.8,
+                            6876.0,
+                            8251.2,
+                            9626.4,
+                            11001.6,
+                            12376.800000000001,
+                            13752.0
+                        ],
+                        "id": 26
+                    },
+                    "id": 47
+                }
+            ],
+            "@id": "tmdb_5000_movies.csv",
+            "@type": "cr:RecordSet",
+            "name": "tmdb_5000_movies.csv",
+            "description": "Movie credits data"
+        }
+    ],
+    "version": 2,
+    "keywords": [
+        "subject > arts and entertainment > movies and tv shows",
+        "subject > arts and entertainment"
+    ],
+    "isAccessibleForFree": true,
+    "includedInDataCatalog": {
+        "@type": "sc:DataCatalog",
+        "name": "Kaggle",
+        "url": "https://www.kaggle.com"
+    },
+    "creator": {
+        "@type": "sc:Organization",
+        "name": "The Movie Database (TMDb)",
+        "url": "/organizations/tmdb",
+        "image": "https://storage.googleapis.com/kaggle-organizations/1030/thumbnail.png%3Fr=355"
+    },
+    "publisher": {
+        "@type": "sc:Organization",
+        "name": "Kaggle",
+        "url": "https://www.kaggle.com/organizations/kaggle",
+        "image": "https://storage.googleapis.com/kaggle-organizations/4/thumbnail.png"
+    },
+    "thumbnailUrl": "https://storage.googleapis.com/kaggle-datasets-images/138/287/229bfb5d3dd1a49cc5ac899c45ca2213/dataset-card.png",
+    "dateModified": "2017-09-28T01:09:12.897",
+    "datePublished": "2016-08-30T03:36:42.723",
+    "@type": "sc:Dataset",
+    "name": "TMDB 5000 Movie Dataset",
+    "url": "https://www.kaggle.com/datasets/tmdb/tmdb-movie-metadata/versions/2",
+    "description": "### Background\nWhat can we say about the success of a movie before it is released? Are there certain companies (Pixar?) that have found a consistent formula? Given that major films costing over $100 million to produce can still flop, this question is more important than ever to the industry. Film aficionados might have different interests. Can we predict which films will be highly rated, whether or not they are a commercial success?\n\nThis is a great place to start digging in to those questions, with data on the plot, cast, crew, budget, and revenues of several thousand films.\n\n### Data Source Transfer Summary\nWe (Kaggle) have removed the original version of this dataset per a [DMCA](https://en.wikipedia.org/wiki/Digital_Millennium_Copyright_Act) takedown request from IMDB. In order to minimize the impact, we're replacing it with a similar set of films and data fields from [The Movie Database (TMDb)](themoviedb.org) in accordance with [their terms of use](https://www.themoviedb.org/documentation/api/terms-of-use). The bad news is that kernels built on the old dataset will most likely no longer work.\n\nThe good news is that:\n\n- You can port your existing kernels over with a bit of editing. [This kernel](https://www.kaggle.com/sohier/getting-imdb-kernels-working-with-tmdb-data/) offers functions and examples for doing so. You can also find [a general introduction to the new format here](https://www.kaggle.com/sohier/tmdb-format-introduction).\n\n- The new dataset contains full credits for both the cast and the crew, rather than just the first three actors.\n\n- Actor and actresses are now listed in the order they appear in the credits. It's unclear what ordering the original dataset used; for the movies I spot checked it didn't line up with either the credits order or IMDB's stars order.\n\n- The revenues appear to be more current. For example, IMDB's figures for Avatar seem to be from 2010 and understate the film's global revenues by over $2 billion.\n\n- Some of the movies that we weren't able to port over (a couple of hundred) were just bad entries. For example, [this IMDB entry](http://www.imdb.com/title/tt5289954/?ref_=fn_t...) has basically no accurate information at all. It lists Star Wars Episode VII as a documentary.\n\n### Data Source Transfer Details\n\n- Several of the new columns contain json. You can save a bit of time by porting the load data functions [from this kernel]().\n\n- Even in simple fields like runtime may not be consistent across versions. For example, previous dataset shows the duration for Avatar's extended cut while TMDB shows the time for the original version.\n\n- There's now a separate file containing the full credits for both the cast and crew.\n\n- All fields are filled out by users so don't expect them to agree on keywords, genres, ratings, or the like.\n\n- Your existing kernels will continue to render normally until they are re-run.\n\n- If you are curious about how this dataset was prepared, the code to access TMDb's API is posted [here](https://gist.github.com/SohierDane/4a84cb96d220fc4791f52562be37968b).\n\nNew columns:\n\n- homepage\n\n- id\n\n- original_title\n\n- overview\n\n- popularity\n\n- production_companies\n\n- production_countries\n\n- release_date\n\n- spoken_languages\n\n- status\n\n- tagline\n\n- vote_average\n\nLost columns:\n\n- actor_1_facebook_likes\n\n- actor_2_facebook_likes\n\n- actor_3_facebook_likes\n\n- aspect_ratio\n\n- cast_total_facebook_likes\n\n- color\n\n- content_rating\n\n- director_facebook_likes\n\n- facenumber_in_poster\n\n- movie_facebook_likes\n\n- movie_imdb_link\n\n- num_critic_for_reviews\n\n- num_user_for_reviews\n\n### Open Questions About the Data\nThere are some things we haven't had a chance to confirm about the new dataset. If you have any insights, please let us know in the forums!\n\n- Are the budgets and revenues all in US dollars? Do they consistently show the global revenues?\n\n- This dataset hasn't yet gone through a data quality analysis. Can you find any obvious corrections? For example, in the IMDb version it was necessary to treat values of zero in the budget field as missing. Similar findings would be very helpful to your fellow Kagglers! (It's probably a good idea to keep treating zeros as missing, with the caveat that missing budgets much more likely to have been from small budget films in the first place).\n\n### Inspiration\n\n- Can you categorize the films by type, such as animated or not? We don't have explicit labels for this, but it should be possible to build them from the crew's job titles.\n\n- How sharp is the divide between major film studios and the independents? Do those two groups fall naturally out of a clustering analysis or is something more complicated going on?\n\n### Acknowledgements\nThis dataset was generated from [The Movie Database](themoviedb.org) API. This product uses the TMDb API but is not endorsed or certified by TMDb.\nTheir API also provides access to data on many additional movies, actors and actresses, crew members, and TV shows. You can [try it for yourself here](https://www.themoviedb.org/documentation/api).\n\n![](https://www.themoviedb.org/assets/static_cache/9b3f9c24d9fd5f297ae433eb33d93514/images/v4/logos/408x161-powered-by-rectangle-green.png)\n\n"
+}

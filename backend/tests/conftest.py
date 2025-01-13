@@ -36,10 +36,8 @@ def evaluator() -> QueryEvaluator:
     metadata = settings.metadata
 
     lucene_connector = LuceneConnector(settings.lucene_host, settings.lucene_port)
-    rebinning_index = FainderIndex(
-        settings.rebinning_index_path, metadata.hist_to_doc, metadata.column_to_hists
+    rebinning_index = FainderIndex(settings.rebinning_index_path, metadata)
+    conversion_index = FainderIndex(settings.conversion_index_path, metadata)
+    return QueryEvaluator(
+        set(metadata.doc_to_cols.keys()), lucene_connector, rebinning_index, conversion_index
     )
-    conversion_index = FainderIndex(
-        settings.conversion_index_path, metadata.hist_to_doc, metadata.column_to_hists
-    )
-    return QueryEvaluator(metadata.doc_ids, lucene_connector, rebinning_index, conversion_index)

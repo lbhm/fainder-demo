@@ -28,7 +28,7 @@ public class JsonFileFinder {
             }
         });
 
-        logger.debug("Found {} JSON files", Optional.of(jsonFiles.size()));
+        logger.info("Found {} JSON files", Optional.of(jsonFiles.size()));
         return jsonFiles;
     }
 }
