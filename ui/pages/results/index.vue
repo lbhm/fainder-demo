@@ -18,6 +18,11 @@ page
       <!-- Main Content -->
       <div class="results-wrapper">
         <div class="list-container">
+          <!-- Add search stats -->
+          <div v-if="!isLoading && !error && results && results.length > 0" class="search-stats mb-4">
+            Found {{ resultCount }} results in {{ searchTime.toFixed(2) }}ms
+          </div>
+
           <!-- Remove the Modify Search button since we have inline search now -->
 
           <!-- Loading state -->
@@ -144,6 +149,10 @@ const recordSetPanels = ref([]); // Array of arrays for each file panel
 
 console.log(query.value);
 
+// Add new refs for search stats
+const searchTime = ref(0);
+const resultCount = ref(0);
+
 const selectResult = (result) => {
   const index = results.value.indexOf(result);
   selectedIndex.value = index;
@@ -193,6 +202,8 @@ async function loadResults(queryStr) {
 
     const r = await response.json();
     results.value = r.results;
+    searchTime.value = r.search_time_ms;
+    resultCount.value = r.result_count;
 
     if (results.value && results.value.length > 0) {
       if (results.value[selectedIndex.value]){
@@ -401,5 +412,10 @@ async function searchData({query: searchQuery}) {
 .panel-title {
   font-size: 1.25rem !important;
   font-weight: 500;
+}
+
+.search-stats {
+  color: rgba(var(--v-theme-on-surface), 0.7);
+  font-size: 0.875rem;
 }
 </style>

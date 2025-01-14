@@ -85,3 +85,5 @@ class QueryRequest(BaseModel):
 class QueryResponse(BaseModel):
     query: str
     results: list[dict[str, Any]]
+    search_time_ms: float  # Search time in milliseconds
+    result_count: int  # Total number of results

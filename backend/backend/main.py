@@ -1,4 +1,5 @@
 import sys
+import time
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
@@ -73,11 +74,20 @@ async def query(request: QueryRequest) -> QueryResponse:
     logger.info(f"Received query: {request}")
 
     try:
+        start_time = time.perf_counter()
         doc_ids = await query_evaluator.execute(request.query)
+
         logger.info(f"Query '{request.query}' returned document IDs: {doc_ids}")
 
         docs = croissant_store.get_documents(doc_ids)
-        return QueryResponse(query=request.query, results=docs)
+        end_time = time.perf_counter()
+        search_time_ms = (end_time - start_time) * 1000
+        return QueryResponse(
+            query=request.query,
+            results=docs,
+            search_time_ms=search_time_ms,
+            result_count=len(docs),
+        )
     except UnexpectedInput as e:
         logger.info(f"Bad user query: {e.get_context(request.query)}")
         raise HTTPException(

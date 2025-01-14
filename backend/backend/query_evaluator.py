@@ -268,7 +268,7 @@ class QueryExecutor(Transformer):
 
     def start(self, items: list[set[uint32]]) -> set[int]:
         logger.trace("Starting query evaluation")
-        logger.debug(f"Final result: {items[0]}")
+        logger.trace(f"Final result: {items[0]}")
         return column_ids_to_doc_ids(items[0], self.metadata.col_to_doc)
 
 
