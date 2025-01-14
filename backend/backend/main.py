@@ -9,7 +9,7 @@ from lark import UnexpectedInput
 from loguru import logger
 
 from backend.column_search import ColumnSearch
-from backend.config import PredicateError, QueryRequest, QueryResponse, Settings
+from backend.config import ColumnSearchError, PredicateError, QueryRequest, QueryResponse, Settings
 from backend.croissant_store import CroissantStore
 from backend.fainder_index import FainderIndex
 from backend.lucene_connector import LuceneConnector
@@ -86,6 +86,9 @@ async def query(request: QueryRequest) -> QueryResponse:
     except PredicateError as e:
         logger.info(f"Invalid percentile predicate: {e}")
         raise HTTPException(status_code=400, detail=f"Invalid percentile predicate: {e}") from e
+    except ColumnSearchError as e:
+        logger.info(f"Column search error: {e}")
+        raise HTTPException(status_code=400, detail=f"Column search error: {e}") from e
     # TODO: Add other known errors for specific error handling
     except Exception as e:
         logger.error(f"Unknown query execution error: {e}")

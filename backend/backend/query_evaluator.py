@@ -18,17 +18,16 @@ GRAMMAR = """
     term: PERCENTILE_OPERATOR "(" percentileterm ")"
         | KEYWORD_OPERATOR "(" keywordterm ")"
         | COLUMN_OPERATOR "(" columnterm ")"
-    percentileterm: NUMBER ";" COMPARISON ";" NUMBER ";" IDENTIFIER
-        | NUMBER ";" COMPARISON ";" NUMBER
+    percentileterm: FLOAT ";" COMPARISON ";" FLOAT
     keywordterm: KEYWORD
-    columnterm: IDENTIFIER ";" COLUMN_MODE
+    columnterm: IDENTIFIER ";" NUMBER
     OPERATOR: "AND" | "OR" | "XOR"
     COMPARISON: "ge" | "gt" | "le" | "lt"
     PERCENTILE_OPERATOR: ("pp"i | "percentile"i) " "*
     KEYWORD_OPERATOR: ("kw"i | "keyword"i) " "*
     COLUMN_OPERATOR: ("col"i | "column"i) " "*
-    COLUMN_MODE: "exact" | "fuzzy" | "semantic"
-    NUMBER: /[0-9]+(\\.[0-9]+)?/
+    NUMBER: /[0-9]+/
+    FLOAT: /[0-9]+(\\.[0-9]+)?/
     IDENTIFIER: /[a-zA-Z0-9_]+/
     KEYWORD: /[^;)]+/
     %ignore " "
@@ -181,7 +180,6 @@ class QueryExecutor(Transformer):
         percentile = float(items[0].value)
         comparison = items[1].value
         reference = float(items[2].value)
-        identifier = items[3].value if len(items) > 3 and isinstance(items[3], Token) else None
         operator = None
         side = None
         if len(items) >= 5:
@@ -193,9 +191,7 @@ class QueryExecutor(Transformer):
         if filter_column:
             filter_hists = columns_ids_to_hist_ids(filter_column, self.metadata.col_to_hist)
 
-        result_hists = self.fainder_index.search(
-            percentile, comparison, reference, identifier, filter_hists
-        )
+        result_hists = self.fainder_index.search(percentile, comparison, reference, filter_hists)
         result = hist_ids_to_column_ids(result_hists, self.metadata.hist_to_col)
         self.last_result = result
         return result
@@ -222,12 +218,12 @@ class QueryExecutor(Transformer):
     def columnterm(self, items: list[Token]) -> set[uint32]:
         logger.trace(f"Evaluating column term: {items}")
         column = items[0].value.strip()
-        mode = items[1].value.strip()
+        k = int(items[1].value.strip())
         operator = items[-2] if len(items) > 2 else None
         side = items[-1] if len(items) > 2 else None
         filter_column = self._get_column_filter(operator, side)
 
-        result = self.column_search.search(column, mode, filter_column)
+        result = self.column_search.search(column, k, filter_column)
         self.last_result = result
         return result
 
@@ -237,10 +233,12 @@ class QueryExecutor(Transformer):
 
     def not_expr(self, items: list[set[uint32]]) -> set[uint32]:
         logger.trace(f"Evaluating NOT expression with {len(items)} items")
+        # TODO: Same "Problem" as in the query function with xor
         to_negate = items[0]
-        # TODO: Improve this
-        col_ids = {uint32(x) for x in range(len(self.metadata.col_to_doc.keys()))}
-        return col_ids - to_negate
+        doc_ids = column_ids_to_doc_ids(to_negate, self.metadata.col_to_doc)
+        all_docs = set(self.metadata.doc_to_cols.keys())
+        result = all_docs - doc_ids
+        return doc_ids_to_column_ids(result, self.metadata.doc_to_cols)
 
     def expression(self, items: list[set[uint32]]) -> set[uint32]:
         logger.trace(f"Evaluating expression with {len(items[0])} items")
@@ -255,17 +253,15 @@ class QueryExecutor(Transformer):
         operator: str = items[1].value.strip()  # type: ignore
         right: set[uint32] = items[2]  # type: ignore
 
-        # TODO: Should this be done here?
-        left_docs = column_ids_to_doc_ids(left, self.metadata.col_to_doc)
-
-        right_docs = column_ids_to_doc_ids(right, self.metadata.col_to_doc)
-
         match operator:
             case "AND":
-                return doc_ids_to_column_ids(left_docs & right_docs, self.metadata.doc_to_cols)
+                return left & right
             case "OR":
-                return doc_ids_to_column_ids(left_docs | right_docs, self.metadata.doc_to_cols)
+                return left | right
             case "XOR":
+                # TODO: Document 2-level XOR
+                left_docs = column_ids_to_doc_ids(left, self.metadata.col_to_doc)
+                right_docs = column_ids_to_doc_ids(right, self.metadata.col_to_doc)
                 return doc_ids_to_column_ids(left_docs ^ right_docs, self.metadata.doc_to_cols)
             case _:
                 raise ValueError(f"Unknown operator: {operator}")

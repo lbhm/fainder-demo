@@ -111,7 +111,7 @@ def generate_fainder_indices(
     n_clusters: int = 15,
     bin_budget: int = 100,
     alpha: float = 1,
-    transform: Literal["standard", "robust", "quantile", "power"] = "quantile",
+    transform: Literal["standard", "robust", "quantile", "power"] | None = None,
     algorithm: Literal["agglomerative", "hdbscan", "kmeans"] = "kmeans",
     seed: int = 42,
     workers: int | None = os.cpu_count(),
@@ -121,7 +121,7 @@ def generate_fainder_indices(
     logger.info(f"Clustering {len(hists)} histograms")
     clustered_hists, cluster_bins, _ = cluster_histograms(
         hists=hists,
-        transform=transform,
+        transform=transform,  # type: ignore
         quantile_range=(0.25, 0.75),
         use_umap=False,
         algorithm=algorithm,

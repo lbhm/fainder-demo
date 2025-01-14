@@ -25,12 +25,11 @@ class FainderIndex:
         percentile: float,
         comparison: str,
         reference: float,
-        identifier: str | None = None,
         hist_filter: set[np.uint32] | None = None,
     ) -> set[np.uint32]:
         # Data validation
         if not (0 < percentile <= 1) or comparison not in ["ge", "gt", "le", "lt"]:
-            raise PredicateError(f"{percentile};{comparison};{reference};{identifier}")
+            raise PredicateError(f"{percentile};{comparison};{reference}")
 
         hist_filter_list = [int(x) for x in hist_filter] if hist_filter else None
 

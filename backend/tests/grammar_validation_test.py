@@ -13,7 +13,7 @@ VALID_TEST_CASES = {
     "basic_percentile": {
         "queries": [
             "pp(0.5;ge;20.0)",
-            "percentile(0.5;ge;20.0;age)",
+            "percentile(0.5;ge;20.0)",
         ]
     },
     "combined": {
@@ -42,6 +42,12 @@ VALID_TEST_CASES = {
             "kw(test) AND pp (0.5;ge;20.0)",
             "keyword (test) AND pp  (0.5;ge;20.0)",
             "keyword(test)ANDpp(0.5;ge;20.0)",
+        ]
+    },
+    "column_operator": {
+        "queries": [
+            "col(test; 0)",
+            "column(hello; 1)",
         ]
     },
 }

@@ -29,6 +29,13 @@ def _setup_and_teardown() -> Generator[None, Any, None]:
     pass
 
 
+# generated with:
+# n_clusters: int = 27,
+# bin_budget: int = 270,
+# alpha: float = 1,
+# transform: Literal["standard", "robust", "quantile", "power"] | None = None,
+
+
 @pytest.fixture(scope="module")
 def evaluator() -> QueryEvaluator:
     settings = Settings(
