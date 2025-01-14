@@ -54,17 +54,28 @@ page
           </v-alert>
 
           <!-- Results list -->
-          <v-infinite-scroll
+          <v-virtual-scroll
             v-if="!isLoading && !error && results && results.length > 0"
             mode="manual"
+            :items="results"
           >
-            <template v-for="result in results" :key="result.id">
-              <v-card @click="selectResult(result)" :height="100">
-                <v-card-title>{{ result.name }}</v-card-title>
-                <v-card-subtitle>{{ result.alternateName }}</v-card-subtitle>
+            <template v-slot:default="{ item }">
+              <v-card @click="selectResult(item)" :height="100">
+                <v-card-title>{{ item.name }}</v-card-title>
+                <v-card-subtitle>{{ item.alternateName }}</v-card-subtitle>
               </v-card>
             </template>
-          </v-infinite-scroll>
+          </v-virtual-scroll>
+
+          <!-- Pagination controls -->
+          <div v-if="!isLoading && !error && results && results.length > 0" class="pagination-controls mt-4">
+            <v-pagination
+              v-model="currentPage"
+              :length="totalPages"
+              :total-visible="7"
+              rounded="circle"
+            ></v-pagination>
+          </div>
         </div>
 
         <div class="details-container">
@@ -153,6 +164,14 @@ console.log(query.value);
 const searchTime = ref(0);
 const resultCount = ref(0);
 
+const currentPage = ref(1);
+const totalPages = ref(1);
+const perPage = 10;
+
+watch(currentPage, async (newPage) => {
+  await loadResults(query.value, newPage);
+});
+
 const selectResult = (result) => {
   const index = results.value.indexOf(result);
   selectedIndex.value = index;
@@ -177,7 +196,7 @@ const selectResult = (result) => {
 
 await loadResults(query.value);
 
-async function loadResults(queryStr) {
+async function loadResults(queryStr, page = 1) {
   isLoading.value = true;
   error.value = null;
 
@@ -192,7 +211,9 @@ async function loadResults(queryStr) {
         'Access-Control-Allow-Origin': '*'
       },
       body: JSON.stringify({
-        query: queryStr
+        query: queryStr,
+        page: page,
+        per_page: perPage
       })
     });
 
@@ -204,6 +225,8 @@ async function loadResults(queryStr) {
     results.value = r.results;
     searchTime.value = r.search_time_ms;
     resultCount.value = r.result_count;
+    totalPages.value = r.total_pages;
+    currentPage.value = r.page;
 
     if (results.value && results.value.length > 0) {
       if (results.value[selectedIndex.value]){
@@ -326,14 +349,15 @@ const getChartData = (field, index) => {
 
 async function searchData({query: searchQuery}) {
   showSearchModal.value = false;
-  await loadResults(searchQuery);
+  currentPage.value = 1; // Reset to first page on new search
+  await loadResults(searchQuery, 1);
   query.value = searchQuery;
 
   return await navigateTo({
     path: '/results',
     query: {
       query: searchQuery,
-      index: 0,
+      page: 1,
       theme: theme.global.name.value
     }
   });
@@ -417,5 +441,11 @@ async function searchData({query: searchQuery}) {
 .search-stats {
   color: rgba(var(--v-theme-on-surface), 0.7);
   font-size: 0.875rem;
+}
+
+.pagination-controls {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
 }
 </style>

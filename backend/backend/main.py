@@ -77,16 +77,23 @@ async def query(request: QueryRequest) -> QueryResponse:
         start_time = time.perf_counter()
         doc_ids = await query_evaluator.execute(request.query)
 
-        logger.info(f"Query '{request.query}' returned document IDs: {doc_ids}")
+        # Calculate pagination
+        start_idx = (request.page - 1) * request.per_page
+        end_idx = start_idx + request.per_page
+        paginated_doc_ids = doc_ids[start_idx:end_idx]
+        total_pages = (len(doc_ids) + request.per_page - 1) // request.per_page
 
-        docs = croissant_store.get_documents(doc_ids)
+        docs = croissant_store.get_documents(paginated_doc_ids)
         end_time = time.perf_counter()
         search_time_ms = (end_time - start_time) * 1000
+
         return QueryResponse(
             query=request.query,
             results=docs,
             search_time_ms=search_time_ms,
-            result_count=len(docs),
+            result_count=len(doc_ids),
+            page=request.page,
+            total_pages=total_pages,
         )
     except UnexpectedInput as e:
         logger.info(f"Bad user query: {e.get_context(request.query)}")

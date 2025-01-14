@@ -80,6 +80,8 @@ class ColumnSearchError(Exception):
 
 class QueryRequest(BaseModel):
     query: str
+    page: int = 1
+    per_page: int = 10
 
 
 class QueryResponse(BaseModel):
@@ -87,3 +89,5 @@ class QueryResponse(BaseModel):
     results: list[dict[str, Any]]
     search_time_ms: float  # Search time in milliseconds
     result_count: int  # Total number of results
+    page: int
+    total_pages: int
