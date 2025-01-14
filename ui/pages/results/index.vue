@@ -447,6 +447,10 @@ async function searchData({query: searchQuery}) {
   flex: 0 0 30%;
   min-width: 300px;
   max-width: 400px;
+  position: sticky;
+  top: 24px; /* Adjust based on your layout's top spacing */
+  height: calc(100vh - 48px); /* Adjust based on your layout's spacing */
+  overflow-y: auto; /* Allow scrolling within the container */
 }
 
 .details-container {
