@@ -69,7 +69,6 @@ app.add_middleware(
 @app.post("/query")
 async def query(request: QueryRequest) -> QueryResponse:
     """Execute a query and return the results."""
-    # TODO: Add pagination to query results
     # TODO: Add caching of query results
     logger.info(f"Received query: {request}")
 
