@@ -5,7 +5,7 @@ from lark import Lark, Token, Transformer, Tree, Visitor
 from loguru import logger
 from numpy import uint32
 
-from backend.column_search import ColumnSearch
+from backend.column_index import ColumnIndex
 from backend.config import Metadata
 from backend.fainder_index import FainderIndex
 from backend.lucene_connector import LuceneConnector
@@ -39,20 +39,14 @@ class QueryEvaluator:
         self,
         lucene_connector: LuceneConnector,
         rebinning_index: FainderIndex,
-        conversion_index: FainderIndex,
-        column_search: ColumnSearch,
+        conversion_index: FainderIndex,  # currently not used
+        hnsw_index: ColumnIndex,
         metadata: Metadata,
     ):
-        self.metadata = metadata
         self.lucene_connector = lucene_connector
-        self.rebinning_index = rebinning_index
-        self.conversion_index = conversion_index  # NOTE: Currently unused
         self.grammar = Lark(GRAMMAR, start="start")
         self.annotator = QueryAnnotator()
-        self.column_search = column_search
-        self.executor = QueryExecutor(
-            self.lucene_connector, self.rebinning_index, self.column_search, self.metadata
-        )
+        self.executor = QueryExecutor(self.lucene_connector, rebinning_index, hnsw_index, metadata)
 
     def parse(self, query: str) -> Tree:
         return self.grammar.parse(query)
@@ -136,14 +130,14 @@ class QueryExecutor(Transformer):
         self,
         lucene_connector: LuceneConnector,
         fainder_index: FainderIndex,
-        column_search: ColumnSearch,
+        hnsw_index: ColumnIndex,
         metadata: Metadata,
         enable_filtering: bool = True,
     ):
         self.fainder_index = fainder_index
         self.lucene_connector = lucene_connector
         self.enable_filtering = enable_filtering
-        self.column_search = column_search
+        self.hnsw_index = hnsw_index
         self.metadata = metadata
         self.reset()
 
@@ -186,13 +180,13 @@ class QueryExecutor(Transformer):
             operator = items[-2]
             side = items[-1]
 
-        filter_column = self._get_column_filter(operator, side)
-        filter_hists = None
-        if filter_column:
-            filter_hists = columns_ids_to_hist_ids(filter_column, self.metadata.col_to_hist)
+        column_filter = self._get_column_filter(operator, side)
+        hist_filter = None
+        if column_filter:
+            hist_filter = col_to_hist_ids(column_filter, self.metadata.col_to_hist)
 
-        result_hists = self.fainder_index.search(percentile, comparison, reference, filter_hists)
-        result = hist_ids_to_column_ids(result_hists, self.metadata.hist_to_col)
+        result_hists = self.fainder_index.search(percentile, comparison, reference, hist_filter)
+        result = hist_to_col_ids(result_hists, self.metadata.hist_to_col)
         self.last_result = result
         return result
 
@@ -202,16 +196,15 @@ class QueryExecutor(Transformer):
         keyword = items[0].value.strip()
         operator = items[-2] if len(items) > 2 else None
         side = items[-1] if len(items) > 2 else None
-        filter_column = self._get_column_filter(operator, side)
 
-        filter_docs = None
-        if filter_column:
-            filter_docs = column_ids_to_doc_ids(filter_column, self.metadata.col_to_doc)
+        column_filter = self._get_column_filter(operator, side)
+        doc_filter = None
+        if column_filter:
+            doc_filter = col_to_doc_ids(column_filter, self.metadata.col_to_doc)
 
-        result_docs, scores = self.lucene_connector.evaluate_query(keyword, filter_docs)
+        result_docs, scores = self.lucene_connector.evaluate_query(keyword, doc_filter)
         self.updates_scores(result_docs, scores)
-        #
-        result_set = doc_ids_to_column_ids(set(result_docs), self.metadata.doc_to_cols)
+        result_set = doc_to_col_ids(set(result_docs), self.metadata.doc_to_cols)
         self.last_result = result_set
         return result_set
 
@@ -221,9 +214,10 @@ class QueryExecutor(Transformer):
         k = int(items[1].value.strip())
         operator = items[-2] if len(items) > 2 else None
         side = items[-1] if len(items) > 2 else None
-        filter_column = self._get_column_filter(operator, side)
 
-        result = self.column_search.search(column, k, filter_column)
+        column_filter = self._get_column_filter(operator, side)
+
+        result = self.hnsw_index.search(column, k, column_filter)
         self.last_result = result
         return result
 
@@ -235,10 +229,10 @@ class QueryExecutor(Transformer):
         logger.trace(f"Evaluating NOT expression with {len(items)} items")
         # TODO: Same "Problem" as in the query function with xor
         to_negate = items[0]
-        doc_ids = column_ids_to_doc_ids(to_negate, self.metadata.col_to_doc)
+        doc_ids = col_to_doc_ids(to_negate, self.metadata.col_to_doc)
         all_docs = set(self.metadata.doc_to_cols.keys())
         result = all_docs - doc_ids
-        return doc_ids_to_column_ids(result, self.metadata.doc_to_cols)
+        return doc_to_col_ids(result, self.metadata.doc_to_cols)
 
     def expression(self, items: list[set[uint32]]) -> set[uint32]:
         logger.trace(f"Evaluating expression with {len(items[0])} items")
@@ -260,51 +254,44 @@ class QueryExecutor(Transformer):
                 return left | right
             case "XOR":
                 # TODO: Document 2-level XOR
-                left_docs = column_ids_to_doc_ids(left, self.metadata.col_to_doc)
-                right_docs = column_ids_to_doc_ids(right, self.metadata.col_to_doc)
-                return doc_ids_to_column_ids(left_docs ^ right_docs, self.metadata.doc_to_cols)
+                left_docs = col_to_doc_ids(left, self.metadata.col_to_doc)
+                right_docs = col_to_doc_ids(right, self.metadata.col_to_doc)
+                return doc_to_col_ids(left_docs ^ right_docs, self.metadata.doc_to_cols)
             case _:
                 raise ValueError(f"Unknown operator: {operator}")
 
     def start(self, items: list[set[uint32]]) -> set[int]:
         logger.trace("Starting query evaluation")
-        logger.debug(f"Final result: {items[0]}")
-        return column_ids_to_doc_ids(items[0], self.metadata.col_to_doc)
+        logger.debug(f"Final result: {[int(i) for i in items[0]]}")
+        return col_to_doc_ids(items[0], self.metadata.col_to_doc)
 
 
-def doc_ids_to_column_ids(doc_ids: set[int], doc_to_columns: dict[int, set[int]]) -> set[uint32]:
-    column_ids: set[uint32] = set()
-    for doc_id in doc_ids:
-        if doc_id in doc_to_columns:
-            column_ids.update(uint32(x) for x in doc_to_columns[doc_id])
-
-    return column_ids
-
-
-def column_ids_to_doc_ids(column_ids: set[uint32], column_to_doc: dict[int, int]) -> set[int]:
-    doc_ids = set()
-    for column_id in column_ids:
-        if int(column_id) in column_to_doc:
-            doc_ids.add(column_to_doc[int(column_id)])
-
-    return doc_ids
+def doc_to_col_ids(doc_ids: set[int], doc_to_columns: dict[int, set[int]]) -> set[uint32]:
+    return {
+        uint32(column_id)
+        for doc_id in doc_ids
+        if doc_id in doc_to_columns
+        for column_id in doc_to_columns[doc_id]
+    }
 
 
-def columns_ids_to_hist_ids(
-    column_ids: set[uint32], column_to_hist: dict[int, int]
-) -> set[uint32]:
-    hist_ids = set()
-    for column_id in column_ids:
-        if int(column_id) in column_to_hist:
-            hist_ids.add(uint32(column_to_hist[int(column_id)]))
-
-    return hist_ids
+def col_to_doc_ids(column_ids: set[uint32], column_to_doc: dict[int, int]) -> set[int]:
+    return {
+        column_to_doc[int(column_id)]
+        for column_id in column_ids
+        if int(column_id) in column_to_doc
+    }
 
 
-def hist_ids_to_column_ids(hist_ids: set[uint32], hist_to_column: dict[int, int]) -> set[uint32]:
-    column_ids = set()
-    for hist_id in hist_ids:
-        if hist_id in hist_to_column:
-            column_ids.add(uint32(hist_to_column[int(hist_id)]))
+def col_to_hist_ids(column_ids: set[uint32], column_to_hist: dict[int, int]) -> set[uint32]:
+    return {
+        uint32(column_to_hist[int(column_id)])
+        for column_id in column_ids
+        if int(column_id) in column_to_hist
+    }
 
-    return column_ids
+
+def hist_to_col_ids(hist_ids: set[uint32], hist_to_column: dict[int, int]) -> set[uint32]:
+    return {
+        uint32(hist_to_column[int(hist_id)]) for hist_id in hist_ids if hist_id in hist_to_column
+    }

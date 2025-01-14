@@ -7,7 +7,7 @@ from fainder.utils import load_input
 from loguru import logger
 from numpy.typing import NDArray
 
-from backend.config import Metadata, PredicateError
+from backend.config import Metadata, PercentileError
 
 
 class FainderIndex:
@@ -29,9 +29,9 @@ class FainderIndex:
     ) -> set[np.uint32]:
         # Data validation
         if not (0 < percentile <= 1) or comparison not in ["ge", "gt", "le", "lt"]:
-            raise PredicateError(f"{percentile};{comparison};{reference}")
+            raise PercentileError(f"{percentile};{comparison};{reference}")
 
-        hist_filter_list = [int(x) for x in hist_filter] if hist_filter else None
+        filter_array = np.array(list(hist_filter), dtype=np.uint32) if hist_filter else None
 
         # Predicate evaluation
         query: PercentileQuery = (percentile, comparison, reference)  # type: ignore
@@ -40,7 +40,7 @@ class FainderIndex:
             queries=[query],
             input_type="index",
             index_mode="recall",
-            hist_filter=hist_filter_list,
+            hist_filter=filter_array,
         )
         result = results[0]
         logger.debug(f"Results: {result}")

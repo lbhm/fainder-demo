@@ -121,7 +121,7 @@ def generate_fainder_indices(
     logger.info(f"Clustering {len(hists)} histograms")
     clustered_hists, cluster_bins, _ = cluster_histograms(
         hists=hists,
-        transform=transform,  # type: ignore
+        transform=transform,
         quantile_range=(0.25, 0.75),
         algorithm=algorithm,
         n_cluster_range=(n_clusters, n_clusters),
