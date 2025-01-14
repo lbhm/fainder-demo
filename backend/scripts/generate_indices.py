@@ -108,8 +108,8 @@ def load_metadata(base_path: Path) -> tuple[list[tuple[np.uint32, Histogram]], d
 def generate_fainder_indices(
     hists: list[tuple[np.uint32, Histogram]],
     output_path: Path,
-    n_clusters: int = 15,
-    bin_budget: int = 100,
+    n_clusters: int = 27,
+    bin_budget: int = 270,
     alpha: float = 1,
     transform: Literal["standard", "robust", "quantile", "power"] | None = None,
     algorithm: Literal["agglomerative", "hdbscan", "kmeans"] = "kmeans",
@@ -123,7 +123,6 @@ def generate_fainder_indices(
         hists=hists,
         transform=transform,  # type: ignore
         quantile_range=(0.25, 0.75),
-        use_umap=False,
         algorithm=algorithm,
         n_cluster_range=(n_clusters, n_clusters),
         n_global_bins=bin_budget,

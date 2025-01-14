@@ -19,14 +19,14 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
-    "fainder@git+https://github.com/lbhm/fainder@main",
+    "fainder@git+https://github.com/lbhm/fainder@demo",
     "fastapi[standard]~=0.115.6",
     "grpcio~=1.69",
     "grpcio-tools~=1.69",
     "hnswlib~=0.8.0",
     "lark~=1.2",
     "loguru~=0.7.3",
-    "numpy~=1.26",
+    "numpy~=2.0",
     "pydantic~=2.10",
     "pydantic-settings~=2.7",
     "sentence-transformers~=3.3",
