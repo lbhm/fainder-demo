@@ -72,8 +72,9 @@ page
             <v-pagination
               v-model="currentPage"
               :length="totalPages"
-              :total-visible="7"
+              :total-visible="totalVisible"
               rounded="circle"
+              width="100%"
             ></v-pagination>
           </div>
         </div>
@@ -148,10 +149,10 @@ const theme = useTheme();
 const route = useRoute();
 const q = ref(route.query);
 
-// read query and theme from query params
+// read query, page and theme from query params
 const query = ref(q.value.query);
 const selectedIndex = ref(parseInt(q.value.index) || 0);
-
+const currentPage = ref(parseInt(q.value.page) || 1);
 
 const descriptionPanel = ref([0]); // Array with 0 means first panel is open
 const recordSetPanels = ref([]); // Array of arrays for each file panel
@@ -164,12 +165,62 @@ console.log(query.value);
 const searchTime = ref(0);
 const resultCount = ref(0);
 
-const currentPage = ref(1);
 const totalPages = ref(1);
-const perPage = 10;
+// Remove static perPage constant
+const totalVisible = ref(7);
+
+// Add ref for window height
+const windowHeight = ref(window.innerHeight);
+const itemHeight = 100; // Height of each result card in pixels
+const headerHeight = 200; // Approximate height of header elements (search + stats)
+const paginationHeight = 56; // Height of pagination controls
+
+// Update perPage to be calculated based on available height
+const perPage = computed(() => {
+  const availableHeight = windowHeight.value - headerHeight - paginationHeight;
+  const itemsPerPage = Math.floor(availableHeight / itemHeight);
+  // Ensure we show at least 3 items and at most 15 items
+  return Math.max(3, Math.min(15, itemsPerPage));
+});
+
+const handleResize = () => {
+  updateTotalVisible();
+  windowHeight.value = window.innerHeight;
+};
+// Add window resize handler
+onMounted(() => {
+  updateTotalVisible();
+  window.addEventListener('resize', handleResize);
+  windowHeight.value = window.innerHeight; // Initial value
+});
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize);
+});
+
+function updateTotalVisible() {
+  const width = window.innerWidth;
+  if (width < 600) {
+    totalVisible.value = 2;
+  } else if (width < 960) {
+    totalVisible.value = 3;
+  } else {
+    totalVisible.value = 5;
+  }
+}
 
 watch(currentPage, async (newPage) => {
   await loadResults(query.value, newPage);
+  // Update URL with new page
+  navigateTo({
+    path: '/results',
+    query: {
+      query: query.value,
+      page: newPage,
+      index: selectedIndex.value,
+      theme: theme.global.name.value
+    }
+  });
 });
 
 const selectResult = (result) => {
@@ -183,18 +234,19 @@ const selectResult = (result) => {
     console.log(recordSetPanels.value);
   }
 
-  // Update URL with new index
+  // Update URL keeping the page parameter
   navigateTo({
     path: '/results',
     query: {
       query: query.value,
+      page: currentPage.value,
       index: index,
-      theme: theme.global.name.value // Add theme to query
+      theme: theme.global.name.value
     }
   });
 };
 
-await loadResults(query.value);
+await loadResults(query.value, currentPage.value);
 
 async function loadResults(queryStr, page = 1) {
   isLoading.value = true;
@@ -213,7 +265,7 @@ async function loadResults(queryStr, page = 1) {
       body: JSON.stringify({
         query: queryStr,
         page: page,
-        per_page: perPage
+        per_page: perPage.value  // Access the computed value here
       })
     });
 
@@ -358,6 +410,7 @@ async function searchData({query: searchQuery}) {
     query: {
       query: searchQuery,
       page: 1,
+      index: 0,
       theme: theme.global.name.value
     }
   });
@@ -447,5 +500,11 @@ async function searchData({query: searchQuery}) {
   display: flex;
   justify-content: center;
   margin-top: 1rem;
+  width: 100%;
+}
+
+.pagination-controls :deep(.v-pagination) {
+  width: 100%;
+  justify-content: center;
 }
 </style>
