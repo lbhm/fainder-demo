@@ -29,13 +29,9 @@ logger.add(sys.stdout, level="DEBUG")
 # Global variables to store persistent objects
 croissant_store = CroissantStore(settings.croissant_path)
 lucene_connector = LuceneConnector(settings.lucene_host, settings.lucene_port)
-rebinning_index = FainderIndex(
-    settings.rebinning_index_path, metadata.hist_to_doc, metadata.column_to_hists
-)
-conversion_index = FainderIndex(
-    settings.conversion_index_path, metadata.hist_to_doc, metadata.column_to_hists
-)
-column_search = ColumnSearch(metadata.column_to_hists)
+rebinning_index = FainderIndex(settings.rebinning_index_path, metadata)
+conversion_index = FainderIndex(settings.conversion_index_path, metadata)
+column_search = ColumnSearch(metadata)
 query_evaluator = QueryEvaluator(
     lucene_connector, rebinning_index, conversion_index, column_search, metadata
 )

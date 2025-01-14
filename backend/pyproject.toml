@@ -23,11 +23,13 @@ dependencies = [
     "fastapi[standard]~=0.115.6",
     "grpcio~=1.69",
     "grpcio-tools~=1.69",
+    "hnswlib~=0.8.0",
     "lark~=1.2",
     "loguru~=0.7.3",
     "numpy~=1.26",
     "pydantic~=2.10",
     "pydantic-settings~=2.7",
+    "sentence-transformers~=3.3",
 ]
 
 [project.optional-dependencies]

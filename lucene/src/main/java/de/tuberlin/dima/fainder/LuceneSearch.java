@@ -65,7 +65,7 @@ public class LuceneSearch {
             // Prefix match for partial words
             queryBuilder.add(parser.parse(escapedQuery + "*"), BooleanClause.Occur.SHOULD);
 
-            logger.debug("Executing query {}. With filter: {} ", queryBuilder.build(), docIds);
+            logger.info("Executing query {}. With filter: {} ", queryBuilder.build(), docIds);
 
             ScoreDoc[] hits = null;
             if (docIds != null && !docIds.isEmpty()) {
@@ -94,7 +94,7 @@ public class LuceneSearch {
             for (ScoreDoc scoreDoc : hits) {
                 int docId = scoreDoc.doc;
                 Document doc = storedFields.document(docId);
-                logger.debug("Hit {}: {} (Score: {})", docId, doc.get("name"), scoreDoc.score);
+                logger.info("Hit {}: {} (Score: {})", docId, doc.get("name"), scoreDoc.score);
                 int result = Integer.parseInt(doc.get("id"));
 
                 if (minScore == null || scoreDoc.score >= minScore) {
