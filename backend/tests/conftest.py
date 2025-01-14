@@ -32,7 +32,9 @@ def _setup_and_teardown() -> Generator[None, Any, None]:
 @pytest.fixture(scope="module")
 def evaluator() -> QueryEvaluator:
     settings = Settings(
-        data_dir=Path(__file__).parent / "assets", collection_name="toy_collection"
+        data_dir=Path(__file__).parent / "assets",
+        collection_name="toy_collection",
+        _env_file=None,  # type: ignore
     )
     metadata = settings.metadata
 

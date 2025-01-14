@@ -19,11 +19,15 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public class LuceneSearch {
     private static final Logger logger = LoggerFactory.getLogger(LuceneSearch.class);
     private final IndexSearcher searcher;
     private final QueryParser parser;
+
+    // Constant flag for testing different implementations
+    private final Boolean BOOL_FILTER;
 
     public LuceneSearch(Path indexPath) throws IOException {
         Directory indexDir = FSDirectory.open(indexPath);
@@ -33,16 +37,17 @@ public class LuceneSearch {
         StandardAnalyzer analyzer = new StandardAnalyzer(CharArraySet.EMPTY_SET);
         parser = new QueryParser("all", analyzer);
         // parser.setAllowLeadingWildcard(true); // Allow wildcards at start of term
+        BOOL_FILTER = false;
     }
 
     /**
      * @param query      The query string
-     * @param docIds     List of document IDs to filter (optional)
+     * @param docIds     Set of document IDs to filter (optional)
      * @param minScore   The minimum score for a document to be included in the results
      * @param maxResults The maximum number of documents to return
      * @return A pair of lists: document IDs and their scores
      */
-    public Pair<List<Integer>, List<Float>> search(String query, List<Integer> docIds, Float minScore, int maxResults) {
+    public Pair<List<Integer>, List<Float>> search(String query, Set<Integer> docIds, Float minScore, int maxResults) {
         if (query == null || query.isEmpty()) {
             return new Pair<>(List.of(), List.of());
         }
@@ -60,17 +65,29 @@ public class LuceneSearch {
             // Prefix match for partial words
             queryBuilder.add(parser.parse(escapedQuery + "*"), BooleanClause.Occur.SHOULD);
 
+            logger.debug("Executing query {}. With filter: {} ", queryBuilder.build(), docIds);
+
+            ScoreDoc[] hits = null;
             if (docIds != null && !docIds.isEmpty()) {
                 // Create filter for allowed document IDs
                 // TODO: Does the docFilter actually help to reduce query execution time?
-                Query docFilter = createDocFilter(docIds);
-                queryBuilder.add(docFilter, BooleanClause.Occur.FILTER);
+                if(BOOL_FILTER){
+                    Query docFilter = createDocFilter(docIds);
+                    queryBuilder.add(docFilter, BooleanClause.Occur.FILTER);
+                    Query parsedQuery = queryBuilder.build();
+                    hits = searcher.search(parsedQuery, maxResults).scoreDocs;
+                }
+                else{
+                    Query parsedQuery = queryBuilder.build();
+                    CustomCollectorManager collectorManager = new CustomCollectorManager(maxResults, docIds);
+                    hits = searcher.search(parsedQuery, collectorManager).scoreDocs;
+                }
+            }
+            else {
+                Query parsedQuery = queryBuilder.build();
+                hits = searcher.search(parsedQuery, maxResults).scoreDocs;
             }
 
-            Query parsedQuery = queryBuilder.build();
-            logger.debug("Executing query {}", parsedQuery);
-
-            ScoreDoc[] hits = searcher.search(parsedQuery, maxResults).scoreDocs;
             StoredFields storedFields = searcher.storedFields();
             List<Integer> results = new ArrayList<>();
             List<Float> scores = new ArrayList<>();
@@ -97,7 +114,7 @@ public class LuceneSearch {
 
     }
 
-    private Query createDocFilter(List<Integer> docIds) {
+    private Query createDocFilter(Set<Integer> docIds) {
         // TODO: Improve efficiency off this
         // just or TermQueries for id in filter
         BooleanQuery.Builder builder = new BooleanQuery.Builder();
