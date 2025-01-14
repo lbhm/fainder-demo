@@ -31,7 +31,38 @@ fainder/
 
 ## Getting Started
 
-### Docker Setup
+### Data Preparation
+
+TODO: describe how to prepare the dataset profiles and index files
+
+### Environment Configuration
+
+The demo uses environment variables to configure its components. You can export these variables
+in your shell or create a `.env` file in the directory from where you start each component. The
+following variables are available (no default means it must be set):
+
+```bash
+# Frontend
+NUXT_API_BASE=http://localhost:8000  # Backend API base URL
+
+# Backend
+DATA_DIR=                    # Directory containing dataset collections
+COLLECTION_NAME=             # Name of the dataset collection (subdirectoy in DATA_DIR)
+CROISSANT_DIR=croissant      # Subdirectory containing the Croissant files of a collection
+FAINDER_DIR=fainder          # Subdirectory containing Fainder indices for a collection
+METADATA_FILE=metadata.json  # JSON or Pickle file with metadata about a collection
+LUCENE_HOST=127.0.0.1        # Hostname of the Lucene service
+LUCENE_PORT=8001             # Port of the Lucene service
+
+# Lucene (TODO: this is not yet implemented as env variables)
+LUCENE_INDEX_PATH
+LUCENE_DATA_PATH
+LUCENE_PORT
+LUCENE_MAX_RESULTS
+LUCENE_MIN_SCORE
+```
+
+### Run with Docker
 
 You need a recent version of Docker including `docker compose` to run the demo.
 
@@ -47,7 +78,7 @@ To stop the containers, hit `Ctrl+C` or run:
 docker compose down
 ```
 
-### Local Setup
+### Run Locally
 
 #### Prerequisites
 

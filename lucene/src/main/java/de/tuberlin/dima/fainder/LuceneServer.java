@@ -11,8 +11,10 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 
 public class LuceneServer {
     private static final Logger logger = LoggerFactory.getLogger(LuceneServer.class);
@@ -102,10 +104,14 @@ public class LuceneServer {
         @Override
         public void evaluate(QueryRequest queryRequest, StreamObserver<QueryResponse> responseObserver) {
             String query = queryRequest.getQuery();
-            List<Integer> docIds = queryRequest.getDocIdsList();
+            Set<Integer> docIds = new HashSet<>(queryRequest.getDocIdsList());
 
             Pair<List<Integer>, List<Float>> searchResults = luceneSearch.search(query, docIds, minScore, maxResults);
-            QueryResponse response = QueryResponse.newBuilder().addAllResults(searchResults.getFirst()).addAllScores(searchResults.getSecond()).build();
+            QueryResponse response = QueryResponse
+                    .newBuilder()
+                    .addAllResults(searchResults.getFirst())
+                    .addAllScores(searchResults.getSecond())
+                    .build();
 
             responseObserver.onNext(response);
             responseObserver.onCompleted();

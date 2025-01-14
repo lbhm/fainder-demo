@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     lucene_host: str = "127.0.0.1"
     lucene_port: str = "8001"
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     @classmethod
     @field_validator("metadata_file", mode="after")

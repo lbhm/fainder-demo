@@ -46,6 +46,7 @@ TEST_CASES: dict[str, dict[str, str | list[int]]] = {
     "optional_whitespaces": {"query": "kw(a) AND pp (0.9;ge;1000000)", "expected": [2, 1]},
     "no_whitespaces": {"query": "kw(a)ANDpp(0.9;ge;1000000)", "expected": [2, 1]},
     "case_insensitive": {"query": "KW(a)AND Pp(0.9;ge;1000000)", "expected": [2, 1]},
+    "keyword_filter": {"query": "pp(0.5;ge;50;Latitude) AND kw(a)", "expected": [0]},
 }
 
 
