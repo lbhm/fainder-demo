@@ -5,12 +5,14 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Literal
 
+import hnswlib  # type: ignore
 import numpy as np
 from fainder.preprocessing.clustering import cluster_histograms
 from fainder.preprocessing.percentile_index import create_index
 from fainder.typing import Histogram
 from fainder.utils import configure_run, save_output
 from loguru import logger
+from sentence_transformers import SentenceTransformer
 
 
 def load_metadata(base_path: Path) -> tuple[list[tuple[np.uint32, Histogram]], dict[str, int]]:
@@ -38,7 +40,7 @@ def load_metadata(base_path: Path) -> tuple[list[tuple[np.uint32, Histogram]], d
     hist_id = 0
     vector_id = 0
 
-    logger.info("Reading histograms")
+    logger.info("Reading croissant files")
     # NOTE: Remove the sorting if it becomes a bottleneck
     for doc_id, path in enumerate(sorted(croissant_dir.iterdir())):
         if path.is_file():
@@ -79,6 +81,11 @@ def load_metadata(base_path: Path) -> tuple[list[tuple[np.uint32, Histogram]], d
             # Replace the file with the updated metadata
             with path.open("w") as file:
                 json.dump(metadata, file)
+
+    logger.info(
+        f"Found {len(doc_to_cols)} documents with {len(col_to_doc)} columns and "
+        f"{len(hist_to_col)} histograms."
+    )
 
     # Save the mappings and indices
     logger.info("Saving metadata")
@@ -154,8 +161,47 @@ def generate_fainder_indices(
     )
 
 
-def generate_embedding_index(name_to_vector: dict[str, int], output_path: Path):
-    pass
+def generate_embedding_index(
+    name_to_vector: dict[str, int],
+    output_path: Path,
+    model_name: str = "all-MiniLM-L6-v2",
+    batch_size: int = 32,
+    show_progress_bar: bool = True,
+    precision: Literal["float32", "int8", "uint8", "binary", "ubinary"] = "float32",
+    normalize_embeddings: bool = True,
+    ef_construction: int = 400,
+    n_bidirectional_links: int = 64,
+    seed: int = 42,
+) -> None:
+    strings = list(name_to_vector.keys())
+    ids = list(name_to_vector.values())
+
+    logger.info("Generating embeddings")
+    embedder = SentenceTransformer(
+        model_name, cache_folder=(output_path / "model_cache").as_posix()
+    )
+    embedder.compile()  # Maybe remove this
+    embeddings = embedder.encode(
+        sentences=strings,
+        batch_size=batch_size,
+        show_progress_bar=show_progress_bar,
+        convert_to_numpy=True,
+        precision=precision,
+        normalize_embeddings=normalize_embeddings,
+    )
+
+    logger.info("Creating HNSW index")
+    index = hnswlib.Index(space="cosine", dim=embeddings.shape[1])
+    index.init_index(
+        max_elements=embeddings.shape[0],
+        ef_construction=ef_construction,
+        M=n_bidirectional_links,
+        random_seed=seed,
+    )
+    index.add_items(embeddings, ids)
+
+    logger.info("Saving HNSW index")
+    index.save_index((output_path / "index.bin").as_posix())
 
 
 def parse_args():
@@ -184,7 +230,7 @@ def parse_args():
     )
 
     # TODO: add more params: bin budget, n_clusters, alpha, seed, workers, etc
-    # TODO: Add HNSW index and column name embeddings
+    # TODO: add all the params from HNSW creation
 
     return parser.parse_args()
 
