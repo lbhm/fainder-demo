@@ -74,7 +74,7 @@ page
               :length="totalPages"
               :total-visible="totalVisible"
               rounded="circle"
-              width="100%"
+              width="70%"
             ></v-pagination>
           </div>
         </div>
@@ -205,7 +205,7 @@ function updateTotalVisible() {
   } else if (width < 960) {
     totalVisible.value = 3;
   } else {
-    totalVisible.value = 5;
+    totalVisible.value = 4;
   }
 }
 
