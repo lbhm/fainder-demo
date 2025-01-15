@@ -71,7 +71,7 @@ public class LuceneIndexer {
                     if(key.equals("id")){
                         document.add(new NumericDocValuesField("id", value.getAsInt()));
                         document.add(new StoredField("id", valueStr));
-                    }else if (key.equals("dateModified")) {
+                    } else if (key.equals("dateModified")) {
                         // Assuming dateModified is best represented as a StringField
                         document.add(new StringField(key, valueStr, Field.Store.YES));
                     } else if (key.equals("isAccessibleForFree")) {
