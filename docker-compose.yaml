@@ -3,6 +3,10 @@ services:
     build:
       context: ./lucene
       dockerfile: Dockerfile
+    user: ${UID:-1000}:${GID:-1000}
+    environment:
+      - DATA_DIR=/app/data
+      - COLLECTION_NAME=${COLLECTION_NAME:?COLLECTION_NAME is missing}
     volumes:
       - ./data:/app/data
     # ports:
@@ -14,6 +18,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    # user: ${UID:-1000}:${GID:-1000}
     environment:
       - DATA_DIR=/app/data
       - COLLECTION_NAME=${COLLECTION_NAME:?COLLECTION_NAME is missing}
@@ -31,6 +36,7 @@ services:
     build:
       context: ./ui
       dockerfile: Dockerfile
+    # user: ${UID:-1000}:${GID:-1000}
     tmpfs: /tmp
     environment:
       - NUXT_API_BASE=http://localhost:8000
