@@ -96,7 +96,6 @@ public class LuceneIndexer {
 
                 // Add the document to the index
                 writer.addDocument(document);
-                fileCounter++;
             }
             writer.commit();
             writer.close();
