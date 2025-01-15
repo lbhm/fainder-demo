@@ -34,15 +34,15 @@ class ColumnIndex:
         if k < 0:
             raise ColumnSearchError(f"k must be a non-negative integer: {k}")
 
-        # Exact search
         result: set[uint32] = set()
-        vector_id = self.name_to_vector.get(column_name, None)
-        if vector_id:
-            col_ids = self.vector_to_cols.get(vector_id, set())
-            result |= {uint32(col_id) for col_id in col_ids}
-
-        # Nearest neighbor search
-        if k > 0:
+        if k == 0:
+            # Exact search
+            vector_id = self.name_to_vector.get(column_name, None)
+            if vector_id:
+                col_ids = self.vector_to_cols.get(vector_id, set())
+                result |= {uint32(col_id) for col_id in col_ids}
+        else:
+            # Nearest neighbor search
             embedding = self.embedder.encode(
                 column_name, convert_to_numpy=True, normalize_embeddings=True
             )
