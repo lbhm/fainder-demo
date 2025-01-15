@@ -78,18 +78,21 @@ async def query(request: QueryRequest) -> QueryResponse:
 
         # Calculate pagination
         start_idx = (request.page - 1) * request.per_page
-        end_idx = start_idx + request.per_page
+        end_idx = start_idx + request.per_page  # end_idx is exclusive in Python slicing
         paginated_doc_ids = doc_ids[start_idx:end_idx]
         total_pages = (len(doc_ids) + request.per_page - 1) // request.per_page
 
         docs = croissant_store.get_documents(paginated_doc_ids)
         end_time = time.perf_counter()
-        search_time_ms = (end_time - start_time) * 1000
+        search_time = end_time - start_time
+        logger.info(
+            f"Query '{request.query}' returned {len(docs)} documents in {search_time:.4f} seconds."
+        )
 
         return QueryResponse(
             query=request.query,
             results=docs,
-            search_time_ms=search_time_ms,
+            search_time_ms=search_time,
             result_count=len(doc_ids),
             page=request.page,
             total_pages=total_pages,

@@ -20,7 +20,7 @@ page
         <div class="list-container">
           <!-- Add search stats -->
           <div v-if="!isLoading && !error && results && results.length > 0" class="search-stats mb-4">
-            Found {{ resultCount }} results in {{ searchTime.toFixed(2) }}ms
+            Found {{ resultCount }} results in {{ (searchTime).toFixed(4) }}s
           </div>
 
           <!-- Remove the Modify Search button since we have inline search now -->
