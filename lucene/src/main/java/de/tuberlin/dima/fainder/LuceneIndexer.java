@@ -44,7 +44,6 @@ public class LuceneIndexer {
             IndexWriterConfig config = new IndexWriterConfig(analyzer);
             IndexWriter writer = new IndexWriter(directory, config);
             Gson gson = new Gson();
-            int fileCounter = 0;
             for (Path filePath : jsonFiles) {
                 // Read the content of the file
                 String jsonContent = new String(Files.readAllBytes(filePath));
@@ -52,9 +51,10 @@ public class LuceneIndexer {
                 // Parse the JSON content into a JsonObject
                 JsonObject jsonObject = gson.fromJson(jsonContent, JsonObject.class);
 
-                // Add id field if it doesn't exist
+                // check if the JSON object has an "id" field and if not, raise an error
                 if (!jsonObject.has("id")) {
-                    jsonObject.addProperty("id", fileCounter);
+                    logger.error("JSON object does not have an 'id' field");
+                    throw new RuntimeException("JSON object does not have an 'id' field!");
                 }
 
                 // Create a new Lucene Document
