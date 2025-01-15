@@ -71,19 +71,17 @@ public class LuceneSearch {
             if (docIds != null && !docIds.isEmpty()) {
                 // Create filter for allowed document IDs
                 // TODO: Does the docFilter actually help to reduce query execution time?
-                if(BOOL_FILTER){
+                if (BOOL_FILTER) {
                     Query docFilter = createDocFilter(docIds);
                     queryBuilder.add(docFilter, BooleanClause.Occur.FILTER);
                     Query parsedQuery = queryBuilder.build();
                     hits = searcher.search(parsedQuery, maxResults).scoreDocs;
-                }
-                else{
+                } else {
                     Query parsedQuery = queryBuilder.build();
                     CustomCollectorManager collectorManager = new CustomCollectorManager(maxResults, docIds);
                     hits = searcher.search(parsedQuery, collectorManager).scoreDocs;
                 }
-            }
-            else {
+            } else {
                 Query parsedQuery = queryBuilder.build();
                 hits = searcher.search(parsedQuery, maxResults).scoreDocs;
             }

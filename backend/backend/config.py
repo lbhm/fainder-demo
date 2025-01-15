@@ -20,7 +20,8 @@ class Settings(BaseSettings):
     data_dir: DirectoryPath
     collection_name: str
     croissant_dir: Path = Path("croissant")
-    faider_dir: Path = Path("fainder")
+    embedding_dir: Path = Path("embeddings")
+    fainder_dir: Path = Path("fainder")
     metadata_file: Path = Path("metadata.json")
 
     lucene_host: str = "127.0.0.1"
@@ -42,8 +43,18 @@ class Settings(BaseSettings):
 
     @computed_field  # type: ignore[misc]
     @property
+    def embedding_path(self) -> DirectoryPath:
+        return self.data_dir / self.collection_name / self.embedding_dir
+
+    @computed_field  # type: ignore[misc]
+    @property
     def fainder_path(self) -> DirectoryPath:
-        return self.data_dir / self.collection_name / self.faider_dir
+        return self.data_dir / self.collection_name / self.fainder_dir
+
+    @computed_field  # type: ignore[misc]
+    @property
+    def hnsw_index_path(self) -> Path:
+        return self.embedding_path / "index.bin"
 
     @computed_field  # type: ignore[misc]
     @property
@@ -70,7 +81,7 @@ class Settings(BaseSettings):
         return Metadata(**data)
 
 
-class PredicateError(Exception):
+class PercentileError(Exception):
     pass
 
 

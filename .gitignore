@@ -37,10 +37,11 @@ venv/
 # Config files
 .env
 
-# Cache folder
+# Cache folders
 .mypy_cache/
 .pytest_cache/
 .ruff_cache/
+model_cache/
 
 # Local project folders
 data/

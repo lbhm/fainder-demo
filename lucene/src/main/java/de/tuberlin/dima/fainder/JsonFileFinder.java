@@ -11,7 +11,6 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 public class JsonFileFinder {
     private static final Logger logger = LoggerFactory.getLogger(JsonFileFinder.class);
@@ -28,7 +27,7 @@ public class JsonFileFinder {
             }
         });
 
-        logger.info("Found {} JSON files", Optional.of(jsonFiles.size()));
+        logger.info("Found {} JSON files", jsonFiles.size());
         return jsonFiles;
     }
 }

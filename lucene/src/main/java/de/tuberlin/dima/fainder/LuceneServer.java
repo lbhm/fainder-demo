@@ -1,5 +1,7 @@
 package de.tuberlin.dima.fainder;
 
+import io.github.cdimascio.dotenv.Dotenv;
+import io.github.cdimascio.dotenv.DotenvException;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
@@ -7,13 +9,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Properties;
 import java.util.Set;
 
 public class LuceneServer {
@@ -28,49 +28,46 @@ public class LuceneServer {
 
     public static void main(String[] args) throws IOException, InterruptedException {
         final LuceneServer server = new LuceneServer();
-        server.loadConfig("config.properties");
+        server.loadConfig();
         server.loadIndex(indexPath, dataPath);
         server.start(port);
         server.blockUntilShutdown();
     }
 
-    public void loadConfig(String fileName) {
-        Properties properties = new Properties();
-        try (InputStream inputStream = LuceneServer.class.getClassLoader().getResourceAsStream(fileName)) {
-            String fainderHome = System.getenv("FAINDER_DEMO_HOME");
-            if (fainderHome == null) {
-                logger.error("FAINDER_DEMO_HOME environment variable is not set");
-                System.exit(1);
-            }
-            if (inputStream == null) {
-                logger.error("Property file '{}' not found in the classpath", fileName);
-                System.exit(1);
+    public void loadConfig() {
+        try {
+            Dotenv config = Dotenv.configure().ignoreIfMissing().load();
+            String dataDir = config.get("DATA_DIR");
+            String collectionName = config.get("COLLECTION_NAME");
+            String croissantDir = config.get("CROISSANT_DIR", "croissant");
+            String luceneDir = config.get("LUCENE_DIR", "lucene");
+            if (dataDir == null || collectionName == null) {
+                throw new DotenvException("Missing required configuration: DATA_DIR, COLLECTION_NAME");
             }
 
-            properties.load(inputStream);
-            indexPath = Paths.get(fainderHome, properties.getProperty("indexPath"));
-            dataPath = Paths.get(fainderHome, properties.getProperty("dataPath"));
-            maxResults = Integer.parseInt(properties.getProperty("maxResults"));
-            port = Integer.parseInt(properties.getProperty("port"));
-            minScore = Float.parseFloat(properties.getProperty("minScore"));
-            logger.info("Loaded config: {}", properties);
-        } catch (IOException e) {
-            logger.error("Failed to load properties: {}", e.getMessage());
+            indexPath = Paths.get(dataDir, collectionName, luceneDir);
+            dataPath = Paths.get(dataDir, collectionName, croissantDir);
+            port = Integer.parseInt(config.get("LUCENE_PORT", "8001"));
+            maxResults = Integer.parseInt(config.get("LUCENE_MAX_RESULTS", "100"));
+            minScore = Float.parseFloat(config.get("LUCENE_MIN_SCORE", "1.0"));
+        } catch (DotenvException e) {
+            logger.error("Failed to load config: {}", e.getMessage());
             System.exit(1);
         }
     }
 
     public void loadIndex(Path indexPath, Path dataPath) throws IOException {
         if (Files.exists(indexPath) && Files.isDirectory(indexPath)) {
-            logger.info("Index directory already exists. Skipping index creation");
+            logger.info("Index directory {} already exists. Skipping index creation", indexPath);
         } else {
-            logger.info("Creating index");
+            logger.info("Creating index from data at {}", dataPath);
             try {
                 LuceneIndexer.createIndex(indexPath, dataPath);
             } catch (RuntimeException e) {
                 logger.error("Index creation failed: {}", e.getMessage());
                 System.exit(1);
             }
+            logger.info("Index successfully created and stored at {}", indexPath);
         }
         luceneSearch = new LuceneSearch(indexPath);
     }
@@ -107,10 +104,8 @@ public class LuceneServer {
             Set<Integer> docIds = new HashSet<>(queryRequest.getDocIdsList());
 
             Pair<List<Integer>, List<Float>> searchResults = luceneSearch.search(query, docIds, minScore, maxResults);
-            QueryResponse response = QueryResponse
-                    .newBuilder()
-                    .addAllResults(searchResults.getFirst())
-                    .addAllScores(searchResults.getSecond())
+            QueryResponse response = QueryResponse.newBuilder()
+                    .addAllResults(searchResults.getFirst()).addAllScores(searchResults.getSecond())
                     .build();
 
             responseObserver.onNext(response);

@@ -49,17 +49,14 @@ NUXT_API_BASE=http://localhost:8000  # Backend API base URL
 DATA_DIR=                    # Directory containing dataset collections
 COLLECTION_NAME=             # Name of the dataset collection (subdirectoy in DATA_DIR)
 CROISSANT_DIR=croissant      # Subdirectory containing the Croissant files of a collection
+EMBEDDING_DIR=embeddings     # Subdirectory containing a HNSW index with column names
 FAINDER_DIR=fainder          # Subdirectory containing Fainder indices for a collection
+LUCENE_DIR=lucene            # Subdirectory containing a Lucene index for keyword predicates
 METADATA_FILE=metadata.json  # JSON or Pickle file with metadata about a collection
 LUCENE_HOST=127.0.0.1        # Hostname of the Lucene service
 LUCENE_PORT=8001             # Port of the Lucene service
-
-# Lucene (TODO: this is not yet implemented as env variables)
-LUCENE_INDEX_PATH
-LUCENE_DATA_PATH
-LUCENE_PORT
-LUCENE_MAX_RESULTS
-LUCENE_MIN_SCORE
+LUCENE_MAX_RESULTS=100       # Maximum number of results returned by Lucene for a keyword predicate
+LUCENE_MIN_SCORE=1.0         # Minimum score for a keyword predicate to be considered
 ```
 
 ### Run with Docker
