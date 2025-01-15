@@ -60,9 +60,6 @@ public class LuceneIndexer {
                 // Create a new Lucene Document
                 Document document = new Document();
 
-                // Store ID as both numeric and string field for efficient filtering
-                document.add(new NumericDocValuesField("id", fileCounter));
-                document.add(new StoredField("id", fileCounter));
 
                 // Iterate through all key-value pairs in the JSON object
                 for (Map.Entry<String, JsonElement> entry : jsonObject.entrySet()) {
@@ -71,7 +68,10 @@ public class LuceneIndexer {
                     // Convert the value to a string
                     String valueStr = value.isJsonNull() ? "" : value.toString();
                     if (valueStr.equals(("NaN"))) valueStr = "";
-                    if (key.equals("dateModified")) {
+                    if(key.equals("id")){
+                        document.add(new NumericDocValuesField("id", value.getAsInt()));
+                        document.add(new StoredField("id", valueStr));
+                    }else if (key.equals("dateModified")) {
                         // Assuming dateModified is best represented as a StringField
                         document.add(new StringField(key, valueStr, Field.Store.YES));
                     } else if (key.equals("isAccessibleForFree")) {
