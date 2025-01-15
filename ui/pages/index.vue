@@ -1,7 +1,9 @@
 <template>
   <v-main class="d-flex align-center justify-center">
-    <div class="search-wrapper text-center">
-      <Logo size="large" class="mb-8"/>
+    <div class="search-wrapper">
+      <div class="d-flex justify-center">
+        <Logo size="large" class="mb-8"/>
+      </div>
       <Search_Component
         :searchQuery="query"
         @searchData="searchData"
