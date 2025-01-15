@@ -81,8 +81,8 @@ page
                     </template>
                   </v-img>
                   <div class="flex-grow-1">
-                    <v-card-title><strong>{{ item.name }}</strong></v-card-title>
-                    <v-card-subtitle>{{ item.alternateName }}</v-card-subtitle>
+                    <v-card-title class="text-truncate"><strong>{{ item.name }}</strong></v-card-title>
+                    <v-card-subtitle class="text-truncate">{{ item.alternateName }}</v-card-subtitle>
                   </div>
                 </div>
               </v-card>
@@ -107,10 +107,29 @@ page
         <div class="details-container">
           <div class="pa-20">
             <v-card v-if="selectedResult">
-              <v-card-title><strong>{{ selectedResult.name }}</strong></v-card-title>
-              <v-card-subtitle>{{
-                selectedResult.alternateName
-              }}</v-card-subtitle>
+              <div class="d-flex align-center pa-4">
+                <div class="flex-grow-1">
+                  <v-card-title><strong>{{ selectedResult.name }}</strong></v-card-title>
+                  <v-card-subtitle>{{ selectedResult.alternateName }}</v-card-subtitle>
+                  <v-card-subtitle><strong>Creator:</strong> {{selectedResult.creator.name }}</v-card-subtitle>
+                  <v-card-subtitle><strong>License:</strong> {{selectedResult.license.name }}</v-card-subtitle>
+                  <v-card-subtitle><strong>Published:</strong> {{selectedResult.datePublished.substring(0, 10) }}</v-card-subtitle>
+                  <v-card-subtitle><strong>Modified:</strong> {{selectedResult.dateModified.substring(0, 10) }}</v-card-subtitle>
+                </div>
+                <v-img
+                  :src="selectedResult.thumbnailUrl || '/FAINDER_LOGO_SVG_01.svg'"
+                  :alt="selectedResult.name"
+                  height="150"
+                  width="150"
+                  cover
+                  class="flex-shrink-0 ml-4"
+                >
+                  <!-- Fallback for failed image load -->
+                  <template v-slot:placeholder>
+                    <v-icon size="48" color="grey-lighten-2">mdi-image</v-icon>
+                  </template>
+                </v-img>
+              </div>
 
               <v-expansion-panels v-model="descriptionPanel">
                 <v-expansion-panel>
@@ -157,6 +176,41 @@ page
                               :chart-options="chartOptions"
                             />
                           </td>
+                        </tr>
+                      </tbody>
+                    </v-table>
+                  </v-expansion-panel-text>
+                </v-expansion-panel>
+              </v-expansion-panels>
+              <v-expansion-panels v-model="metadataPanel">
+                <v-expansion-panel>
+                  <v-expansion-panel-title class="panel-title">Metadata</v-expansion-panel-title>
+                  <v-expansion-panel-text>
+                    <v-table>
+                      <tbody>
+                        <tr>
+                          <td><strong>Creator</strong></td>
+                          <td>{{ selectedResult?.creator?.name || '-' }}</td>
+                        </tr>
+                        <tr>
+                          <td><strong>Publisher</strong></td>
+                          <td>{{ selectedResult?.publisher?.name || '-' }}</td>
+                        </tr>
+                        <tr>
+                          <td><strong>License</strong></td>
+                          <td>{{ selectedResult?.license?.name || '-' }}</td>
+                        </tr>
+                        <tr>
+                          <td><strong>Date Published</strong></td>
+                          <td>{{ selectedResult?.datePublished.substring(0, 10) || '-' }}</td>
+                        </tr>
+                        <tr>
+                          <td><strong>Date Modified</strong></td>
+                          <td>{{ selectedResult?.dateModified.substring(0, 10) || '-' }}</td>
+                        </tr>
+                        <tr>
+                          <td><strong>Keywords</strong></td>
+                          <td style="white-space: pre-line">{{ selectedResult?.keywords?.join('\n') || '-' }}</td>
                         </tr>
                       </tbody>
                     </v-table>
