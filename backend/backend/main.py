@@ -11,6 +11,7 @@ from loguru import logger
 
 from backend.column_index import ColumnIndex
 from backend.config import (
+    CacheInfo,
     ColumnSearchError,
     PercentileError,
     QueryRequest,
@@ -38,9 +39,14 @@ croissant_store = CroissantStore(settings.croissant_path)
 lucene_connector = LuceneConnector(settings.lucene_host, settings.lucene_port)
 rebinning_index = FainderIndex(settings.rebinning_index_path, metadata)
 conversion_index = FainderIndex(settings.conversion_index_path, metadata)
-column_search = ColumnIndex(settings.hnsw_index_path, metadata)
+column_index = ColumnIndex(settings.hnsw_index_path, metadata)
 query_evaluator = QueryEvaluator(
-    lucene_connector, rebinning_index, conversion_index, column_search, metadata
+    lucene_connector=lucene_connector,
+    rebinning_index=rebinning_index,
+    conversion_index=conversion_index,
+    hnsw_index=column_index,
+    metadata=metadata,
+    cache_size=settings.query_cache_size,
 )
 
 cors_origins = [
@@ -75,12 +81,11 @@ app.add_middleware(
 @app.post("/query")
 async def query(request: QueryRequest) -> QueryResponse:
     """Execute a query and return the results."""
-    # TODO: Add caching of query results
     logger.info(f"Received query: {request}")
 
     try:
         start_time = time.perf_counter()
-        doc_ids = await query_evaluator.execute(request.query)
+        doc_ids = query_evaluator.execute(request.query)
 
         # Calculate pagination
         start_idx = (request.page - 1) * request.per_page
@@ -98,7 +103,7 @@ async def query(request: QueryRequest) -> QueryResponse:
         return QueryResponse(
             query=request.query,
             results=docs,
-            search_time_ms=search_time,
+            search_time=search_time,
             result_count=len(doc_ids),
             page=request.page,
             total_pages=total_pages,
@@ -118,6 +123,12 @@ async def query(request: QueryRequest) -> QueryResponse:
     except Exception as e:
         logger.error(f"Unknown query execution error: {e}")
         raise HTTPException(status_code=500, detail="Internal server error") from e
+
+
+@app.get("/cache_statistics")
+async def cache_statistics() -> CacheInfo:
+    """Return statistics about the query result cache."""
+    return query_evaluator.cache_info()
 
 
 # TODO: Recreate the alternative benchmarking endpoints with the new objects/approach

@@ -39,7 +39,6 @@ dev = [
     "mypy~=1.13",
     "pre-commit~=4.0",
     "pytest~=8.3",
-    "pytest-asyncio~=0.25",
     "types-protobuf~=5.29",
 ]
 
@@ -96,6 +95,3 @@ plugins = ["numpy.typing.mypy_plugin"]
 strict = true
 warn_unused_ignores = false
 files = ["backend", "tests"]
-
-[tool.pytest.ini_options]
-asyncio_default_fixture_loop_scope = "session"

@@ -275,7 +275,7 @@ async function loadResults(queryStr, page = 1) {
 
     const r = await response.json();
     results.value = r.results;
-    searchTime.value = r.search_time_ms;
+    searchTime.value = r.search_time;
     resultCount.value = r.result_count;
     totalPages.value = r.total_pages;
     currentPage.value = r.page;

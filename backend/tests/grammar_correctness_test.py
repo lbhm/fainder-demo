@@ -81,7 +81,6 @@ TEST_CASES: dict[str, dict[str, dict[str, dict[str, Any]]]] = {
 }
 
 
-@pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("category", "test_name", "test_case"),
     [
@@ -90,20 +89,20 @@ TEST_CASES: dict[str, dict[str, dict[str, dict[str, Any]]]] = {
         for name, case in data["queries"].items()
     ],
 )
-async def test_new_grammar_correctness(
+def test_new_grammar_correctness(
     category: str, test_name: str, test_case: dict[str, Any], evaluator: QueryEvaluator
 ) -> None:
     query = test_case["query"]
     expected_result = test_case["expected"]
 
     start = time.perf_counter()
-    result1 = await evaluator.execute(query)
+    result1 = evaluator.execute(query)
     end = time.perf_counter()
     time_taken_1 = end - start
     logger.info(f"Result1: {result1}")
 
     start = time.perf_counter()
-    result2 = await evaluator.execute(query, enable_filtering=False)
+    result2 = evaluator.execute(query, enable_filtering=False)
     end = time.perf_counter()
     time_taken_2 = end - start
     logger.info(f"Result2: {result2}")

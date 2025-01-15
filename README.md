@@ -53,6 +53,7 @@ EMBEDDING_DIR=embeddings     # Subdirectory containing a HNSW index with column 
 FAINDER_DIR=fainder          # Subdirectory containing Fainder indices for a collection
 LUCENE_DIR=lucene            # Subdirectory containing a Lucene index for keyword predicates
 METADATA_FILE=metadata.json  # JSON or Pickle file with metadata about a collection
+QUERY_CACHE_SIZE=128         # Maximum number of query resuls to cache
 LUCENE_HOST=127.0.0.1        # Hostname of the Lucene service
 LUCENE_PORT=8001             # Port of the Lucene service
 LUCENE_MAX_RESULTS=100       # Maximum number of results returned by Lucene for a keyword predicate

@@ -1,12 +1,13 @@
 from collections import defaultdict
 from collections.abc import Sequence
+from functools import lru_cache
 
 from lark import Lark, Token, Transformer, Tree, Visitor
 from loguru import logger
 from numpy import uint32
 
 from backend.column_index import ColumnIndex
-from backend.config import Metadata
+from backend.config import CacheInfo, Metadata
 from backend.fainder_index import FainderIndex
 from backend.lucene_connector import LuceneConnector
 
@@ -42,16 +43,21 @@ class QueryEvaluator:
         conversion_index: FainderIndex,  # currently not used
         hnsw_index: ColumnIndex,
         metadata: Metadata,
+        cache_size: int = 128,
     ):
         self.lucene_connector = lucene_connector
         self.grammar = Lark(GRAMMAR, start="start")
         self.annotator = QueryAnnotator()
         self.executor = QueryExecutor(self.lucene_connector, rebinning_index, hnsw_index, metadata)
 
+        # NOTE: Don't use lru_cache on methods
+        # See https://docs.astral.sh/ruff/rules/cached-instance-method/ for details
+        self.execute = lru_cache(maxsize=cache_size)(self._execute)
+
     def parse(self, query: str) -> Tree:
         return self.grammar.parse(query)
 
-    async def execute(self, query: str, enable_filtering: bool = True) -> list[int]:
+    def _execute(self, query: str, enable_filtering: bool = True) -> list[int]:
         self.annotator.reset()
         self.executor.reset()
         self.executor.enable_filtering = enable_filtering
@@ -64,6 +70,13 @@ class QueryEvaluator:
         # Sort the results by score (descending), append to the end if no score is available
         result.sort(key=lambda x: self.executor.scores.get(x, -1), reverse=True)
         return result
+
+    def clear_cache(self) -> None:
+        self.execute.cache_clear()
+
+    def cache_info(self) -> CacheInfo:
+        hits, misses, max_size, curr_size = self.execute.cache_info()
+        return CacheInfo(hits=hits, misses=misses, max_size=max_size, curr_size=curr_size)
 
 
 class QueryAnnotator(Visitor):

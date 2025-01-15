@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     fainder_dir: Path = Path("fainder")
     metadata_file: Path = Path("metadata.json")
 
+    query_cache_size: int = 128
     lucene_host: str = "127.0.0.1"
     lucene_port: str = "8001"
 
@@ -98,7 +99,14 @@ class QueryRequest(BaseModel):
 class QueryResponse(BaseModel):
     query: str
     results: list[dict[str, Any]]
-    search_time_ms: float  # Search time in milliseconds
-    result_count: int  # Total number of results
+    search_time: float
+    result_count: int
     page: int
     total_pages: int
+
+
+class CacheInfo(BaseModel):
+    hits: int
+    misses: int
+    max_size: int | None
+    curr_size: int
