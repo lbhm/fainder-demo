@@ -32,5 +32,12 @@ export default defineNuxtConfig({
       },
     },
   },
+  mdc: {
+    headings: {
+      anchorLinks: {
+        h3: false,
+      },
+    },
+  },
 
 })

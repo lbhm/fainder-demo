@@ -66,8 +66,25 @@ page
           >
             <template v-slot:default="{ item }">
               <v-card @click="selectResult(item)" :height="100">
-                <v-card-title>{{ item.name }}</v-card-title>
-                <v-card-subtitle>{{ item.alternateName }}</v-card-subtitle>
+                <div class="d-flex align-center">
+                  <v-img
+                    :src="item.thumbnailUrl || '/FAINDER_LOGO_SVG_01.svg'"
+                    :alt="item.name"
+                    height="100"
+                    width="100"
+                    cover
+                    class="flex-shrink-0"
+                  >
+                    <!-- Fallback for failed image load -->
+                    <template v-slot:placeholder>
+                      <v-icon size="48" color="grey-lighten-2">mdi-image</v-icon>
+                    </template>
+                  </v-img>
+                  <div class="flex-grow-1">
+                    <v-card-title><strong>{{ item.name }}</strong></v-card-title>
+                    <v-card-subtitle>{{ item.alternateName }}</v-card-subtitle>
+                  </div>
+                </div>
               </v-card>
             </template>
           </v-virtual-scroll>
@@ -90,7 +107,7 @@ page
         <div class="details-container">
           <div class="pa-20">
             <v-card v-if="selectedResult">
-              <v-card-title>{{ selectedResult.name }}</v-card-title>
+              <v-card-title><strong>{{ selectedResult.name }}</strong></v-card-title>
               <v-card-subtitle>{{
                 selectedResult.alternateName
               }}</v-card-subtitle>
@@ -478,7 +495,7 @@ const getChartData = (field, index) => {
 
 .panel-title {
   font-size: 1.25rem !important;
-  font-weight: 500;
+  font-weight: bold;
 }
 
 .search-stats {
