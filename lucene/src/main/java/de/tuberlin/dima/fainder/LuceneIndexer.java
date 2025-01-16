@@ -44,7 +44,6 @@ public class LuceneIndexer {
             IndexWriterConfig config = new IndexWriterConfig(analyzer);
             IndexWriter writer = new IndexWriter(directory, config);
             Gson gson = new Gson();
-            int fileCounter = 0;
             for (Path filePath : jsonFiles) {
                 // Read the content of the file
                 String jsonContent = new String(Files.readAllBytes(filePath));
@@ -52,17 +51,15 @@ public class LuceneIndexer {
                 // Parse the JSON content into a JsonObject
                 JsonObject jsonObject = gson.fromJson(jsonContent, JsonObject.class);
 
-                // Add id field if it doesn't exist
+                // check if the JSON object has an "id" field and if not, raise an error
                 if (!jsonObject.has("id")) {
-                    jsonObject.addProperty("id", fileCounter);
+                    logger.error("JSON object does not have an 'id' field");
+                    throw new RuntimeException("JSON object does not have an 'id' field!");
                 }
 
                 // Create a new Lucene Document
                 Document document = new Document();
 
-                // Store ID as both numeric and string field for efficient filtering
-                document.add(new NumericDocValuesField("id", fileCounter));
-                document.add(new StoredField("id", fileCounter));
 
                 // Iterate through all key-value pairs in the JSON object
                 for (Map.Entry<String, JsonElement> entry : jsonObject.entrySet()) {
@@ -71,7 +68,10 @@ public class LuceneIndexer {
                     // Convert the value to a string
                     String valueStr = value.isJsonNull() ? "" : value.toString();
                     if (valueStr.equals(("NaN"))) valueStr = "";
-                    if (key.equals("dateModified")) {
+                    if(key.equals("id")){
+                        document.add(new NumericDocValuesField("id", value.getAsInt()));
+                        document.add(new StoredField("id", valueStr));
+                    } else if (key.equals("dateModified")) {
                         // Assuming dateModified is best represented as a StringField
                         document.add(new StringField(key, valueStr, Field.Store.YES));
                     } else if (key.equals("isAccessibleForFree")) {
@@ -96,7 +96,6 @@ public class LuceneIndexer {
 
                 // Add the document to the index
                 writer.addDocument(document);
-                fileCounter++;
             }
             writer.commit();
             writer.close();
