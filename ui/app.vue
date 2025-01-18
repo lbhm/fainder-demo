@@ -1,6 +1,6 @@
 <template>
   <v-app>
-    <v-app-bar rounded>
+    <v-app-bar rounded height="80">
       <Logo size="medium" class="mr-4" @click="gotoHome"/>
 
       <!-- Add search component in app bar only on results page -->

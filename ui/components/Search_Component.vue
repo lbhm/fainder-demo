@@ -5,7 +5,7 @@
   <v-main :class="['search-main', { 'pa-3': inline }]">
     <v-container :class="{ 'pa-2': inline }">
       <v-row :class="{ 'inline-layout': inline }">
-        <v-col :cols="inline ? 9 : 12">
+        <v-col cols="10">
           <div class="input-wrapper">
             <v-text-field
               v-model="searchQuery"
@@ -22,28 +22,22 @@
             <div class="syntax-highlight" v-html="highlightedQuery"></div>
           </div>
         </v-col>
-        <v-col :cols="inline ? 1 : 6">
+        <v-col cols="1">
           <v-btn
             @click="showSettings = true"
-            :block="!inline"
-            :class="{ 'settings-btn': inline }"
-            color="secondary"
-            icon="mdi-cog"
-            variant="elevated"
-            size="large"
+            icon
+            class="ml-2"
           >
+            <v-icon>mdi-cog</v-icon>
           </v-btn>
         </v-col>
-        <v-col :cols="inline ? 1 : 6">
+        <v-col cols="1">
           <v-btn
             @click="searchData"
-            :block="!inline"
-            :class="{ 'search-btn': inline }"
-            color="primary"
-            icon="mdi-magnify"
-            variant="elevated"
-            size="large"
+            icon
+            class="ml-2"
           >
+            <v-icon>mdi-magnify</v-icon>
           </v-btn>
         </v-col>
       </v-row>
