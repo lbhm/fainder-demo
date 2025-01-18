@@ -165,7 +165,7 @@
 
         <v-card-text>
           <v-select
-            v-model="tempIndex"
+            v-model="indexType"
             :items="indexTypes"
             label="Index Type"
             variant="outlined"
@@ -208,6 +208,13 @@ const props = defineProps({
   }
 });
 const emit = defineEmits(['searchData']);
+const route = useRoute(); // Add this
+
+const { indexType } = useSearchState();
+// Initialize indexType if not already set
+if (!indexType.value) {
+  indexType.value = route.query.index_type || 'rebinning';
+}
 
 const searchQuery = ref(props.searchQuery);
 const syntaxError = ref('');
@@ -215,9 +222,9 @@ const highlightedQuery = ref('');
 const highlightEnabled = useCookie('highlight-enabled');
 const isValid = ref(true);
 
+console.log('Initial indexType:', indexType?.value);
+
 const showSettings = ref(false);
-const selectedIndex = ref('rebinning');
-const tempIndex = ref('rebinning'); // Add temporary index for dialog
 const indexTypes = [
   { title: 'Rebinning Index', value: 'rebinning' },
   { title: 'Conversion Index', value: 'conversion' },
@@ -226,7 +233,7 @@ const indexTypes = [
 // Query builder state
 const showFunctionDialog = ref(false);
 const currentFunction = ref(null);
-const functionParams = ref({});
+const functionParams = ref({ value: {} }); // Initialize with nested value object
 
 const operators = [
   { text: 'AND', color: 'primary' },
@@ -270,7 +277,7 @@ const insertOperator = (operator) => {
 // Open function builder dialog
 const openFunctionDialog = (type) => {
   currentFunction.value = functions.find(f => f.type === type);
-  functionParams.value = {};
+  functionParams.value = { value: {} }; // Reset with proper structure
   showFunctionDialog.value = true;
 };
 
@@ -379,10 +386,11 @@ async function searchData() {
   const isPlainText = !/(?:pp|percentile|kw|keyword|col|column)\s*\(|AND|OR|XOR|NOT|\(|\)/.test(query);
 
   const processedQuery = isPlainText ? `kw(${query})` : query;
-
+  console.log('Search query:', processedQuery);
+  console.log('Index type:', indexType);
   emit('searchData', {
     query: processedQuery,
-    indexType: selectedIndex.value
+    indexType: indexType.value
   });
 }
 
@@ -508,21 +516,16 @@ const highlightSyntax = (value) => {
 };
 
 function cancelSettings() {
-  tempIndex.value = selectedIndex.value; // Reset to current selection
   showSettings.value = false;
 }
 
 function saveSettings() {
-  selectedIndex.value = tempIndex.value; // Apply the new selection
   showSettings.value = false;
+  emit('searchData', {
+    query: searchQuery.value,
+    indexType: indexType.value
+  });
 }
-
-// Update dialog open handler
-watch(showSettings, (value) => {
-  if (value) {
-    tempIndex.value = selectedIndex.value; // Initialize temp value when dialog opens
-  }
-});
 </script>
 
 <style scoped>
@@ -576,7 +579,7 @@ watch(showSettings, (value) => {
   position: absolute;
   top: 12px;
   left: 15px;  /* Fine-tuned positioning */
-  right: 5px;
+  right: 0px;
   pointer-events: none;
   font-family: inherit;
   font-size: inherit;

@@ -21,11 +21,12 @@ const q = route.query;
 
 const query = ref(q.query);
 
-async function searchData({query: searchQuery}) {
+async function searchData({query: searchQuery, indexType: newIndexType}) {
   return await navigateTo({
     path: '/results',
     query: {
-      query: searchQuery
+      query: searchQuery,
+      index_type: newIndexType
     }
   });
 }

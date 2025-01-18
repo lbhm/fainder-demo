@@ -2,6 +2,25 @@
   <v-app>
     <v-app-bar rounded>
       <Logo size="medium" class="mr-4" @click="gotoHome"/>
+
+      <!-- Add search component in app bar only on results page -->
+      <template v-if="route.path === '/results'">
+        <v-btn
+          icon
+          class="ml-2"
+          @click="showSearchDialog = true"
+        >
+          <v-icon>mdi-arrow-expand</v-icon>
+        </v-btn>
+        <Search_Component
+          :searchQuery="route.query.query"
+          :inline="true"
+          :queryBuilder="false"
+          @searchData="searchData"
+          class="app-bar-search mx-2"
+        />
+      </template>
+
       <v-spacer></v-spacer>
 
       <v-menu>
@@ -50,6 +69,31 @@
         </v-list>
       </v-menu>
     </v-app-bar>
+
+    <!-- Add expandable search dialog -->
+    <v-dialog
+      v-model="showSearchDialog"
+      transition="dialog-top-transition"
+    >
+      <v-card>
+        <v-toolbar dark color="primary">
+          <v-btn icon dark @click="showSearchDialog = false">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+          <v-toolbar-title>Advanced Search</v-toolbar-title>
+        </v-toolbar>
+
+        <v-container class="pt-6">
+          <Search_Component
+            :searchQuery="route.query.query"
+            :inline="true"
+            :queryBuilder="true"
+            @searchData="(data) => { searchData(data); showSearchDialog = false; }"
+          />
+        </v-container>
+      </v-card>
+    </v-dialog>
+
     <NuxtLayout>
       <NuxtPage />
     </NuxtLayout>
@@ -66,8 +110,10 @@
     return navigateTo({path:'/'})
   }
 
+  const { loadResults } = useSearchOperations();
   const route = useRoute();
   const theme = useTheme();
+  const { query, indexType, currentPage, selectedResultIndex } = useSearchState(); 
   const colorMode = useColorMode();
   const highlightEnabled = useCookie('highlight-enabled', { default: () => true })
 
@@ -91,4 +137,40 @@
   function toggleHighlight() {
     highlightEnabled.value = !highlightEnabled.value
   }
+
+  const showSearchDialog = ref(false);
+
+  async function searchData({ query: searchQuery, indexType: newIndexType }) {
+    console.log(searchQuery)
+    query.value = searchQuery;
+    indexType.value = newIndexType;
+
+    currentPage.value = 1;
+    selectedResultIndex.value = 0;
+
+    await loadResults(searchQuery, 1, newIndexType);
+
+
+    return await navigateTo({
+      path: '/results',
+      query: {
+        query: searchQuery,
+        page: 1,
+        index: 0,
+        index_type: newIndexType,
+        theme: theme.global.name.value,
+      },
+    });
+  }
 </script>
+
+<style scoped>
+.app-bar-search {
+  max-width: 600px;
+  flex-grow: 1;
+}
+
+.app-bar-search :deep(.v-field) {
+  border-radius: 20px;
+}
+</style>

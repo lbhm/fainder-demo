@@ -4,17 +4,10 @@ the details of the selected result will be displayed on the right side of the
 page
 
 <template>
-  <div class="pa-400">
-    <div class="app-container pa-10">
-      <!-- Inline Search Component -->
-      <div class="search-container">
-        <Search_Component
-          :searchQuery="query"
-          :inline="true"
-          :queryBuilder="false"
-          @searchData="searchData"
-        />
-      </div>
+  <v-main>
+    <div class="pa-5">
+      <!-- Remove search container -->
+      
       <!-- Add search stats -->
       <div
         v-if="!isLoading && !error && results && results.length > 0"
@@ -157,43 +150,45 @@ page
         </div>
       </div>
     </div>
-  </div>
+  </v-main>
 </template>
 
 <script setup>
 import { Bar } from "vue-chartjs";
 import { useTheme } from "vuetify";
 
-const runtimeConfig = useRuntimeConfig();
-
-const results = ref(null);
-const selectedResult = ref(null);
-const showSearchModal = ref(false);
-const isLoading = ref(false);
-const error = ref(null);
-const theme = useTheme();
-
 const route = useRoute();
-const q = ref(route.query);
+const theme = useTheme();
+const searchOperations = useSearchOperations();
 
-// read query, page and theme from query params
-const query = ref(q.value.query);
-const selectedIndex = ref(parseInt(q.value.index) || 0);
-const currentPage = ref(parseInt(q.value.page) || 1);
+// Use the search state
+const {
+  results,
+  selectedResultIndex, // Change to selectedResultIndex
+  isLoading,
+  error,
+  searchTime,
+  resultCount,
+  currentPage,
+  totalPages,
+  query,
+  indexType, // Add indexType from state
+  perPage
+} = useSearchState();
 
-const descriptionPanel = ref([0]); // Array with 0 means first panel is open
-const recordSetPanels = ref([]); // Array of arrays for each file panel
+console.log(selectedResultIndex.value);
 
-// reset recordSetPanels and descriptionPanel when selectedResult changes
+// Add computed for selected result
+const selectedResult = computed(() => 
+  results.value ? results.value[selectedResultIndex.value] : null
+);
 
-console.log(query.value);
+// Initialize state from route
+query.value = route.query.query;
+indexType.value = route.query.index_type || 'rebinning';
 
-// Add new refs for search stats
-const searchTime = ref(0);
-const resultCount = ref(0);
-
-const totalPages = ref(1);
-// Remove static perPage constant
+const descriptionPanel = ref([0]);
+const recordSetPanels = ref([]);
 const totalVisible = ref(7);
 
 // Add ref for window height
@@ -203,11 +198,12 @@ const headerHeight = 200; // Approximate height of header elements (search + sta
 const paginationHeight = 56; // Height of pagination controls
 
 // Update perPage to be calculated based on available height
-const perPage = computed(() => {
+const updatePerPage = computed(() => {
   const availableHeight = windowHeight.value - headerHeight - paginationHeight;
   const itemsPerPage = Math.floor(availableHeight / itemHeight);
   // Ensure we show at least 3 items and at most 15 items
-  return Math.max(3, Math.min(15, itemsPerPage));
+  perPage.value = Math.max(3, Math.min(15, itemsPerPage));
+  return perPage.value;
 });
 
 const handleResize = () => {
@@ -237,111 +233,76 @@ function updateTotalVisible() {
 }
 
 watch(currentPage, async (newPage) => {
-  await loadResults(query.value, newPage);
+  await searchOperations.loadResults(
+    query.value, 
+    newPage,  
+    indexType.value
+  );
+  
   // Update URL with new page
   navigateTo({
     path: "/results",
     query: {
       query: query.value,
       page: newPage,
-      index: selectedIndex.value,
+      index: selectedResultIndex.value,
+      index_type: indexType.value, 
       theme: theme.global.name.value,
     },
   });
 });
 
+watch(updatePerPage, (newPerPage) => {
+  if (currentPage.value > 0) {
+    perPage.value = newPerPage;
+    searchOperations.loadResults(query.value, currentPage.value);
+  }
+});
+
 const selectResult = (result) => {
   const index = results.value.indexOf(result);
-  selectedIndex.value = index;
-  selectedResult.value = result;
+  selectedResultIndex.value = index;
 
   if (result.recordSet) {
     descriptionPanel.value = [0];
-    recordSetPanels.value = result.recordSet.map(() => [0]); // Initialize each file panel with an array containing 0
-    console.log(recordSetPanels.value);
+    recordSetPanels.value = result.recordSet.map(() => [0]);
   }
 
-  // Update URL keeping the page parameter
+  // Update URL with all necessary parameters
   navigateTo({
     path: "/results",
     query: {
-      query: query.value,
-      page: currentPage.value,
-      index: index,
-      theme: theme.global.name.value,
+      ...route.query, // Keep existing query parameters
+      index: index,   // Update index
     },
   });
 };
 
-await loadResults(query.value, currentPage.value);
-
-async function loadResults(queryStr, page = 1) {
-  isLoading.value = true;
-  error.value = null;
-
-  try {
-    const response = await fetch(`${runtimeConfig.public.apiBase}/query`, {
-      method: "POST",
-      mode: "cors",
-      credentials: "include",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      },
-      body: JSON.stringify({
-        query: queryStr,
-        page: page,
-        per_page: perPage.value, // Access the computed value here
-        index_type: route.query.index_type || 'rebinning',
-      }),
-    });
-
-    if (!response.ok) {
-      const errorBody = await response.text();
-      let details;
-      try {
-        const errorJson = JSON.parse(errorBody);
-        details = errorJson.message || errorBody;
-      } catch {
-        details = errorBody;
-      }
-
-      error.value = {
-        message: `Search request failed (${response.status} ${response.statusText})`,
-        details: details
-      };
-      throw error.value;
+// Initialize from route on mount
+onMounted(() => {
+  if (route.query.index && results.value) {
+    const index = parseInt(route.query.index);
+    if (index >= 0 && index < results.value.length) {
+      selectedResultIndex.value = index;
     }
-
-    const r = await response.json();
-    results.value = r.results;
-    searchTime.value = r.search_time;
-    resultCount.value = r.result_count;
-    totalPages.value = r.total_pages;
-    currentPage.value = r.page;
-
-    if (results.value && results.value.length > 0) {
-      if (results.value[selectedIndex.value]) {
-        selectResult(results.value[selectedIndex.value]);
-      } else {
-        selectResult(results.value[0]);
-      }
-    } else {
-      results.value = null;
-      selectedResult.value = null;
-    }
-  } catch (e) {
-    error.value = {
-      message: "Failed to perform search",
-      details: e.message || e.toString()
-    };
-    results.value = null;
-    selectedResult.value = null;
-  } finally {
-    isLoading.value = false;
   }
-}
+});
+
+// Add retry function
+const retrySearch = async () => {
+  await searchOperations.loadResults(
+    query.value, 
+    currentPage.value, 
+    route.query.index_type
+  );
+};
+
+// Initial load
+await searchOperations.loadResults(
+  query.value, 
+  currentPage.value,  
+  indexType.value
+);
 
 const chartOptions = ref({
   scales: {
@@ -445,28 +406,8 @@ const getChartData = (field, index) => {
   };
 };
 
-async function searchData({ query: searchQuery, indexType }) {
-  showSearchModal.value = false;
-  currentPage.value = 1; // Reset to first page on new search
-  await loadResults(searchQuery, 1);
-  query.value = searchQuery;
 
-  return await navigateTo({
-    path: "/results",
-    query: {
-      query: searchQuery,
-      page: 1,
-      index: 0,
-      index_type: indexType,
-      theme: theme.global.name.value,
-    },
-  });
-}
 
-// Add retry function
-const retrySearch = async () => {
-  await loadResults(query.value, currentPage.value);
-};
 </script>
 
 <style scoped>
@@ -475,17 +416,11 @@ const retrySearch = async () => {
   flex-direction: column;
   max-width: 100%;
   min-height: calc(100vh - 64px);
-  padding: 16px; /* Reduced from 24px */
-  margin-top: 16px; /* Reduced from 64px */
+  padding: 16px;
+  margin-top: 0; /* Remove top margin since search is in app bar now */
 }
 
-.search-container {
-  margin-bottom: 16px;
-  background-color: rgb(var(--v-theme-surface)) !important;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  padding: 8px; /* Added padding for inner spacing */
-}
+/* Remove .search-container styles */
 
 .results-wrapper {
   display: flex;
