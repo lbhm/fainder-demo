@@ -12,6 +12,7 @@
               label="Search by percentile predicates and keywords"
               variant="outlined"
               density="comfortable"
+              :error="!isValid"
               :rules="[validateSyntax]"
               :error-messages="syntaxError"
               @update:model-value="highlightSyntax"
@@ -28,11 +29,10 @@
             :block="!inline"
             :class="{ 'search-btn': inline }"
             color="primary"
-            prepend-icon="mdi-magnify"
+            icon="mdi-magnify"
             variant="elevated"
             size="large"
           >
-            Search
           </v-btn>
         </v-col>
       </v-row>
@@ -42,7 +42,7 @@
 
 
 <script setup>
-import { onMounted, onUnmounted, ref, computed } from 'vue';
+import { onMounted, onUnmounted, ref } from 'vue';
 
 const props = defineProps({
   searchQuery: String,
@@ -56,6 +56,22 @@ const emit = defineEmits(['searchData']);
 const searchQuery = ref(props.searchQuery);
 const syntaxError = ref('');
 const highlightedQuery = ref('');
+const highlightEnabled = useCookie('highlight-enabled');
+const isValid = ref(true);
+
+// on change of highlightEnabled value, update syntax highlighting
+watch(highlightEnabled, (value) => {
+  // Clear error state when highlighting is disabled
+  if (!value) {
+    syntaxError.value = '';
+    isValid.value = true;
+  } else {
+    // Force validation when highlighting is enabled
+    isValid.value = validateSyntax(searchQuery.value);
+  }
+  // Update highlighting
+  highlightSyntax(searchQuery.value);
+});
 
 const handleKeyDown = (event) => {
   if (event.key === 'Enter') {
@@ -82,10 +98,25 @@ async function searchData() {
 }
 
 const validateSyntax = (value) => {
-  if (!value) return true;
+  if (!value) {
+    syntaxError.value = '';
+    isValid.value = true;
+    return true;
+  }
+  if (value.trim() === '') {
+    syntaxError.value = '';
+    isValid.value = true;
+    return true;
+  }
+  if (!highlightEnabled.value) {
+    syntaxError.value = '';
+    isValid.value = true;
+    return true;
+  }
 
-  let isValid = true;
+  // Reset state
   syntaxError.value = '';
+  isValid.value = true;
 
   try {
     // Match percentile function patterns
@@ -107,7 +138,7 @@ const validateSyntax = (value) => {
     columnPattern.lastIndex = 0;
 
     if (!hasPercentile && !hasKeyword && !hasColumn) {
-      isValid = false;
+      isValid.value = false;
       syntaxError.value = 'Query must contain at least one percentile (pp), keyword (kw), or column (col) function';
       return false;
     }
@@ -120,7 +151,7 @@ const validateSyntax = (value) => {
     const closeParens = (fullQuery.match(/\)/g) || []).length;
 
     if (openParens !== closeParens) {
-      isValid = false;
+      isValid.value = false;
       syntaxError.value = 'Unbalanced parentheses';
       return false;
     }
@@ -138,23 +169,27 @@ const validateSyntax = (value) => {
       const isColumn = columnPattern.test(trimmedTerm);
 
       if (!isPercentile && !isKeyword && !isColumn && trimmedTerm !== 'NOT') {
-        isValid = false;
+        isValid.value = false;
         syntaxError.value = `Invalid term: ${trimmedTerm}`;
         break;
       }
     }
 
   } catch (e) {
-    isValid = false;
+    isValid.value = false;
     syntaxError.value = 'Invalid query syntax';
   }
 
-  return isValid;
+  return isValid.value;
 };
 
 const highlightSyntax = (value) => {
   if (!value) {
     highlightedQuery.value = '';
+    return;
+  }
+  if (!highlightEnabled.value) {
+    highlightedQuery.value = value;
     return;
   }
 

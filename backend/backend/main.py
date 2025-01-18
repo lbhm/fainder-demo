@@ -1,10 +1,12 @@
+import io
 import sys
 import time
+import zipfile
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from lark import UnexpectedInput
 from loguru import logger
@@ -123,6 +125,38 @@ async def query(request: QueryRequest) -> QueryResponse:
     except Exception as e:
         logger.error(f"Unknown query execution error: {e}")
         raise HTTPException(status_code=500, detail="Internal server error") from e
+
+
+@app.post("/upload")
+async def upload_files(files: list[UploadFile]):
+    """Handle upload of JSON files or ZIP containing JSON files."""
+    try:
+        for file in files:
+            if not file.filename:
+                raise HTTPException(status_code=400, detail="No file uploaded")
+            if file.filename.endswith(".zip"):
+                # Handle ZIP file
+                zip_contents = await file.read()
+                with zipfile.ZipFile(io.BytesIO(zip_contents)) as zip_file:
+                    for json_file in zip_file.namelist():
+                        if json_file.endswith(".json"):
+                            json_content = zip_file.read(json_file)
+                            # Process JSON content
+                            # TODO: Add a function to handle JSON content
+            elif file.filename.endswith(".json"):
+                # Handle JSON file
+                content = await file.read()
+                # TODO: Add a function to handle JSON content
+            else:
+                raise HTTPException(
+                    status_code=400, detail="Only .json and .zip files are accepted"
+                )
+
+        # TODO: Add the reindexing process
+        return {"message": "Files uploaded successfully"}
+    except Exception as e:
+        logger.error(f"Upload error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/cache_statistics")

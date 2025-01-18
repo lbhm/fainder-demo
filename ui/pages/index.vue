@@ -6,6 +6,7 @@
       </div>
       <Search_Component
         :searchQuery="query"
+        :inline="true"
         @searchData="searchData"
       />
     </div>
