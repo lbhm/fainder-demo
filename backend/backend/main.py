@@ -87,7 +87,8 @@ async def query(request: QueryRequest) -> QueryResponse:
 
     try:
         start_time = time.perf_counter()
-        doc_ids = query_evaluator.execute(request.query)
+        # Pass index type to execute
+        doc_ids = query_evaluator.execute(request.query, index_type=request.index_type)
 
         # Calculate pagination
         start_idx = (request.page - 1) * request.per_page

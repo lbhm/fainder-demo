@@ -48,7 +48,8 @@ class QueryEvaluator:
         self.lucene_connector = lucene_connector
         self.grammar = Lark(GRAMMAR, start="start")
         self.annotator = QueryAnnotator()
-        self.executor = QueryExecutor(self.lucene_connector, rebinning_index, hnsw_index, metadata)
+        self.executor_rebinning = QueryExecutor(self.lucene_connector, rebinning_index, hnsw_index, metadata)
+        self.executor_conversion = QueryExecutor(self.lucene_connector, conversion_index, hnsw_index, metadata)
 
         # NOTE: Don't use lru_cache on methods
         # See https://docs.astral.sh/ruff/rules/cached-instance-method/ for details
@@ -57,18 +58,25 @@ class QueryEvaluator:
     def parse(self, query: str) -> Tree:
         return self.grammar.parse(query)
 
-    def _execute(self, query: str, enable_filtering: bool = True) -> list[int]:
+    def _execute(self, query: str, enable_filtering: bool = True, index_type: str = "rebinning") -> list[int]:
         self.annotator.reset()
-        self.executor.reset()
-        self.executor.enable_filtering = enable_filtering
+        executor: QueryExecutor
+        if index_type == "rebinning":
+            executor = self.executor_rebinning
+        elif index_type == "conversion":
+            executor = self.executor_conversion
+        else:
+            raise ValueError(f"Unknown index type: {index_type}")
+        executor.reset()
+        executor.enable_filtering = enable_filtering
 
         parse_tree = self.parse(query)
         self.annotator.visit(parse_tree)
         logger.trace(f"Parse tree: {parse_tree.pretty()}")
 
-        result: list[int] = list(self.executor.transform(parse_tree))
+        result: list[int] = list(executor.transform(parse_tree))
         # Sort the results by score (descending), append to the end if no score is available
-        result.sort(key=lambda x: self.executor.scores.get(x, -1), reverse=True)
+        result.sort(key=lambda x: executor.scores.get(x, -1), reverse=True)
         return result
 
     def clear_cache(self) -> None:

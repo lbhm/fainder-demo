@@ -5,7 +5,7 @@
   <v-main :class="['search-main', { 'pa-3': inline }]">
     <v-container :class="{ 'pa-2': inline }">
       <v-row :class="{ 'inline-layout': inline }">
-        <v-col :cols="inline ? 10 : 12">
+        <v-col :cols="inline ? 9 : 12">
           <div class="input-wrapper">
             <v-text-field
               v-model="searchQuery"
@@ -22,8 +22,19 @@
             <div class="syntax-highlight" v-html="highlightedQuery"></div>
           </div>
         </v-col>
-
-        <v-col :cols="inline ? 2 : 12">
+        <v-col :cols="inline ? 1 : 6">
+          <v-btn
+            @click="showSettings = true"
+            :block="!inline"
+            :class="{ 'settings-btn': inline }"
+            color="secondary"
+            icon="mdi-cog"
+            variant="elevated"
+            size="large"
+          >
+          </v-btn>
+        </v-col>
+        <v-col :cols="inline ? 1 : 6">
           <v-btn
             @click="searchData"
             :block="!inline"
@@ -37,12 +48,46 @@
         </v-col>
       </v-row>
     </v-container>
+
+    <!-- Settings Dialog -->
+    <v-dialog v-model="showSettings" width="500">
+      <v-card>
+        <v-card-title class="text-h5">
+          Search Settings
+        </v-card-title>
+
+        <v-card-text>
+          <v-select
+            v-model="tempIndex"
+            :items="indexTypes"
+            label="Index Type"
+            variant="outlined"
+          />
+        </v-card-text>
+
+        <v-card-actions>
+          <v-spacer />
+          <v-btn
+            color="error"
+            variant="text"
+            @click="cancelSettings"
+            icon="mdi-close"
+          />
+          <v-btn
+            color="primary"
+            variant="text"
+            @click="saveSettings"
+            icon="mdi-content-save-all"
+          />
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-main>
 </template>
 
 
 <script setup>
-import { onMounted, onUnmounted, ref } from 'vue';
+import { onMounted, onUnmounted, ref, watch } from 'vue';
 
 const props = defineProps({
   searchQuery: String,
@@ -58,6 +103,14 @@ const syntaxError = ref('');
 const highlightedQuery = ref('');
 const highlightEnabled = useCookie('highlight-enabled');
 const isValid = ref(true);
+
+const showSettings = ref(false);
+const selectedIndex = ref('rebinning');
+const tempIndex = ref('rebinning'); // Add temporary index for dialog
+const indexTypes = [
+  { title: 'Rebinning Index', value: 'rebinning' },
+  { title: 'Conversion Index', value: 'conversion' },
+];
 
 // on change of highlightEnabled value, update syntax highlighting
 watch(highlightEnabled, (value) => {
@@ -101,7 +154,8 @@ async function searchData() {
   const processedQuery = isPlainText ? `kw(${query})` : query;
 
   emit('searchData', {
-    query: processedQuery
+    query: processedQuery,
+    indexType: selectedIndex.value
   });
 }
 
@@ -117,8 +171,16 @@ const validateSyntax = (value) => {
   isValid.value = true;
 
   try {
-    // If it's plain text, it's always valid
-    if (!/(?:pp|percentile|kw|keyword|col|column)\s*\(|AND|OR|XOR|NOT|\(|\)/.test(value.trim())) {
+    const query = value.trim();
+    
+    // If it's a simple keyword query (no special syntax), treat it as valid
+    if (!query.includes('(') && !query.includes(')') && 
+        !/\b(AND|OR|XOR|NOT)\b/i.test(query)) {
+      return true;
+    }
+
+    // Check if it's a simple keyword function
+    if (/^(kw|keyword)\s*\([^)]+\)$/i.test(query)) {
       return true;
     }
 
@@ -127,24 +189,33 @@ const validateSyntax = (value) => {
     const operatorPattern = /\b(AND|OR|XOR|NOT)\b/gi;
     const parenthesesPattern = /[()]/g;
 
-    // Allow plain text as valid input
+    // For complex queries, check each component
     if (!functionPattern.test(value) &&
         !operatorPattern.test(value) &&
         !parenthesesPattern.test(value)) {
       return true;
     }
 
-    // For complex queries, validate each term
-    let query = processQueryTerms(value);
-
     // Check balanced parentheses
-    const openParens = (query.match(/\(/g) || []).length;
-    const closeParens = (query.match(/\)/g) || []).length;
+    const openParens = (value.match(/\(/g) || []).length;
+    const closeParens = (value.match(/\)/g) || []).length;
 
     if (openParens !== closeParens) {
       isValid.value = false;
       syntaxError.value = 'Unbalanced parentheses';
       return false;
+    }
+
+    // Validate individual function patterns
+    const functions = value.match(functionPattern) || [];
+    for (const func of functions) {
+      if (!/^(pp|percentile)\s*\(\s*\d+(\.\d+)?\s*;\s*(ge|gt|le|lt)\s*;\s*\d+(\.\d+)?\s*\)$/i.test(func) && 
+          !/^(kw|keyword)\s*\([^)]+\)$/i.test(func) &&
+          !/^(col|column)\s*\([^;]+;\s*\d+\)$/i.test(func)) {
+        isValid.value = false;
+        syntaxError.value = 'Invalid function syntax';
+        return false;
+      }
     }
 
     return true;
@@ -154,8 +225,6 @@ const validateSyntax = (value) => {
     return false;
   }
 };
-
-// Remove processQueryTerms function as it's no longer needed
 
 const highlightSyntax = (value) => {
   if (!value) {
@@ -201,6 +270,23 @@ const highlightSyntax = (value) => {
 
   highlightedQuery.value = highlighted;
 };
+
+function cancelSettings() {
+  tempIndex.value = selectedIndex.value; // Reset to current selection
+  showSettings.value = false;
+}
+
+function saveSettings() {
+  selectedIndex.value = tempIndex.value; // Apply the new selection
+  showSettings.value = false;
+}
+
+// Update dialog open handler
+watch(showSettings, (value) => {
+  if (value) {
+    tempIndex.value = selectedIndex.value; // Initialize temp value when dialog opens
+  }
+});
 </script>
 
 <style scoped>
@@ -213,6 +299,16 @@ const highlightSyntax = (value) => {
 }
 
 .search-btn {
+  height: 48px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  text-transform: none;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+}
+
+.settings-btn {
   height: 48px;
   font-weight: 500;
   letter-spacing: 0.5px;

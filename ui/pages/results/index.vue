@@ -292,6 +292,7 @@ async function loadResults(queryStr, page = 1) {
         query: queryStr,
         page: page,
         per_page: perPage.value, // Access the computed value here
+        index_type: route.query.index_type || 'rebinning',
       }),
     });
 
@@ -443,7 +444,7 @@ const getChartData = (field, index) => {
   };
 };
 
-async function searchData({ query: searchQuery }) {
+async function searchData({ query: searchQuery, indexType }) {
   showSearchModal.value = false;
   currentPage.value = 1; // Reset to first page on new search
   await loadResults(searchQuery, 1);
@@ -455,6 +456,7 @@ async function searchData({ query: searchQuery }) {
       query: searchQuery,
       page: 1,
       index: 0,
+      index_type: indexType,
       theme: theme.global.name.value,
     },
   });
