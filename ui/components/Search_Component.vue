@@ -92,23 +92,21 @@ onUnmounted(() => {
 });
 
 async function searchData() {
+  if (!searchQuery.value) return;
+
+  const query = searchQuery.value.trim();
+  // Check if query is just plain text (no operators or functions)
+  const isPlainText = !/(?:pp|percentile|kw|keyword|col|column)\s*\(|AND|OR|XOR|NOT|\(|\)/.test(query);
+
+  const processedQuery = isPlainText ? `kw(${query})` : query;
+
   emit('searchData', {
-    query: searchQuery.value
+    query: processedQuery
   });
 }
 
 const validateSyntax = (value) => {
-  if (!value) {
-    syntaxError.value = '';
-    isValid.value = true;
-    return true;
-  }
-  if (value.trim() === '') {
-    syntaxError.value = '';
-    isValid.value = true;
-    return true;
-  }
-  if (!highlightEnabled.value) {
+  if (!value || value.trim() === '' || !highlightEnabled.value) {
     syntaxError.value = '';
     isValid.value = true;
     return true;
@@ -119,36 +117,29 @@ const validateSyntax = (value) => {
   isValid.value = true;
 
   try {
-    // Match percentile function patterns
-    const percentilePattern = /(?:pp|percentile)\s*\(\s*(\d+(?:\.\d+)?)\s*;\s*(ge|gt|le|lt)\s*;\s*(\d+(?:\.\d+)?)\s*(?:;\s*([a-zA-Z0-9_]+))?\s*\)/gi;
-
-    // Match keyword function patterns
-    const keywordPattern = /(?:kw|keyword)\s*\(\s*([^)]+)\s*\)/gi;
-
-    // Match column function patterns
-    const columnPattern = /(?:col|column)\s*\(\s*([a-zA-Z0-9_]+)\s*;\s*(\d+)\s*\)/gi;
-
-    // Check for at least one pp/percentile or kw/keyword or col/column function
-    const fullQuery = value.trim();
-    const hasPercentile = percentilePattern.test(fullQuery);
-    percentilePattern.lastIndex = 0;
-    const hasKeyword = keywordPattern.test(fullQuery);
-    keywordPattern.lastIndex = 0;
-    const hasColumn = columnPattern.test(fullQuery);
-    columnPattern.lastIndex = 0;
-
-    if (!hasPercentile && !hasKeyword && !hasColumn) {
-      isValid.value = false;
-      syntaxError.value = 'Query must contain at least one percentile (pp), keyword (kw), or column (col) function';
-      return false;
+    // If it's plain text, it's always valid
+    if (!/(?:pp|percentile|kw|keyword|col|column)\s*\(|AND|OR|XOR|NOT|\(|\)/.test(value.trim())) {
+      return true;
     }
 
-    // Match operators
+    // Rest of validation for complex queries
+    const functionPattern = /(?:pp|percentile|kw|keyword|col|column)\s*\([^)]+\)/gi;
     const operatorPattern = /\b(AND|OR|XOR|NOT)\b/gi;
+    const parenthesesPattern = /[()]/g;
+
+    // Allow plain text as valid input
+    if (!functionPattern.test(value) &&
+        !operatorPattern.test(value) &&
+        !parenthesesPattern.test(value)) {
+      return true;
+    }
+
+    // For complex queries, validate each term
+    let query = processQueryTerms(value);
 
     // Check balanced parentheses
-    const openParens = (fullQuery.match(/\(/g) || []).length;
-    const closeParens = (fullQuery.match(/\)/g) || []).length;
+    const openParens = (query.match(/\(/g) || []).length;
+    const closeParens = (query.match(/\)/g) || []).length;
 
     if (openParens !== closeParens) {
       isValid.value = false;
@@ -156,32 +147,15 @@ const validateSyntax = (value) => {
       return false;
     }
 
-    // Split query into terms
-    const terms = fullQuery.split(/\b(AND|OR|XOR)\b/i);
-
-    for (const term of terms) {
-      const trimmedTerm = term.trim();
-      if (!trimmedTerm || operatorPattern.test(trimmedTerm)) continue;
-
-      // Check if term is a valid percentile, keyword, or column function
-      const isPercentile = percentilePattern.test(trimmedTerm);
-      const isKeyword = keywordPattern.test(trimmedTerm);
-      const isColumn = columnPattern.test(trimmedTerm);
-
-      if (!isPercentile && !isKeyword && !isColumn && trimmedTerm !== 'NOT') {
-        isValid.value = false;
-        syntaxError.value = `Invalid term: ${trimmedTerm}`;
-        break;
-      }
-    }
-
+    return true;
   } catch (e) {
     isValid.value = false;
     syntaxError.value = 'Invalid query syntax';
+    return false;
   }
-
-  return isValid.value;
 };
+
+// Remove processQueryTerms function as it's no longer needed
 
 const highlightSyntax = (value) => {
   if (!value) {
