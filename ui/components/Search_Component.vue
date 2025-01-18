@@ -47,7 +47,114 @@
           </v-btn>
         </v-col>
       </v-row>
+
+      <!-- Query Builder Tools -->
+      <v-row v-if="queryBuilder" class="query-builder mt-4">
+        <v-col cols="12">
+          <div class="builder-header mb-2">
+            <v-icon icon="mdi-puzzle" class="mr-2" />
+            <span class="text-h6">Query Builder</span>
+          </div>
+          <div class="d-flex flex-wrap gap-2">
+            <v-chip
+              v-for="op in operators"
+              :key="op.text"
+              :color="op.color"
+              class="mr-2 mb-2"
+              @click="insertOperator(op.text)"
+            >
+              {{ op.text }}
+            </v-chip>
+            <v-chip
+              v-for="func in functions"
+              :key="func.name"
+              :color="func.color"
+              class="mr-2 mb-2"
+              @click="openFunctionDialog(func.type)"
+            >
+              {{ func.name }}
+            </v-chip>
+          </div>
+        </v-col>
+      </v-row>
     </v-container>
+
+    <!-- Function Dialogs -->
+    <v-dialog v-model="showFunctionDialog" max-width="500px">
+      <v-card>
+        <v-card-title>{{ currentFunction?.name || 'Build Function' }}</v-card-title>
+        <v-card-text>
+          <!-- Percentile Function Builder -->
+          <div v-if="currentFunction?.type === 'percentile'">
+            <v-text-field
+              v-model="functionParams.percentile"
+              label="Percentile"
+              type="number"
+              min="0"
+              max="1"
+              step="0.01"
+              :rules="[v => !!v || 'Percentile is required',
+                      v => (v >= 0 && v <= 1) || 'Percentile must be between 0 and 1']"
+              hide-details="auto"
+            />
+            <v-select
+              v-model="functionParams.comparison"
+              :items="['gt', 'ge', 'lt', 'le']"
+              label="Comparison"
+              :rules="[v => !!v || 'Comparison operator is required']"
+              hide-details="auto"
+              class="mt-4"
+            />
+            <v-text-field
+              v-model="functionParams.value"
+              label="Value"
+              type="number"
+              :rules="[v => !!v || 'Value is required']"
+              hide-details="auto"
+              class="mt-4"
+            />
+          </div>
+          <!-- Keyword Function Builder -->
+          <div v-if="currentFunction?.type === 'keyword'">
+            <v-text-field
+              v-model="functionParams.keyword"
+              label="Search Terms"
+              :rules="[v => !!v || 'Search terms are required']"
+              hide-details="auto"
+            />
+          </div>
+          <!-- Column Function Builder -->
+          <div v-if="currentFunction?.type === 'column'">
+            <v-text-field
+              v-model="functionParams.column"
+              label="Column Name"
+              :rules="[v => !!v || 'Column name is required']"
+              hide-details="auto"
+            />
+            <v-text-field
+              v-model="functionParams.threshold"
+              label="Threshold"
+              type="number"
+              :rules="[v => !!v || 'Threshold is required']"
+              hide-details="auto"
+              class="mt-4"
+            />
+          </div>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn color="error" variant="text" @click="showFunctionDialog = false">Cancel</v-btn>
+          <v-btn 
+            color="primary" 
+            variant="text" 
+            @click="validateAndInsert"
+            :disabled="!isFormValid"
+          >
+            Insert
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
     <!-- Settings Dialog -->
     <v-dialog v-model="showSettings" width="500">
@@ -87,13 +194,17 @@
 
 
 <script setup>
-import { onMounted, onUnmounted, ref, watch } from 'vue';
+import { onMounted, onUnmounted, ref, watch, nextTick, computed } from 'vue';
 
 const props = defineProps({
   searchQuery: String,
   inline: {
     type: Boolean,
     default: false
+  },
+  queryBuilder: {
+    type: Boolean,
+    default: true
   }
 });
 const emit = defineEmits(['searchData']);
@@ -111,6 +222,122 @@ const indexTypes = [
   { title: 'Rebinning Index', value: 'rebinning' },
   { title: 'Conversion Index', value: 'conversion' },
 ];
+
+// Query builder state
+const showFunctionDialog = ref(false);
+const currentFunction = ref(null);
+const functionParams = ref({});
+
+const operators = [
+  { text: 'AND', color: 'primary' },
+  { text: 'OR', color: 'secondary' },
+  { text: 'XOR', color: 'warning' },
+  { text: 'NOT', color: 'error' },
+];
+
+const functions = [
+  { type: 'percentile', name: 'Percentile', color: 'indigo' },
+  { type: 'keyword', name: 'Keyword', color: 'teal' },
+  { type: 'column', name: 'Column', color: 'deep-purple' },
+];
+
+// Insert operator at cursor position or at end
+const insertOperator = (operator) => {
+  const input = document.querySelector('.search-input input');
+  const cursorPos = input.selectionStart;
+  const currentValue = searchQuery.value || '';
+  
+  const beforeCursor = currentValue.substring(0, cursorPos);
+  const afterCursor = currentValue.substring(cursorPos);
+  
+  // Add space before operator if there's text before and it doesn't end with space
+  const needsSpaceBefore = beforeCursor.length > 0 && !beforeCursor.endsWith(' ');
+  // Add space after operator if there's text after and it doesn't start with space
+  const needsSpaceAfter = afterCursor.length > 0 && !afterCursor.startsWith(' ');
+  
+  const spacedOperator = `${needsSpaceBefore ? ' ' : ''}${operator}${needsSpaceAfter ? ' ' : ''}`;
+  searchQuery.value = `${beforeCursor}${spacedOperator}${afterCursor}`;
+  highlightSyntax(searchQuery.value);
+  
+  // Restore focus and move cursor after inserted operator and space
+  nextTick(() => {
+    input.focus();
+    const newPos = cursorPos + spacedOperator.length;
+    input.setSelectionRange(newPos, newPos);
+  });
+};
+
+// Open function builder dialog
+const openFunctionDialog = (type) => {
+  currentFunction.value = functions.find(f => f.type === type);
+  functionParams.value = {};
+  showFunctionDialog.value = true;
+};
+
+// Build and insert function based on type
+const validateAndInsert = () => {
+  if (!isFormValid.value) return;
+  
+  let functionText = '';
+  switch (currentFunction.value.type) {
+    case 'percentile':
+      functionText = `pp(${parseFloat(functionParams.value.percentile)};${functionParams.value.comparison};${parseFloat(functionParams.value.value)})`;
+      break;
+    case 'keyword':
+      functionText = `kw(${functionParams.value.keyword.trim()})`;
+      break;
+    case 'column':
+      functionText = `col(${functionParams.value.column.trim()};${parseFloat(functionParams.value.threshold)})`;
+      break;
+  }
+  
+  const input = document.querySelector('.search-input input');
+  const cursorPos = input.selectionStart;
+  const currentValue = searchQuery.value || '';
+  
+  const beforeCursor = currentValue.substring(0, cursorPos);
+  const afterCursor = currentValue.substring(cursorPos);
+  
+  searchQuery.value = `${beforeCursor}${functionText}${afterCursor}`;
+  highlightSyntax(searchQuery.value);
+  
+  showFunctionDialog.value = false;
+  
+  // Restore focus
+  nextTick(() => {
+    input.focus();
+    const newPos = cursorPos + functionText.length;
+    input.setSelectionRange(newPos, newPos);
+  });
+};
+
+// Replace existing insertFunction with validateAndInsert
+const insertFunction = validateAndInsert;
+
+const isFormValid = computed(() => {
+  if (!currentFunction.value || !functionParams.value) return false;
+
+  switch (currentFunction.value.type) {
+    case 'percentile':
+      return (
+        !!functionParams.value.percentile &&
+        parseFloat(functionParams.value.percentile) >= 0 &&
+        parseFloat(functionParams.value.percentile) <= 1 &&
+        !!functionParams.value.comparison &&
+        !!functionParams.value.value
+      );
+    case 'keyword':
+      return !!functionParams.value.keyword && functionParams.value.keyword.trim() !== '';
+    case 'column':
+      return (
+        !!functionParams.value.column &&
+        functionParams.value.column.trim() !== '' &&
+        !!functionParams.value.threshold
+      );
+    default:
+      return false;
+  }
+});
 
 // on change of highlightEnabled value, update syntax highlighting
 watch(highlightEnabled, (value) => {
@@ -237,36 +464,45 @@ const highlightSyntax = (value) => {
   }
 
   let highlighted = value;
-
-  // First highlight everything except brackets
+  
+  // Use more specific regex patterns with lookahead/lookbehind
   highlighted = highlighted
-    .replace(/(pp|percentile|kw|keyword|col|column)\s*(?=\()/gi, '<span class="function">$1</span>')
-    .replace(/\bNOT\b/gi, '<span class="not-operator">$&</span>')
-    .replace(/\b(AND|OR|XOR)\b/gi, '<span class="operator">$1</span>')
-    .replace(/\b(ge|gt|le|lt)\b/gi, '<span class="comparison">$1</span>')
-    .replace(/\b(\d+(\.\d+)?)\b/g, '<span class="number">$1</span>')
-    .replace(/;\s*([a-zA-Z0-9_]+)\s*(?=\))/g, ';<span class="field">$1</span>');
+    // Functions - match the entire function call
+    .replace(/(?:pp|percentile|kw|keyword|col|column)\s*\([^)]+\)/gi, (match) => {
+      return match
+        // Highlight function name
+        .replace(/(pp|percentile|kw|keyword|col|column)\s*(?=\()/i, '<span class="function">$1</span>')
+        // Highlight numbers
+        .replace(/\b(\d+(?:\.\d+)?)\b/g, '<span class="number">$1</span>')
+        // Highlight comparisons
+        .replace(/\b(ge|gt|le|lt)\b/gi, '<span class="comparison">$1</span>')
+        // Highlight field names
+        .replace(/;\s*([a-zA-Z0-9_]+)\s*(?=\))/g, ';<span class="field">$1</span>');
+    })
+    // Highlight operators - use word boundaries to avoid partial matches
+    .replace(/\bNOT\b/gi, '<span class="not-operator">NOT</span>')
+    .replace(/\b(AND|OR|XOR)\b/gi, '<span class="operator">$1</span>');
 
-  // Then handle brackets last
+  // Handle brackets
   let bracketLevel = 0;
   const maxBracketLevels = 4;
+  
+  // Process opening brackets
+  highlighted = highlighted.replace(/\(/g, () => {
+    const bracket = `<span class="bracket-${bracketLevel}">&#40;</span>`;
+    bracketLevel = (bracketLevel + 1) % maxBracketLevels;
+    return bracket;
+  });
 
-  // First, handle all opening brackets with proper escaping
-  let openBrackets = highlighted.split('(');
-  highlighted = openBrackets[0];
-  for (let i = 1; i < openBrackets.length; i++) {
-    bracketLevel =
-    highlighted += `<span class="bracket-${bracketLevel}">&#40;</span>${openBrackets[i]}`;
-  }
-
-  // Then, handle all closing brackets with proper escaping
-  let closeBrackets = highlighted.split(')');
-  highlighted = closeBrackets[0];
-  bracketLevel = Math.min(maxBracketLevels, closeBrackets.length - 1);
-  for (let i = 1; i < closeBrackets.length; i++) {
-    bracketLevel = ((bracketLevel - 1) + maxBracketLevels) % maxBracketLevels;
-    highlighted += `<span class="bracket-${bracketLevel}">&#41;</span>${closeBrackets[i]}`;
-  }
+  // Reset bracket level for closing brackets
+  bracketLevel = 0;
+  
+  // Process closing brackets
+  highlighted = highlighted.replace(/\)/g, () => {
+    const bracket = `<span class="bracket-${bracketLevel}">&#41;</span>`;
+    bracketLevel = (bracketLevel + 1) % maxBracketLevels;
+    return bracket;
+  });
 
   highlightedQuery.value = highlighted;
 };
@@ -340,7 +576,7 @@ watch(showSettings, (value) => {
   position: absolute;
   top: 12px;
   left: 15px;  /* Fine-tuned positioning */
-  right: 13px;
+  right: 5px;
   pointer-events: none;
   font-family: inherit;
   font-size: inherit;
@@ -408,5 +644,28 @@ watch(showSettings, (value) => {
 .syntax-highlight :deep(.bracket-3) {
   color: #FFC107;  /* Amber */
   background-color: transparent;
+}
+
+.query-builder {
+  background-color: rgba(var(--v-theme-surface), 0.8);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.gap-2 {
+  gap: 8px;
+}
+
+.builder-header {
+  display: flex;
+  align-items: center;
+  color: rgba(var(--v-theme-on-surface), 0.87);
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(var(--v-theme-on-surface), 0.12);
+  margin-bottom: 12px;
+}
+
+.builder-header .v-icon {
+  opacity: 0.7;
 }
 </style>

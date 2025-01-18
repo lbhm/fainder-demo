@@ -11,6 +11,7 @@ page
         <Search_Component
           :searchQuery="query"
           :inline="true"
+          :queryBuilder="false"
           @searchData="searchData"
         />
       </div>
