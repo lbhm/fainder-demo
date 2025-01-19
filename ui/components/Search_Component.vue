@@ -74,23 +74,24 @@ words # The search page will contain multiple search bars
                 col({{ term.column }};{{ term.threshold }})
               </v-chip>
               <v-chip
-                v-for="(percentileTerm, index) in percentileTerms"
+                v-for="(term, index) in percentileTerms"
+                :key="`percentile-${index}`"
                 closable
-                @click:close="removePercentileTerm"
+                @click:close="removePercentileTerm(index)"
                 color="indigo"
               >
-                pp({{ percentileTerm.percentile }};{{ percentileTerm.comparison }};{{ percentileTerm.value }})
+                pp({{ term.percentile }};{{ term.comparison }};{{ term.value }})
               </v-chip>
             </v-chip-group>
 
-            <!-- Combined filter form -->
+            <!-- Split into separate rows -->
             <v-row>
               <v-col cols="12">
                 <div class="text-subtitle-1 mb-2">Column Filter</div>
                 <v-row>
                   <v-col cols="5">
                     <v-text-field
-                      v-model="combinedFilter.column"
+                      v-model="columnFilter.column"
                       label="Column Name"
                       variant="outlined"
                       density="comfortable"
@@ -99,7 +100,7 @@ words # The search page will contain multiple search bars
                   </v-col>
                   <v-col cols="5">
                     <v-text-field
-                      v-model="combinedFilter.threshold"
+                      v-model="columnFilter.threshold"
                       label="Threshold"
                       type="number"
                       variant="outlined"
@@ -107,15 +108,29 @@ words # The search page will contain multiple search bars
                       hide-details="auto"
                     />
                   </v-col>
+                  <v-col cols="2" class="d-flex align-center">
+                    <v-btn
+                      color="primary"
+                      @click="addColumnFilter"
+                      :disabled="!isColumnFilterValid"
+                      prepend-icon="mdi-plus"
+                    >
+                      Add
+                    </v-btn>
+                  </v-col>
                 </v-row>
+              </v-col>
+            </v-row>
 
-                <v-divider class="my-4"></v-divider>
+            <v-divider class="my-4"></v-divider>
 
+            <v-row>
+              <v-col cols="12">
                 <div class="text-subtitle-1 mb-2">Percentile Filter</div>
                 <v-row>
                   <v-col cols="3">
                     <v-text-field
-                      v-model="combinedFilter.percentile"
+                      v-model="percentileFilter.percentile"
                       label="Percentile"
                       type="number"
                       min="0"
@@ -128,7 +143,7 @@ words # The search page will contain multiple search bars
                   </v-col>
                   <v-col cols="3">
                     <v-select
-                      v-model="combinedFilter.comparison"
+                      v-model="percentileFilter.comparison"
                       :items="['gt', 'ge', 'lt', 'le']"
                       label="Comparison"
                       variant="outlined"
@@ -138,7 +153,7 @@ words # The search page will contain multiple search bars
                   </v-col>
                   <v-col cols="4">
                     <v-text-field
-                      v-model="combinedFilter.value"
+                      v-model="percentileFilter.value"
                       label="Value"
                       type="number"
                       variant="outlined"
@@ -146,20 +161,33 @@ words # The search page will contain multiple search bars
                       hide-details="auto"
                     />
                   </v-col>
-                </v-row>
-
-                <v-row class="mt-4">
-                  <v-col cols="12" class="d-flex justify-end">
+                  <v-col cols="2" class="d-flex align-center">
                     <v-btn
-                      color="primary"
-                      @click="addCombinedFilter"
-                      :disabled="!isCombinedFilterValid"
+                      color="indigo"
+                      @click="addPercentileFilter"
+                      :disabled="!isPercentileFilterValid"
                       prepend-icon="mdi-plus"
                     >
-                      Add Filter
+                      Add
                     </v-btn>
                   </v-col>
                 </v-row>
+              </v-col>
+            </v-row>
+
+            <v-row>
+              <v-col cols="12">
+                <div class="d-flex justify-end">
+                  <v-btn
+                    color="success"
+                    @click="addBothFilters"
+                    :disabled="!isColumnFilterValid || !isPercentileFilterValid"
+                    prepend-icon="mdi-plus-circle-multiple"
+                    class="mr-2"
+                  >
+                    Add Both
+                  </v-btn>
+                </div>
               </v-col>
             </v-row>
 
@@ -373,9 +401,12 @@ const functionParams = ref({ value: {} }); // Initialize with nested value objec
 // Simple query builder state
 const showSimpleBuilder = ref(false);
 
-const combinedFilter = ref({
+const columnFilter = ref({
   column: '',
-  threshold: '',
+  threshold: ''
+});
+
+const percentileFilter = ref({
   percentile: '',
   comparison: '',
   value: ''
@@ -747,48 +778,83 @@ const removePercentileTerm = (index) => {
   percentileTerms.value.splice(index, 1);
 };
 
-// Modify the addCombinedFilter function
-const addCombinedFilter = () => {
-  if (!isCombinedFilterValid.value) return;
-  
-  // Save the terms but don't update query yet
-  const f = combinedFilter.value;
+// Separate validation for each filter type
+const isColumnFilterValid = computed(() => {
+  const f = columnFilter.value;
+  return f.column?.trim() && f.threshold !== '' && !isNaN(f.threshold);
+});
 
-  
-  columnTerms.value.push({
-    column: f.column,
-    threshold: parseFloat(f.threshold)
-  })
-  percentileTerms.value.push({
-    percentile: parseFloat(f.percentile),
-    comparison: f.comparison,
-    value: parseFloat(f.value)
-  });
-  
-  // Reset form
-  combinedFilter.value = {
-    column: '',
-    threshold: '',
-    percentile: '',
-    comparison: '',
-    value: ''
-  };
-};
-
-
-// Combined validation
-const isCombinedFilterValid = computed(() => {
-  const f = combinedFilter.value;
-  return f.column?.trim() &&
-         f.threshold !== '' &&
-         !isNaN(f.threshold) &&
-         f.percentile !== '' && 
+const isPercentileFilterValid = computed(() => {
+  const f = percentileFilter.value;
+  return f.percentile !== '' && 
          parseFloat(f.percentile) >= 0 && 
          parseFloat(f.percentile) <= 1 &&
          f.comparison &&
          f.value !== '' &&
          !isNaN(f.value);
 });
+
+// Separate add functions for each filter type
+const addColumnFilter = () => {
+  if (!isColumnFilterValid.value) return;
+  
+  columnTerms.value.push({
+    column: columnFilter.value.column,
+    threshold: parseFloat(columnFilter.value.threshold)
+  });
+  
+  // Reset form
+  columnFilter.value = {
+    column: '',
+    threshold: ''
+  };
+};
+
+const addPercentileFilter = () => {
+  if (!isPercentileFilterValid.value) return;
+  
+  percentileTerms.value.push({
+    percentile: parseFloat(percentileFilter.value.percentile),
+    comparison: percentileFilter.value.comparison,
+    value: parseFloat(percentileFilter.value.value)
+  });
+  
+  // Reset form
+  percentileFilter.value = {
+    percentile: '',
+    comparison: '',
+    value: ''
+  };
+};
+
+const addBothFilters = () => {
+  if (!isColumnFilterValid.value || !isPercentileFilterValid.value) return;
+  
+  // Add column filter
+  columnTerms.value.push({
+    column: columnFilter.value.column,
+    threshold: parseFloat(columnFilter.value.threshold)
+  });
+  
+  // Add percentile filter
+  percentileTerms.value.push({
+    percentile: parseFloat(percentileFilter.value.percentile),
+    comparison: percentileFilter.value.comparison,
+    value: parseFloat(percentileFilter.value.value)
+  });
+  
+  // Reset both forms
+  columnFilter.value = {
+    column: '',
+    threshold: ''
+  };
+  
+  percentileFilter.value = {
+    percentile: '',
+    comparison: '',
+    value: ''
+  };
+};
 
 function cancelSettings() {
   showSettings.value = false;

@@ -106,6 +106,7 @@
   import { useTheme } from 'vuetify'
   import { useRoute } from 'vue-router'
   import Logo from '~/components/Logo.vue'
+  import { reloadNuxtApp } from "nuxt/app";
 
   function gotoHome() {
     console.log('go to home')
@@ -150,10 +151,9 @@
     currentPage.value = 1;
     selectedResultIndex.value = 0;
 
-    await loadResults(searchQuery, 1, newfainder_mode);
+    //await loadResults(searchQuery, 1, newfainder_mode);
 
-
-    return await navigateTo({
+    await navigateTo({
       path: '/results',
       query: {
         query: searchQuery,
@@ -163,6 +163,10 @@
         theme: theme.global.name.value,
       },
     });
+
+    // refresh the page 
+    
+    reloadNuxtApp();
   }
 </script>
 
