@@ -7,6 +7,8 @@
       <Search_Component
         :searchQuery="query"
         :inline="true"
+        :queryBuilder="false"
+        :simpleBuilder="true"
         @searchData="searchData"
       />
     </div>
@@ -22,6 +24,14 @@ const q = route.query;
 const query = ref(q.query);
 
 async function searchData({query: searchQuery, fainder_mode: newfainder_mode}) {
+  // If query is empty or undefined, reset the URL without query parameters
+  if (!searchQuery || searchQuery.trim() === '') {
+    return await navigateTo({
+      path: '/',
+      replace: true
+    });
+  }
+
   return await navigateTo({
     path: '/results',
     query: {

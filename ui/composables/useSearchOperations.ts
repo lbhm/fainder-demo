@@ -43,15 +43,19 @@ export const useSearchOperations = () => {
         let details;
         try {
           const errorJson = JSON.parse(errorBody);
-          details = errorJson.message || errorBody;
+          details = errorJson.detail || errorJson.message || errorBody;
         } catch {
-          details = errorBody;
+          details = errorBody || `Server returned ${response.status} ${response.statusText}`;
         }
 
         error.value = {
-          message: `Search request failed (${response.status} ${response.statusText})`,
+          message: response.status === 500 
+            ? 'Internal Server Error' 
+            : `Search request failed (${response.status} ${response.statusText})`,
           details: details
         };
+        results.value = null;
+        selectedResultIndex.value = 0;
         throw error.value;
       }
 
@@ -78,7 +82,6 @@ export const useSearchOperations = () => {
       };
       results.value = null;
       selectedResultIndex.value = 0;  // Reset index on error
-      throw e;
     } finally {
       isLoading.value = false;
     }

@@ -5,11 +5,11 @@ words # The search page will contain multiple search bars
   <v-main :class="['search-main', { 'pa-3': inline }]">
     <v-container :class="{ 'pa-2': inline }">
       <v-row :class="{ 'inline-layout': inline }">
-        <v-col cols="10">
+        <v-col cols="11">
           <div class="input-wrapper">
             <v-text-field
               v-model="searchQuery"
-              label="Search by percentile predicates and keywords"
+              label="Search"
               variant="outlined"
               density="comfortable"
               :error="!isValid"
@@ -18,28 +18,161 @@ words # The search page will contain multiple search bars
               @update:model-value="highlightSyntax"
               hide-details="auto"
               class="search-input"
+              append-inner-icon="mdi-magnify"
             />
             <div class="syntax-highlight" v-html="highlightedQuery"></div>
           </div>
         </v-col>
         <v-col cols="1">
-          <v-btn @click="showSettings = true" icon class="ml-2">
-            <v-icon>mdi-cog</v-icon>
-          </v-btn>
-        </v-col>
-        <v-col cols="1">
-          <v-btn @click="searchData" icon class="ml-2">
-            <v-icon>mdi-magnify</v-icon>
+          <v-btn icon="mdi-cog" @click="showSettings = true" variant="text">
           </v-btn>
         </v-col>
       </v-row>
+
+      <!-- Simple Query Builder Toggle Button -->
+      <v-row v-if="simpleBuilder" class="mt-4">
+        <v-col cols="12">
+          <v-btn
+            v-if="!showSimpleBuilder"
+            block
+            variant="outlined"
+            @click="showSimpleBuilder = true"
+            prepend-icon="mdi-plus"
+            color="primary"
+          >
+            Add Column Filters
+          </v-btn>
+        </v-col>
+      </v-row>
+
+      <!-- Simple Query Builder -->
+      <v-expand-transition>
+        <v-row v-if="simpleBuilder && showSimpleBuilder" class="query-builder mt-4">
+          <v-col cols="12">
+            <div class="d-flex align-center justify-space-between mb-2">
+              <div class="builder-header">
+                <v-icon icon="mdi-database-search" class="mr-2" />
+                <span class="text-h6">Query Builder</span>
+              </div>
+              <v-btn
+                variant="text"
+                icon="mdi-close"
+                size="small"
+                @click="showSimpleBuilder = false"
+              />
+            </div>
+            
+            <!-- Combined filters list -->
+            <v-chip-group class="mb-4">
+              <v-chip
+                v-for="(term, index) in columnTerms"
+                :key="`col-${index}`"
+                closable
+                @click:close="removeColumnTerm(index)"
+                color="primary"
+              >
+                col({{ term.column }};{{ term.threshold }})
+              </v-chip>
+              <v-chip
+                v-for="(percentileTerm, index) in percentileTerms"
+                closable
+                @click:close="removePercentileTerm"
+                color="indigo"
+              >
+                pp({{ percentileTerm.percentile }};{{ percentileTerm.comparison }};{{ percentileTerm.value }})
+              </v-chip>
+            </v-chip-group>
+
+            <!-- Combined filter form -->
+            <v-row>
+              <v-col cols="12">
+                <div class="text-subtitle-1 mb-2">Column Filter</div>
+                <v-row>
+                  <v-col cols="5">
+                    <v-text-field
+                      v-model="combinedFilter.column"
+                      label="Column Name"
+                      variant="outlined"
+                      density="comfortable"
+                      hide-details="auto"
+                    />
+                  </v-col>
+                  <v-col cols="5">
+                    <v-text-field
+                      v-model="combinedFilter.threshold"
+                      label="Threshold"
+                      type="number"
+                      variant="outlined"
+                      density="comfortable"
+                      hide-details="auto"
+                    />
+                  </v-col>
+                </v-row>
+
+                <v-divider class="my-4"></v-divider>
+
+                <div class="text-subtitle-1 mb-2">Percentile Filter</div>
+                <v-row>
+                  <v-col cols="3">
+                    <v-text-field
+                      v-model="combinedFilter.percentile"
+                      label="Percentile"
+                      type="number"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      variant="outlined"
+                      density="comfortable"
+                      hide-details="auto"
+                    />
+                  </v-col>
+                  <v-col cols="3">
+                    <v-select
+                      v-model="combinedFilter.comparison"
+                      :items="['gt', 'ge', 'lt', 'le']"
+                      label="Comparison"
+                      variant="outlined"
+                      density="comfortable"
+                      hide-details="auto"
+                    />
+                  </v-col>
+                  <v-col cols="4">
+                    <v-text-field
+                      v-model="combinedFilter.value"
+                      label="Value"
+                      type="number"
+                      variant="outlined"
+                      density="comfortable"
+                      hide-details="auto"
+                    />
+                  </v-col>
+                </v-row>
+
+                <v-row class="mt-4">
+                  <v-col cols="12" class="d-flex justify-end">
+                    <v-btn
+                      color="primary"
+                      @click="addCombinedFilter"
+                      :disabled="!isCombinedFilterValid"
+                      prepend-icon="mdi-plus"
+                    >
+                      Add Filter
+                    </v-btn>
+                  </v-col>
+                </v-row>
+              </v-col>
+            </v-row>
+
+          </v-col>
+        </v-row>
+      </v-expand-transition>
 
       <!-- Query Builder Tools -->
       <v-row v-if="queryBuilder" class="query-builder mt-4">
         <v-col cols="12">
           <div class="builder-header mb-2">
             <v-icon icon="mdi-puzzle" class="mr-2" />
-            <span class="text-h6">Query Builder</span>
+            <span class="text-h6">Add Operator</span>
           </div>
           <div class="d-flex flex-wrap gap-2">
             <v-chip
@@ -199,7 +332,12 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+  simpleBuilder: {
+    type: Boolean,
+    default: false,
+  },
 });
+
 const emit = defineEmits(["searchData"]);
 const route = useRoute();
 const temp_fainder_mode = ref(route.query.fainder_mode || "low_memory");
@@ -230,6 +368,19 @@ const fainder_modes = [
 const showFunctionDialog = ref(false);
 const currentFunction = ref(null);
 const functionParams = ref({ value: {} }); // Initialize with nested value object
+
+
+// Simple query builder state
+const showSimpleBuilder = ref(false);
+
+const combinedFilter = ref({
+  column: '',
+  threshold: '',
+  percentile: '',
+  comparison: '',
+  value: ''
+});
+
 
 const operators = [
   { text: "AND", color: "primary" },
@@ -322,8 +473,6 @@ const validateAndInsert = () => {
   });
 };
 
-// Replace existing insertFunction with validateAndInsert
-const insertFunction = validateAndInsert;
 
 const isFormValid = computed(() => {
   if (!currentFunction.value || !functionParams.value) return false;
@@ -386,20 +535,55 @@ onUnmounted(() => {
 });
 
 async function searchData() {
-  if (!searchQuery.value) return;
+  if ((!searchQuery.value || searchQuery.value.trim() === "" )
+  && columnTerms.value.length === 0 && percentileTerms.value.length === 0) {
+    return;
+  }
 
-  const query = searchQuery.value.trim();
+  // Combine search query with filter terms
+
+  const terms = [];
+  
+  // Add column terms
+  const columnQueryTerms = columnTerms.value.map(term => 
+    `col(${term.column};${term.threshold})`
+  );
+
+  // Add percentile terms
+  const percentileQueryTerms = percentileTerms.value.map(term => 
+    `pp(${term.percentile};${term.comparison};${term.value})`
+  );
+  if (columnQueryTerms.length) {
+    terms.push(columnQueryTerms.join(' AND '));
+  }
+  
+  if (percentileQueryTerms.length) {
+    terms.push(percentileQueryTerms.join(' AND '));
+  }
+  // Combine filter terms
+  const filterQuery = terms.join(' AND ');
+
+
+  let query = searchQuery.value?.trim() || '';
+  
   // Check if query is just plain text (no operators or functions)
-  const isPlainText =
-    !/(?:pp|percentile|kw|keyword|col|column)\s*\(|AND|OR|XOR|NOT|\(|\)/.test(
-      query
-    );
+  const isPlainText = !/(?:pp|percentile|kw|keyword|col|column)\s*\(|AND|OR|XOR|NOT|\(|\)/.test(query);
+  
+  // Process plain text as keyword search
+  if (isPlainText && query) {
+    query = `kw(${query})`;
+  }
+  
+  // Combine filter terms with query
+  if (filterQuery) {
+    query = query ? `${query} AND ${filterQuery}` : filterQuery;
+  }
 
-  const processedQuery = isPlainText ? `kw(${query})` : query;
-  console.log("Search query:", processedQuery);
+
+  console.log("Search query:", query);
   console.log("Index type:", fainder_mode);
   emit("searchData", {
-    query: processedQuery,
+    query: query,
     fainder_mode: fainder_mode.value,
   });
 }
@@ -549,6 +733,63 @@ const highlightSyntax = (value) => {
   highlightedQuery.value = highlighted;
 };
 
+// Add these new refs for column terms management
+const columnTerms = ref([]);
+const percentileTerms = ref([]);
+
+// Remove a column term
+const removeColumnTerm = (index) => {
+  columnTerms.value.splice(index, 1);
+};
+
+// Remove percentile term
+const removePercentileTerm = (index) => {
+  percentileTerms.value.splice(index, 1);
+};
+
+// Modify the addCombinedFilter function
+const addCombinedFilter = () => {
+  if (!isCombinedFilterValid.value) return;
+  
+  // Save the terms but don't update query yet
+  const f = combinedFilter.value;
+
+  
+  columnTerms.value.push({
+    column: f.column,
+    threshold: parseFloat(f.threshold)
+  })
+  percentileTerms.value.push({
+    percentile: parseFloat(f.percentile),
+    comparison: f.comparison,
+    value: parseFloat(f.value)
+  });
+  
+  // Reset form
+  combinedFilter.value = {
+    column: '',
+    threshold: '',
+    percentile: '',
+    comparison: '',
+    value: ''
+  };
+};
+
+
+// Combined validation
+const isCombinedFilterValid = computed(() => {
+  const f = combinedFilter.value;
+  return f.column?.trim() &&
+         f.threshold !== '' &&
+         !isNaN(f.threshold) &&
+         f.percentile !== '' && 
+         parseFloat(f.percentile) >= 0 && 
+         parseFloat(f.percentile) <= 1 &&
+         f.comparison &&
+         f.value !== '' &&
+         !isNaN(f.value);
+});
+
 function cancelSettings() {
   showSettings.value = false;
 }
@@ -556,12 +797,6 @@ function cancelSettings() {
 function saveSettings() {
   showSettings.value = false;
   fainder_mode.value = temp_fainder_mode.value;
-  if (searchQuery.value && searchQuery.value.trim() !== "") {
-    emit("searchData", {
-      query: searchQuery.value,
-      fainder_mode: fainder_mode.value,
-    });
-  }
 }
 </script>
 

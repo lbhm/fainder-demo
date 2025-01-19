@@ -4,8 +4,9 @@ the details of the selected result will be displayed on the right side of the
 page
 
 <template>
-  <v-main>
-    <div class="pa-5">
+    <v-main>
+      <v-divider></v-divider>
+      <div class="pa-5">
       <!-- Remove search container -->
       
       <!-- Add search stats -->

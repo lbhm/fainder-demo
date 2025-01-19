@@ -1,8 +1,9 @@
 # mock uploadpage
 
 <template>
-  <v-main>
-    <div class="pa-10">
+    <v-main>
+      <v-divider></v-divider>
+      <div class="pa-5">
       <h1>Upload Page</h1>
       <p>Upload the croissant metadata json files in a zip or as json files.</p>
       <v-form @submit.prevent="handleSubmit" class="mt-4">
@@ -12,8 +13,8 @@
           multiple
           prepend-icon="mdi-file"
           class="mb-4"
-          accept=".json,.zip"
-          :rules="[v => !v || v.every(file => ['application/json', 'application/zip'].includes(file?.type)) || 'Only JSON and ZIP files are allowed']"
+          accept=".json"
+          :rules="[v => !v || v.every(file => file?.type === 'application/json') || 'Only JSON files are allowed']"
         ></v-file-input>
         <v-btn
           prepend-icon="mdi-upload"

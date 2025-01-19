@@ -1,17 +1,11 @@
 <template>
   <v-app>
-    <v-app-bar rounded height="80">
+    <v-app-bar :elevation="0" height="80">
       <Logo size="medium" class="mr-4" @click="gotoHome"/>
+      <v-spacer></v-spacer>
 
       <!-- Add search component in app bar only on results page -->
       <template v-if="route.path === '/results'">
-        <v-btn
-          icon
-          class="ml-2"
-          @click="showSearchDialog = true"
-        >
-          <v-icon>mdi-arrow-expand</v-icon>
-        </v-btn>
         <Search_Component
           :searchQuery="route.query.query"
           :inline="true"
@@ -19,6 +13,12 @@
           @searchData="searchData"
           class="app-bar-search mx-2"
         />
+        <v-btn
+          icon
+          @click="showSearchDialog = true"
+        >
+          <v-icon>mdi-arrow-expand</v-icon>
+        </v-btn>
       </template>
 
       <v-spacer></v-spacer>
@@ -45,7 +45,7 @@
             <v-list-item-title>About</v-list-item-title>
           </v-list-item>
 
-          <v-divider></v-divider>
+          <v-divider class="mx-3"></v-divider>
 
           <v-list-item @click="toggleHighlight">
             <template v-slot:prepend>
@@ -69,25 +69,27 @@
         </v-list>
       </v-menu>
     </v-app-bar>
-
+   
     <!-- Add expandable search dialog -->
     <v-dialog
       v-model="showSearchDialog"
       transition="dialog-top-transition"
+      maxWidth="56rem"
     >
       <v-card>
         <v-toolbar dark color="primary">
           <v-btn icon dark @click="showSearchDialog = false">
             <v-icon>mdi-close</v-icon>
           </v-btn>
-          <v-toolbar-title>Advanced Search</v-toolbar-title>
+          <v-toolbar-title>Query Builder</v-toolbar-title>
         </v-toolbar>
 
         <v-container class="pt-6">
           <Search_Component
             :searchQuery="route.query.query"
             :inline="true"
-            :queryBuilder="true"
+            :queryBuilder="false"
+            :simpleBuilder="true"
             @searchData="(data) => { searchData(data); showSearchDialog = false; }"
           />
         </v-container>
@@ -166,7 +168,7 @@
 
 <style scoped>
 .app-bar-search {
-  max-width: 600px;
+  max-width: 800px;  /* Increased from 600px */
   flex-grow: 1;
 }
 

@@ -269,7 +269,9 @@ class QueryExecutor(Transformer):
 
         match operator:
             case "AND":
-                return left & right
+                left_docs = col_to_doc_ids(left, self.metadata.col_to_doc)
+                right_docs = col_to_doc_ids(right, self.metadata.col_to_doc)
+                return doc_to_col_ids(left_docs & right_docs, self.metadata.doc_to_cols)
             case "OR":
                 return left | right
             case "XOR":

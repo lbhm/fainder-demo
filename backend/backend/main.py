@@ -41,7 +41,9 @@ croissant_store = CroissantStore(settings.croissant_path)
 lucene_connector = LuceneConnector(settings.lucene_host, settings.lucene_port)
 rebinning_index = FainderIndex(settings.rebinning_index_path, metadata)
 conversion_index = FainderIndex(settings.conversion_index_path, metadata)
+logger.info("starting to column index")
 column_index = ColumnIndex(settings.hnsw_index_path, metadata)
+logger.info("All indexes loaded successfully.")
 query_evaluator = QueryEvaluator(
     lucene_connector=lucene_connector,
     rebinning_index=rebinning_index,
@@ -130,28 +132,17 @@ async def query(request: QueryRequest) -> QueryResponse:
 
 @app.post("/upload")
 async def upload_files(files: list[UploadFile]):
-    """Handle upload of JSON files or ZIP containing JSON files."""
+    """Handle upload of JSON files."""
     try:
         for file in files:
             if not file.filename:
                 raise HTTPException(status_code=400, detail="No file uploaded")
-            if file.filename.endswith(".zip"):
-                # Handle ZIP file
-                zip_contents = await file.read()
-                with zipfile.ZipFile(io.BytesIO(zip_contents)) as zip_file:
-                    for json_file in zip_file.namelist():
-                        if json_file.endswith(".json"):
-                            json_content = zip_file.read(json_file)
-                            # Process JSON content
-                            # TODO: Add a function to handle JSON content
-            elif file.filename.endswith(".json"):
-                # Handle JSON file
-                content = await file.read()
-                # TODO: Add a function to handle JSON content
-            else:
+            if not file.filename.endswith(".json"):
                 raise HTTPException(
-                    status_code=400, detail="Only .json and .zip files are accepted"
+                    status_code=400, detail="Only .json files are accepted"
                 )
+            content = await file.read()
+            # TODO: Add a function to handle JSON content
 
         # TODO: Add the reindexing process
         return {"message": "Files uploaded successfully"}
