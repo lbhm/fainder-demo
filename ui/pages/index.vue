@@ -21,12 +21,12 @@ const q = route.query;
 
 const query = ref(q.query);
 
-async function searchData({query: searchQuery, indexType: newIndexType}) {
+async function searchData({query: searchQuery, fainder_mode: newfainder_mode}) {
   return await navigateTo({
     path: '/results',
     query: {
       query: searchQuery,
-      index_type: newIndexType
+      fainder_mode: newfainder_mode
     }
   });
 }

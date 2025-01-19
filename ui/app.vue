@@ -113,7 +113,7 @@
   const { loadResults } = useSearchOperations();
   const route = useRoute();
   const theme = useTheme();
-  const { query, indexType, currentPage, selectedResultIndex } = useSearchState(); 
+  const { query, fainder_mode, currentPage, selectedResultIndex } = useSearchState(); 
   const colorMode = useColorMode();
   const highlightEnabled = useCookie('highlight-enabled', { default: () => true })
 
@@ -140,15 +140,15 @@
 
   const showSearchDialog = ref(false);
 
-  async function searchData({ query: searchQuery, indexType: newIndexType }) {
+  async function searchData({ query: searchQuery, fainder_mode: newfainder_mode }) {
     console.log(searchQuery)
     query.value = searchQuery;
-    indexType.value = newIndexType;
+    fainder_mode.value = newfainder_mode;
 
     currentPage.value = 1;
     selectedResultIndex.value = 0;
 
-    await loadResults(searchQuery, 1, newIndexType);
+    await loadResults(searchQuery, 1, newfainder_mode);
 
 
     return await navigateTo({
@@ -157,7 +157,7 @@
         query: searchQuery,
         page: 1,
         index: 0,
-        index_type: newIndexType,
+        fainder_mode: newfainder_mode,
         theme: theme.global.name.value,
       },
     });

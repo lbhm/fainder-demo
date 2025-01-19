@@ -14,11 +14,11 @@ export const useSearchOperations = () => {
     perPage,
   } = useSearchState()
 
-  const loadResults = async (queryStr: string, page = 1, indexType?: string) => {
+  const loadResults = async (queryStr: string, page = 1, fainder_mode?: string) => {
     isLoading.value = true
     error.value = null
 
-    console.log(`Loading results for query: ${queryStr}, page: ${page}, indexType: ${indexType}`)
+    console.log(`Loading results for query: ${queryStr}, page: ${page}, fainder_mode: ${fainder_mode}`)
 
     try {
       const response = await fetch(`${runtimeConfig.public.apiBase}/query`, {
@@ -34,7 +34,7 @@ export const useSearchOperations = () => {
           query: queryStr,
           page: page,
           per_page: perPage.value,
-          index_type: indexType || 'rebinning',
+          fainder_mode: fainder_mode || 'low_memory',
         }),
       });
 

@@ -58,15 +58,14 @@ class QueryEvaluator:
     def parse(self, query: str) -> Tree:
         return self.grammar.parse(query)
 
-    def _execute(self, query: str, enable_filtering: bool = True, index_type: str = "rebinning") -> list[int]:
+    def _execute(self, query: str, enable_filtering: bool = True, fainder_mode: str = "low_memory") -> list[int]:
         self.annotator.reset()
         executor: QueryExecutor
-        if index_type == "rebinning":
-            executor = self.executor_rebinning
-        elif index_type == "conversion":
-            executor = self.executor_conversion
-        else:
-            raise ValueError(f"Unknown index type: {index_type}")
+
+        # TODO: add fainder_mode
+
+        executor = self.executor_rebinning
+
         executor.reset()
         executor.enable_filtering = enable_filtering
 

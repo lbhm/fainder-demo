@@ -17,8 +17,8 @@ export const useSearchState = () => {
     route.query.query as string || ''
 )
   // Initialize with route query or default value
-  const indexType = useState('index-type', () => 
-    route.query.index_type as string || 'rebinning'
+  const fainder_mode = useState('index-type', () => 
+    route.query.fainder_mode as string || 'low_memory'
   )
 
   // Add perPage state
@@ -34,7 +34,7 @@ export const useSearchState = () => {
     currentPage,
     totalPages,
     query,
-    indexType,
+    fainder_mode,
     perPage
   }
 }

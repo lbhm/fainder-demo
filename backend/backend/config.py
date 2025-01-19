@@ -87,7 +87,7 @@ class QueryRequest(BaseModel):
     query: str
     page: int = 1
     per_page: int = 10
-    index_type: str = "rebinning"
+    fainder_mode: str = "low_memory"
 
 
 class QueryResponse(BaseModel):

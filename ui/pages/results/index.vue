@@ -172,7 +172,7 @@ const {
   currentPage,
   totalPages,
   query,
-  indexType, // Add indexType from state
+  fainder_mode, 
   perPage
 } = useSearchState();
 
@@ -185,7 +185,7 @@ const selectedResult = computed(() =>
 
 // Initialize state from route
 query.value = route.query.query;
-indexType.value = route.query.index_type || 'rebinning';
+fainder_mode.value = route.query.fainder_mode || 'low_memory';
 
 const descriptionPanel = ref([0]);
 const recordSetPanels = ref([]);
@@ -236,7 +236,7 @@ watch(currentPage, async (newPage) => {
   await searchOperations.loadResults(
     query.value, 
     newPage,  
-    indexType.value
+    fainder_mode.value
   );
   
   // Update URL with new page
@@ -246,7 +246,7 @@ watch(currentPage, async (newPage) => {
       query: query.value,
       page: newPage,
       index: selectedResultIndex.value,
-      index_type: indexType.value, 
+      fainder_mode: fainder_mode.value, 
       theme: theme.global.name.value,
     },
   });
@@ -293,7 +293,7 @@ const retrySearch = async () => {
   await searchOperations.loadResults(
     query.value, 
     currentPage.value, 
-    route.query.index_type
+    route.query.fainder_mode
   );
 };
 
@@ -301,7 +301,7 @@ const retrySearch = async () => {
 await searchOperations.loadResults(
   query.value, 
   currentPage.value,  
-  indexType.value
+  fainder_mode.value
 );
 
 const chartOptions = ref({
