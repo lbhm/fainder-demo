@@ -7,7 +7,8 @@
       <!-- Add search component in app bar only on results page -->
       <template v-if="route.path === '/results'">
         <Search_Component
-          :searchQuery="route.query.query"
+          :key="searchComponentKey"
+          :searchQuery="internalSearchQuery"
           :inline="true"
           :queryBuilder="false"
           @searchData="searchData"
@@ -86,6 +87,7 @@
 
         <v-container class="pt-6">
           <Search_Component
+            :key="searchComponentKey"
             :searchQuery="route.query.query"
             :inline="true"
             :queryBuilder="false"
@@ -106,7 +108,7 @@
   import { useTheme } from 'vuetify'
   import { useRoute } from 'vue-router'
   import Logo from '~/components/Logo.vue'
-  import { reloadNuxtApp } from "nuxt/app";
+
 
   function gotoHome() {
     console.log('go to home')
@@ -119,6 +121,9 @@
   const { query, fainder_mode, currentPage, selectedResultIndex } = useSearchState(); 
   const colorMode = useColorMode();
   const highlightEnabled = useCookie('highlight-enabled', { default: () => true })
+
+  const internalSearchQuery = ref(route.query.query);
+  const searchComponentKey = ref(0);
 
   let currentTheme = route.query.theme || colorMode.value;
   theme.global.name.value = currentTheme === "dark" ? "dark" : "light";
@@ -151,7 +156,7 @@
     currentPage.value = 1;
     selectedResultIndex.value = 0;
 
-    //await loadResults(searchQuery, 1, newfainder_mode);
+    await loadResults(searchQuery, 1, newfainder_mode);
 
     await navigateTo({
       path: '/results',
@@ -164,9 +169,11 @@
       },
     });
 
-    // refresh the page 
+    // change the searchQuery in app bar
+    internalSearchQuery.value = searchQuery;
+    searchComponentKey.value++; // Increment key to force component reload
+
     
-    reloadNuxtApp();
   }
 </script>
 
