@@ -197,123 +197,7 @@ words # The search page will contain multiple search bars
         </v-row>
       </v-expand-transition>
 
-      <!-- Query Builder Tools -->
-      <v-row v-if="queryBuilder" class="query-builder mt-4">
-        <v-col cols="12">
-          <div class="builder-header mb-2">
-            <v-icon icon="mdi-puzzle" class="mr-2" />
-            <span class="text-h6">Add Operator</span>
-          </div>
-          <div class="d-flex flex-wrap gap-2">
-            <v-chip
-              v-for="op in operators"
-              :key="op.text"
-              :color="op.color"
-              class="mr-2 mb-2"
-              @click="insertOperator(op.text)"
-            >
-              {{ op.text }}
-            </v-chip>
-            <v-chip
-              v-for="func in functions"
-              :key="func.name"
-              :color="func.color"
-              class="mr-2 mb-2"
-              @click="openFunctionDialog(func.type)"
-            >
-              {{ func.name }}
-            </v-chip>
-          </div>
-        </v-col>
-      </v-row>
     </v-container>
-
-    <!-- Function Dialogs -->
-    <v-dialog v-model="showFunctionDialog" max-width="500px">
-      <v-card>
-        <v-card-title>{{
-          currentFunction?.name || "Build Function"
-        }}</v-card-title>
-        <v-card-text>
-          <!-- Percentile Function Builder -->
-          <div v-if="currentFunction?.type === 'percentile'">
-            <v-text-field
-              v-model="functionParams.percentile"
-              label="Percentile"
-              type="number"
-              min="0"
-              max="1"
-              step="0.01"
-              :rules="[
-                (v) => !!v || 'Percentile is required',
-                (v) =>
-                  (v >= 0 && v <= 1) || 'Percentile must be between 0 and 1',
-              ]"
-              hide-details="auto"
-            />
-            <v-select
-              v-model="functionParams.comparison"
-              :items="['gt', 'ge', 'lt', 'le']"
-              label="Comparison"
-              :rules="[(v) => !!v || 'Comparison operator is required']"
-              hide-details="auto"
-              class="mt-4"
-            />
-            <v-text-field
-              v-model="functionParams.value"
-              label="Value"
-              type="number"
-              :rules="[(v) => !!v || 'Value is required']"
-              hide-details="auto"
-              class="mt-4"
-            />
-          </div>
-          <!-- Keyword Function Builder -->
-          <div v-if="currentFunction?.type === 'keyword'">
-            <v-text-field
-              v-model="functionParams.keyword"
-              label="Search Terms"
-              :rules="[(v) => !!v || 'Search terms are required']"
-              hide-details="auto"
-            />
-          </div>
-          <!-- Column Function Builder -->
-          <div v-if="currentFunction?.type === 'column'">
-            <v-text-field
-              v-model="functionParams.column"
-              label="Column Name"
-              :rules="[(v) => !!v || 'Column name is required']"
-              hide-details="auto"
-            />
-            <v-text-field
-              v-model="functionParams.threshold"
-              label="Threshold"
-              type="number"
-              :rules="[(v) => !!v || 'Threshold is required']"
-              hide-details="auto"
-              class="mt-4"
-            />
-          </div>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn
-            color="error"
-            variant="text"
-            @click="showFunctionDialog = false"
-            >Cancel</v-btn
-          >
-          <v-btn
-            color="primary"
-            variant="text"
-            @click="validateAndInsert"
-            :disabled="!isFormValid"
-          >
-            Insert
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
 
     <!-- Settings Dialog -->
     <v-dialog v-model="showSettings" width="500">
@@ -358,10 +242,6 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  queryBuilder: {
-    type: Boolean,
-    default: true,
-  },
   simpleBuilder: {
     type: Boolean,
     default: false,
@@ -394,11 +274,6 @@ const fainder_modes = [
   { title: "Exact Mode", value: "exact" },
 ];
 
-// Query builder state
-const showFunctionDialog = ref(false);
-const currentFunction = ref(null);
-const functionParams = ref({ value: {} }); // Initialize with nested value object
-
 
 // Simple query builder state
 const showSimpleBuilder = ref(false);
@@ -415,125 +290,6 @@ const percentileFilter = ref({
 });
 
 
-const operators = [
-  { text: "AND", color: "primary" },
-  { text: "OR", color: "secondary" },
-  { text: "XOR", color: "warning" },
-  { text: "NOT", color: "error" },
-];
-
-const functions = [
-  { type: "percentile", name: "Percentile", color: "indigo" },
-  { type: "keyword", name: "Keyword", color: "teal" },
-  { type: "column", name: "Column", color: "deep-purple" },
-];
-
-// Insert operator at cursor position or at end
-const insertOperator = (operator) => {
-  const input = document.querySelector(".search-input input");
-  const cursorPos = input.selectionStart;
-  const currentValue = searchQuery.value || "";
-
-  const beforeCursor = currentValue.substring(0, cursorPos);
-  const afterCursor = currentValue.substring(cursorPos);
-
-  // Add space before operator if there's text before and it doesn't end with space
-  const needsSpaceBefore =
-    beforeCursor.length > 0 && !beforeCursor.endsWith(" ");
-  // Add space after operator if there's text after and it doesn't start with space
-  const needsSpaceAfter =
-    afterCursor.length > 0 && !afterCursor.startsWith(" ");
-
-  const spacedOperator = `${needsSpaceBefore ? " " : ""}${operator}${
-    needsSpaceAfter ? " " : ""
-  }`;
-  searchQuery.value = `${beforeCursor}${spacedOperator}${afterCursor}`;
-  highlightSyntax(searchQuery.value);
-
-  // Restore focus and move cursor after inserted operator and space
-  nextTick(() => {
-    input.focus();
-    const newPos = cursorPos + spacedOperator.length;
-    input.setSelectionRange(newPos, newPos);
-  });
-};
-
-// Open function builder dialog
-const openFunctionDialog = (type) => {
-  currentFunction.value = functions.find((f) => f.type === type);
-  functionParams.value = { value: {} }; // Reset with proper structure
-  showFunctionDialog.value = true;
-};
-
-// Build and insert function based on type
-const validateAndInsert = () => {
-  if (!isFormValid.value) return;
-
-  let functionText = "";
-  switch (currentFunction.value.type) {
-    case "percentile":
-      functionText = `pp(${parseFloat(functionParams.value.percentile)};${
-        functionParams.value.comparison
-      };${parseFloat(functionParams.value.value)})`;
-      break;
-    case "keyword":
-      functionText = `kw(${functionParams.value.keyword.trim()})`;
-      break;
-    case "column":
-      functionText = `col(${functionParams.value.column.trim()};${parseFloat(
-        functionParams.value.threshold
-      )})`;
-      break;
-  }
-
-  const input = document.querySelector(".search-input input");
-  const cursorPos = input.selectionStart;
-  const currentValue = searchQuery.value || "";
-
-  const beforeCursor = currentValue.substring(0, cursorPos);
-  const afterCursor = currentValue.substring(cursorPos);
-
-  searchQuery.value = `${beforeCursor}${functionText}${afterCursor}`;
-  highlightSyntax(searchQuery.value);
-
-  showFunctionDialog.value = false;
-
-  // Restore focus
-  nextTick(() => {
-    input.focus();
-    const newPos = cursorPos + functionText.length;
-    input.setSelectionRange(newPos, newPos);
-  });
-};
-
-
-const isFormValid = computed(() => {
-  if (!currentFunction.value || !functionParams.value) return false;
-
-  switch (currentFunction.value.type) {
-    case "percentile":
-      return (
-        !!functionParams.value.percentile &&
-        parseFloat(functionParams.value.percentile) >= 0 &&
-        parseFloat(functionParams.value.percentile) <= 1 &&
-        !!functionParams.value.comparison &&
-        !!functionParams.value.value
-      );
-    case "keyword":
-      return (
-        !!functionParams.value.keyword &&
-        functionParams.value.keyword.trim() !== ""
-      );
-    case "column":
-      return (
-        !!functionParams.value.column &&
-        functionParams.value.column.trim() !== "" &&
-        !!functionParams.value.threshold
-      );
-    default:
-      return false;
-  }
-});
 
 // on change of highlightEnabled value, update syntax highlighting
 watch(highlightEnabled, (value) => {
@@ -579,7 +335,7 @@ async function searchData() {
 
   // Add column terms
   const columnQueryTerms = columnTerms.value.map(term =>
-    `col(${term.column};${term.threshold})`
+    `name(${term.column};${term.threshold})`
   );
 
   // Add percentile terms
@@ -594,7 +350,10 @@ async function searchData() {
     terms.push(percentileQueryTerms.join(' AND '));
   }
   // Combine filter terms
-  const filterQuery = terms.join(' AND ');
+  const filterTerms = terms.join(' AND ');
+
+  // wrap filter terms in col() function
+  const filterQuery = filterTerms ? `col(${filterTerms})` : '';
 
 
   let query = searchQuery.value?.trim() || '';
@@ -628,65 +387,61 @@ const validateSyntax = (value) => {
     return true;
   }
 
-  // Reset state
-  syntaxError.value = "";
-  isValid.value = true;
-
   try {
+    // Reset state
+    syntaxError.value = "";
+    isValid.value = true;
+
     const query = value.trim();
 
     // If it's a simple keyword query (no special syntax), treat it as valid
-    if (
-      !query.includes("(") &&
-      !query.includes(")") &&
-      !/\b(AND|OR|XOR|NOT)\b/i.test(query)
-    ) {
-      return true;
-    }
-
-    // Check if it's a simple keyword function
-    if (/^(kw|keyword)\s*\([^)]+\)$/i.test(query)) {
-      return true;
-    }
-
-    // Rest of validation for complex queries
-    const functionPattern =
-      /(?:pp|percentile|kw|keyword|col|column)\s*\([^)]+\)/gi;
-    const operatorPattern = /\b(AND|OR|XOR|NOT)\b/gi;
-    const parenthesesPattern = /[()]/g;
-
-    // For complex queries, check each component
-    if (
-      !functionPattern.test(value) &&
-      !operatorPattern.test(value) &&
-      !parenthesesPattern.test(value)
-    ) {
+    if (!query.includes("(") && !query.includes(")") && !/\b(AND|OR|XOR|NOT)\b/i.test(query)) {
       return true;
     }
 
     // Check balanced parentheses
     const openParens = (value.match(/\(/g) || []).length;
     const closeParens = (value.match(/\)/g) || []).length;
-
     if (openParens !== closeParens) {
       isValid.value = false;
       syntaxError.value = "Unbalanced parentheses";
       return false;
     }
 
-    // Validate individual function patterns
+    // Extract and validate individual function calls
+    const functionPattern = /(?:pp|percentile|kw|keyword|col|column|name)\s*\([^)]+\)/gi;
     const functions = value.match(functionPattern) || [];
+
     for (const func of functions) {
-      if (
-        !/^(pp|percentile)\s*\(\s*\d+(\.\d+)?\s*;\s*(ge|gt|le|lt)\s*;\s*\d+(\.\d+)?\s*\)$/i.test(
-          func
-        ) &&
-        !/^(kw|keyword)\s*\([^)]+\)$/i.test(func) &&
-        !/^(col|column)\s*\([^;]+;\s*\d+\)$/i.test(func)
-      ) {
-        isValid.value = false;
-        syntaxError.value = "Invalid function syntax";
-        return false;
+      const lowFunc = func.toLowerCase();
+      if (lowFunc.startsWith('col') || lowFunc.startsWith('column')) {
+        // Check if it contains name or percentile terms
+        if (!/^(?:col|column)\s*\(\s*(?:name\s*\([^;]+;\s*\d+\)|pp\s*\([^)]+\))\s*\)$/i.test(func)) {
+          // Check if it has invalid keyword inside
+          if (/(?:kw|keyword)\s*\([^)]+\)/i.test(func)) {
+            isValid.value = false;
+            syntaxError.value = "Keywords not allowed inside column expressions";
+            return false;
+          }
+        }
+      } else if (lowFunc.startsWith('kw') || lowFunc.startsWith('keyword')) {
+        if (!/^(?:kw|keyword)\s*\([^)]+\)$/i.test(func)) {
+          isValid.value = false;
+          syntaxError.value = "Invalid keyword syntax";
+          return false;
+        }
+      } else if (lowFunc.startsWith('pp') || lowFunc.startsWith('percentile')) {
+        if (!/^(?:pp|percentile)\s*\(\s*\d+(?:\.\d+)?\s*;\s*(?:ge|gt|le|lt)\s*;\s*\d+(?:\.\d+)?\s*\)$/i.test(func)) {
+          isValid.value = false;
+          syntaxError.value = "Invalid percentile syntax";
+          return false;
+        }
+      } else if (lowFunc.startsWith('name')) {
+        if (!/^name\s*\([^;]+;\s*\d+\)$/i.test(func)) {
+          isValid.value = false;
+          syntaxError.value = "Invalid name syntax";
+          return false;
+        }
       }
     }
 
@@ -699,46 +454,30 @@ const validateSyntax = (value) => {
 };
 
 const highlightSyntax = (value) => {
-  if (!value) {
-    highlightedQuery.value = "";
-    return;
-  }
-  if (!highlightEnabled.value) {
-    highlightedQuery.value = value;
+  if (!value || !highlightEnabled.value) {
+    highlightedQuery.value = value || "";
     return;
   }
 
   let highlighted = value;
 
-  // Use more specific regex patterns with lookahead/lookbehind
+  // Highlight all function names consistently
+  highlighted = highlighted.replace(
+    /\b(kw|keyword|name|pp|percentile|col|column)\s*\(/gi,
+    '<span class="function">$1</span>('
+  );
+
+  // Highlight content inside function calls
   highlighted = highlighted
-    // Functions - match the entire function call
-    .replace(
-      /(?:pp|percentile|kw|keyword|col|column)\s*\([^)]+\)/gi,
-      (match) => {
-        return (
-          match
-            // Highlight function name
-            .replace(
-              /(pp|percentile|kw|keyword|col|column)\s*(?=\()/i,
-              '<span class="function">$1</span>'
-            )
-            // Highlight numbers
-            .replace(/\b(\d+(?:\.\d+)?)\b/g, '<span class="number">$1</span>')
-            // Highlight comparisons
-            .replace(
-              /\b(ge|gt|le|lt)\b/gi,
-              '<span class="comparison">$1</span>'
-            )
-            // Highlight field names
-            .replace(
-              /;\s*([a-zA-Z0-9_]+)\s*(?=\))/g,
-              ';<span class="field">$1</span>'
-            )
-        );
-      }
-    )
-    // Highlight operators - use word boundaries to avoid partial matches
+    // Highlight comparison operators
+    .replace(/;\s*(ge|gt|le|lt)\s*;/gi, ';<span class="comparison">$1</span>;')
+    // Highlight numbers
+    .replace(/\b(\d+(?:\.\d+)?)\b/g, '<span class="number">$1</span>')
+    // Highlight field names (text between parentheses and semicolon)
+    .replace(/\(([^;)]+)(?=;)/g, '(<span class="field">$1</span>');
+
+  // Highlight operators
+  highlighted = highlighted
     .replace(/\bNOT\b/gi, '<span class="not-operator">NOT</span>')
     .replace(/\b(AND|OR|XOR)\b/gi, '<span class="operator">$1</span>');
 
@@ -746,21 +485,14 @@ const highlightSyntax = (value) => {
   let bracketLevel = 0;
   const maxBracketLevels = 4;
 
-  // Process opening brackets
-  highlighted = highlighted.replace(/\(/g, () => {
-    const bracket = `<span class="bracket-${bracketLevel}">&#40;</span>`;
-    bracketLevel = (bracketLevel + 1) % maxBracketLevels;
-    return bracket;
-  });
-
-  // Reset bracket level for closing brackets
-  bracketLevel = 0;
-
-  // Process closing brackets
-  highlighted = highlighted.replace(/\)/g, () => {
-    const bracket = `<span class="bracket-${bracketLevel}">&#41;</span>`;
-    bracketLevel = (bracketLevel + 1) % maxBracketLevels;
-    return bracket;
+  highlighted = highlighted.replace(/[\(\)]/g, (match) => {
+    if (match === '(') {
+      bracketLevel = Math.min(bracketLevel + 1, maxBracketLevels);
+      return `<span class="bracket-${bracketLevel - 1}">(</span>`;
+    } else {
+      bracketLevel = Math.max(bracketLevel - 1, 0);
+      return `<span class="bracket-${bracketLevel}">)</span>`;
+    }
   });
 
   highlightedQuery.value = highlighted;
