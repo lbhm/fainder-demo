@@ -15,13 +15,13 @@ class ColumnIndex:
         metadata: Metadata,
         model: str = "all-MiniLM-L6-v2",
         ef: int = 50,
-        disable_transforner: bool = False,
+        bypass_transformer: bool = False,
     ) -> None:
         self.name_to_vector = metadata.name_to_vector
         self.vector_to_name = {v: k for k, v in self.name_to_vector.items()}
         self.vector_to_cols = metadata.vector_to_cols
 
-        if disable_transforner:
+        if bypass_transformer:
             return
         # Embedding model
         # TODO: Expose model and ef parameters in the settings

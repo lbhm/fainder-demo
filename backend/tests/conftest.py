@@ -43,7 +43,7 @@ def evaluator() -> QueryEvaluator:
     # n_clusters = 27, bin_budget = 270, alpha = 1, transform = None,
     rebinning_index = FainderIndex(settings.rebinning_index_path, metadata)
     conversion_index = FainderIndex(settings.conversion_index_path, metadata)
-    column_search = ColumnIndex(settings.hnsw_index_path, metadata, disable_transforner=True)
+    column_search = ColumnIndex(settings.hnsw_index_path, metadata, bypass_transformer=True)
     return QueryEvaluator(
         lucene_connector, rebinning_index, conversion_index, column_search, metadata
     )

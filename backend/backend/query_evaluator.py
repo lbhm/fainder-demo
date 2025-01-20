@@ -17,10 +17,10 @@ GRAMMAR = """
     expression: not_expr | term | "(" query ")"
     not_expr: "NOT" term | "NOT" "(" query ")"
     term: KEYWORD_OPERATOR "(" keywordterm ")"
-        | COLUMN_OPERATOR "(" column_expression ")"
-    column_expression: col_expr (OPERATOR column_expression)?
-    col_expr: not_col_expr | columnterm | "(" column_expression ")"
-    not_col_expr: "NOT" columnterm | "NOT" "(" column_expression ")"
+        | COLUMN_OPERATOR "(" column_query ")"
+    column_query: col_expr (OPERATOR column_query)?
+    col_expr: not_col_expr | columnterm | "(" column_query ")"
+    not_col_expr: "NOT" columnterm | "NOT" "(" column_query ")"
     columnterm: NAME_OPERATOR "(" nameterm ")" | PERCENTILE_OPERATOR "(" percentileterm ")"
     percentileterm: FLOAT ";" COMPARISON ";" FLOAT
     keywordterm: KEYWORD
@@ -191,27 +191,25 @@ class QueryExecutor(Transformer):
         percentile = float(items[0].value)
         comparison = items[1].value
         reference = float(items[2].value)
-        operator = None
-        side = None
-        if len(items) >= 5:
-            operator = items[-2]
-            side = items[-1]
+        # operator = None
+        # side = None
+        # if len(items) >= 5:
+        # operator = items[-2]
+        # side = items[-1]
 
         # TODO: add filter
         hist_filter = None
 
         result_hists = self.fainder_index.search(percentile, comparison, reference, hist_filter)
-        result = hist_to_col_ids(result_hists, self.metadata.hist_to_col)
         # TODO: update results
-
-        return result
+        return hist_to_col_ids(result_hists, self.metadata.hist_to_col)
 
     def keywordterm(self, items: list[Token]) -> set[int]:
         # TODO: Investigate length of items and annotations
         logger.trace(f"Evaluating keyword term: {items}")
         keyword = items[0].value.strip()
-        operator = items[-2] if len(items) > 2 else None
-        side = items[-1] if len(items) > 2 else None
+        # operator = items[-2] if len(items) > 2 else None
+        # side = items[-1] if len(items) > 2 else None
 
         # TODO: add filter
         doc_filter = None
@@ -226,8 +224,8 @@ class QueryExecutor(Transformer):
         logger.trace(f"Evaluating column term: {items}")
         column = items[0].value.strip()
         k = int(items[1].value.strip())
-        operator = items[-2] if len(items) > 2 else None
-        side = items[-1] if len(items) > 2 else None
+        # operator = items[-2] if len(items) > 2 else None
+        # side = items[-1] if len(items) > 2 else None
 
         # TODO: fix this
         column_filter = None
@@ -238,7 +236,7 @@ class QueryExecutor(Transformer):
 
         return result
 
-    def column_expression(self, items: list[set[uint32] | Token]) -> set[uint32]:
+    def column_query(self, items: list[set[uint32] | Token]) -> set[uint32]:
         logger.trace(f"Evaluating column expression with {len(items)} items")
         if len(items) == 1 and isinstance(items[0], set):
             return items[0]
@@ -265,7 +263,7 @@ class QueryExecutor(Transformer):
         logger.trace(f"Evaluating NOT column expression with {len(items)} items")
         to_negate = items[0]
         # For column expressions, we negate using the set of all column IDs
-        all_columns = {uint32(col_id) for col_id in self.metadata.col_to_doc.keys()}
+        all_columns = {uint32(col_id) for col_id in self.metadata.col_to_doc}
         return all_columns - to_negate
 
     def columnterm(self, items: tuple[Token, set[uint32]]) -> set[uint32]:
@@ -276,10 +274,10 @@ class QueryExecutor(Transformer):
         logger.trace(f"Evaluating term with items: {items}")
         if items[0].value.strip().lower() == "column" or items[0].value.strip().lower() == "col":
             item: set[uint32] = items[1]  # type: ignore
-            items_doc = col_to_doc_ids(item, self.metadata.col_to_doc)
-            return items_doc
+            return col_to_doc_ids(item, self.metadata.col_to_doc)
+
         item: set[int] = items[1]  # type: ignore
-        return item
+        return item  # type: ignore
 
     def not_expr(self, items: list[set[int]]) -> set[int]:
         logger.trace(f"Evaluating NOT expression with {len(items)} items")
