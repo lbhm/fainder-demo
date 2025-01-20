@@ -61,5 +61,5 @@ class ColumnIndex:
                 f"{[self.vector_to_name[vector_id] for vector_id in vector_ids[0]]} with "
                 f"distances {distances[0]}"
             )
-
-        return result.intersection(column_filter) if column_filter else result
+        # TODO: add column filter
+        return result

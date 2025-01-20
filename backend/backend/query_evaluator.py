@@ -145,7 +145,7 @@ class QueryExecutor(Transformer):
         fainder_index: FainderIndex,
         hnsw_index: ColumnIndex,
         metadata: Metadata,
-        enable_filtering: bool = True,
+        enable_filtering: bool = False,
     ):
         self.fainder_index = fainder_index
         self.lucene_connector = lucene_connector
@@ -228,9 +228,11 @@ class QueryExecutor(Transformer):
         operator = items[-2] if len(items) > 2 else None
         side = items[-1] if len(items) > 2 else None
 
+        # TODO: fix this
         column_filter = self._get_column_filter(operator, side)
 
         result = self.hnsw_index.search(column, k, column_filter)
+        logger.trace(f"Result of column search with column:{column} k:{k}r: {result}")
         self.last_result = result
         return result
 
@@ -262,7 +264,9 @@ class QueryExecutor(Transformer):
 
         match operator:
             case "AND":
-                return left & right
+                left_docs = col_to_doc_ids(left, self.metadata.col_to_doc)              
+                right_docs = col_to_doc_ids(right, self.metadata.col_to_doc)
+                return doc_to_col_ids(left_docs & right_docs, self.metadata.doc_to_cols)
             case "OR":
                 return left | right
             case "XOR":

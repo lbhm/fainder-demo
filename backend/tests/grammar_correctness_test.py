@@ -75,6 +75,10 @@ TEST_CASES: dict[str, dict[str, dict[str, dict[str, Any]]]] = {
                 "query": "col(Latitude; 0) AND pp(0.5;ge;50) AND kw(a)",
                 "expected": [0],
             },
+            "multiple_columns": {
+                "query": "col(Latitude; 0) AND col(Longitude; 1)",
+                "expected": [0],
+            },
             # TODO: Add tests for semantic similarity search
         }
     },
