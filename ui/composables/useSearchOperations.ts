@@ -2,14 +2,14 @@ import { useSearchState } from './useSearchState'
 
 export const useSearchOperations = () => {
   const runtimeConfig = useRuntimeConfig()
-  const { 
-    results, 
+  const {
+    results,
     selectedResultIndex,
-    isLoading, 
-    error, 
-    searchTime, 
-    resultCount, 
-    totalPages, 
+    isLoading,
+    error,
+    searchTime,
+    resultCount,
+    totalPages,
     currentPage,
     perPage,
   } = useSearchState()
@@ -49,8 +49,8 @@ export const useSearchOperations = () => {
         }
 
         error.value = {
-          message: response.status === 500 
-            ? 'Internal Server Error' 
+          message: response.status === 500
+            ? 'Internal Server Error'
             : `Search request failed (${response.status} ${response.statusText})`,
           details: details
         };

@@ -70,7 +70,7 @@
         </v-list>
       </v-menu>
     </v-app-bar>
-   
+
     <!-- Add expandable search dialog -->
     <v-dialog
       v-model="showSearchDialog"
@@ -118,7 +118,7 @@
   const { loadResults } = useSearchOperations();
   const route = useRoute();
   const theme = useTheme();
-  const { query, fainder_mode, currentPage, selectedResultIndex } = useSearchState(); 
+  const { query, fainder_mode, currentPage, selectedResultIndex } = useSearchState();
   const colorMode = useColorMode();
   const highlightEnabled = useCookie('highlight-enabled', { default: () => true })
 
@@ -173,7 +173,7 @@
     internalSearchQuery.value = searchQuery;
     searchComponentKey.value++; // Increment key to force component reload
 
-    
+
   }
 </script>
 

@@ -1,6 +1,6 @@
 export const useSearchState = () => {
   const route = useRoute()
-  
+
   const results = useState('search-results', () => null)
   const selectedResultIndex = useState('selected-result-index', () => {
     const indexFromRoute = route.query.index;
@@ -13,11 +13,11 @@ export const useSearchState = () => {
   const currentPage = useState('current-page', () => parseInt(route.query.page as string) || 1
     )
   const totalPages = useState('total-pages', () => 1)
-  const query = useState('search-query', () => 
+  const query = useState('search-query', () =>
     route.query.query as string || ''
 )
   // Initialize with route query or default value
-  const fainder_mode = useState('index-type', () => 
+  const fainder_mode = useState('index-type', () =>
     route.query.fainder_mode as string || 'low_memory'
   )
 

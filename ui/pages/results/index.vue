@@ -8,7 +8,7 @@ page
       <v-divider></v-divider>
       <div class="pa-5">
       <!-- Remove search container -->
-      
+
       <!-- Add search stats -->
       <div
         v-if="!isLoading && !error && results && results.length > 0"
@@ -173,14 +173,14 @@ const {
   currentPage,
   totalPages,
   query,
-  fainder_mode, 
+  fainder_mode,
   perPage
 } = useSearchState();
 
 console.log(selectedResultIndex.value);
 
 // Add computed for selected result
-const selectedResult = computed(() => 
+const selectedResult = computed(() =>
   results.value ? results.value[selectedResultIndex.value] : null
 );
 
@@ -235,11 +235,11 @@ function updateTotalVisible() {
 
 watch(currentPage, async (newPage) => {
   await searchOperations.loadResults(
-    query.value, 
-    newPage,  
+    query.value,
+    newPage,
     fainder_mode.value
   );
-  
+
   // Update URL with new page
   navigateTo({
     path: "/results",
@@ -247,7 +247,7 @@ watch(currentPage, async (newPage) => {
       query: query.value,
       page: newPage,
       index: selectedResultIndex.value,
-      fainder_mode: fainder_mode.value, 
+      fainder_mode: fainder_mode.value,
       theme: theme.global.name.value,
     },
   });
@@ -292,16 +292,16 @@ onMounted(() => {
 // Add retry function
 const retrySearch = async () => {
   await searchOperations.loadResults(
-    query.value, 
-    currentPage.value, 
+    query.value,
+    currentPage.value,
     route.query.fainder_mode
   );
 };
 
 // Initial load
 await searchOperations.loadResults(
-  query.value, 
-  currentPage.value,  
+  query.value,
+  currentPage.value,
   fainder_mode.value
 );
 

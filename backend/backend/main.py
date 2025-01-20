@@ -1,7 +1,5 @@
-import io
 import sys
 import time
-import zipfile
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
@@ -138,17 +136,15 @@ async def upload_files(files: list[UploadFile]):
             if not file.filename:
                 raise HTTPException(status_code=400, detail="No file uploaded")
             if not file.filename.endswith(".json"):
-                raise HTTPException(
-                    status_code=400, detail="Only .json files are accepted"
-                )
-            content = await file.read()
+                raise HTTPException(status_code=400, detail="Only .json files are accepted")
+            _ = await file.read()
             # TODO: Add a function to handle JSON content
 
         # TODO: Add the reindexing process
         return {"message": "Files uploaded successfully"}
     except Exception as e:
         logger.error(f"Upload error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.get("/cache_statistics")

@@ -63,7 +63,7 @@ words # The search page will contain multiple search bars
                 @click="showSimpleBuilder = false"
               />
             </div>
-            
+
             <!-- Combined filters list -->
             <v-chip-group class="mb-4">
               <v-chip
@@ -576,20 +576,20 @@ async function searchData() {
   // Combine search query with filter terms
 
   const terms = [];
-  
+
   // Add column terms
-  const columnQueryTerms = columnTerms.value.map(term => 
+  const columnQueryTerms = columnTerms.value.map(term =>
     `col(${term.column};${term.threshold})`
   );
 
   // Add percentile terms
-  const percentileQueryTerms = percentileTerms.value.map(term => 
+  const percentileQueryTerms = percentileTerms.value.map(term =>
     `pp(${term.percentile};${term.comparison};${term.value})`
   );
   if (columnQueryTerms.length) {
     terms.push(columnQueryTerms.join(' AND '));
   }
-  
+
   if (percentileQueryTerms.length) {
     terms.push(percentileQueryTerms.join(' AND '));
   }
@@ -598,15 +598,15 @@ async function searchData() {
 
 
   let query = searchQuery.value?.trim() || '';
-  
+
   // Check if query is just plain text (no operators or functions)
   const isPlainText = !/(?:pp|percentile|kw|keyword|col|column)\s*\(|AND|OR|XOR|NOT|\(|\)/.test(query);
-  
+
   // Process plain text as keyword search
   if (isPlainText && query) {
     query = `kw(${query})`;
   }
-  
+
   // Combine filter terms with query
   if (filterQuery) {
     query = query ? `${query} AND ${filterQuery}` : filterQuery;
@@ -788,8 +788,8 @@ const isColumnFilterValid = computed(() => {
 
 const isPercentileFilterValid = computed(() => {
   const f = percentileFilter.value;
-  return f.percentile !== '' && 
-         parseFloat(f.percentile) >= 0 && 
+  return f.percentile !== '' &&
+         parseFloat(f.percentile) >= 0 &&
          parseFloat(f.percentile) <= 1 &&
          f.comparison &&
          f.value !== '' &&
@@ -799,12 +799,12 @@ const isPercentileFilterValid = computed(() => {
 // Separate add functions for each filter type
 const addColumnFilter = () => {
   if (!isColumnFilterValid.value) return;
-  
+
   columnTerms.value.push({
     column: columnFilter.value.column,
     threshold: parseFloat(columnFilter.value.threshold)
   });
-  
+
   // Reset form
   columnFilter.value = {
     column: '',
@@ -814,13 +814,13 @@ const addColumnFilter = () => {
 
 const addPercentileFilter = () => {
   if (!isPercentileFilterValid.value) return;
-  
+
   percentileTerms.value.push({
     percentile: parseFloat(percentileFilter.value.percentile),
     comparison: percentileFilter.value.comparison,
     value: parseFloat(percentileFilter.value.value)
   });
-  
+
   // Reset form
   percentileFilter.value = {
     percentile: '',
@@ -831,26 +831,26 @@ const addPercentileFilter = () => {
 
 const addBothFilters = () => {
   if (!isColumnFilterValid.value || !isPercentileFilterValid.value) return;
-  
+
   // Add column filter
   columnTerms.value.push({
     column: columnFilter.value.column,
     threshold: parseFloat(columnFilter.value.threshold)
   });
-  
+
   // Add percentile filter
   percentileTerms.value.push({
     percentile: parseFloat(percentileFilter.value.percentile),
     comparison: percentileFilter.value.comparison,
     value: parseFloat(percentileFilter.value.value)
   });
-  
+
   // Reset both forms
   columnFilter.value = {
     column: '',
     threshold: ''
   };
-  
+
   percentileFilter.value = {
     percentile: '',
     comparison: '',

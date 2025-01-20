@@ -48,8 +48,12 @@ class QueryEvaluator:
         self.lucene_connector = lucene_connector
         self.grammar = Lark(GRAMMAR, start="start")
         self.annotator = QueryAnnotator()
-        self.executor_rebinning = QueryExecutor(self.lucene_connector, rebinning_index, hnsw_index, metadata)
-        self.executor_conversion = QueryExecutor(self.lucene_connector, conversion_index, hnsw_index, metadata)
+        self.executor_rebinning = QueryExecutor(
+            self.lucene_connector, rebinning_index, hnsw_index, metadata
+        )
+        self.executor_conversion = QueryExecutor(
+            self.lucene_connector, conversion_index, hnsw_index, metadata
+        )
 
         # NOTE: Don't use lru_cache on methods
         # See https://docs.astral.sh/ruff/rules/cached-instance-method/ for details
@@ -58,7 +62,9 @@ class QueryEvaluator:
     def parse(self, query: str) -> Tree:
         return self.grammar.parse(query)
 
-    def _execute(self, query: str, enable_filtering: bool = True, fainder_mode: str = "low_memory") -> list[int]:
+    def _execute(
+        self, query: str, enable_filtering: bool = True, fainder_mode: str = "low_memory"
+    ) -> list[int]:
         self.annotator.reset()
         executor: QueryExecutor
 
