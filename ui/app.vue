@@ -1,25 +1,103 @@
 <template>
   <v-app>
-    <v-app-bar rounded>
-      <Logo size="medium" class="mr-4"/>
+    <v-app-bar :elevation="0" height="85">
+      <Logo size="medium" class="mr-4" @click="gotoHome"/>
+      <v-spacer></v-spacer>
 
-      <v-btn @click="gotoHome" prepend-icon="mdi-home">
-        Home
-      </v-btn>
+      <!-- Add search component in app bar only on results page -->
+      <template v-if="route.path === '/results'">
+        <Search_Component
+          :key="searchComponentKey"
+          :searchQuery="internalSearchQuery"
+          :inline="true"
+          :queryBuilder="false"
+          @searchData="searchData"
+          class="app-bar-search mx-2"
+        />
+        <v-btn
+          icon
+          @click="showSearchDialog = true"
+        >
+          <v-icon>mdi-arrow-expand</v-icon>
+        </v-btn>
+      </template>
 
       <v-spacer></v-spacer>
 
-      <v-btn value="theme" @click="toggleTheme">
-        <div v-if="theme.global.current.value.dark">
-          <v-icon icon="mdi-weather-sunny" color="yellow"></v-icon>
-          {{ "Light Mode" }}
-        </div>
-        <div v-else>
-          <v-icon icon="mdi-weather-night" color="indigo"></v-icon>
-          {{ "Dark Mode" }}
-        </div>
-      </v-btn>
+      <v-menu>
+        <template v-slot:activator="{ props }">
+          <v-btn icon v-bind="props">
+            <v-icon>mdi-menu</v-icon>
+          </v-btn>
+        </template>
+
+        <v-list>
+          <v-list-item @click="navigateTo('/upload')">
+            <template v-slot:prepend>
+              <v-icon icon="mdi-upload"></v-icon>
+            </template>
+            <v-list-item-title>Upload Datasets</v-list-item-title>
+          </v-list-item>
+
+          <v-list-item @click="navigateTo('/about')">
+            <template v-slot:prepend>
+              <v-icon icon="mdi-information"></v-icon>
+            </template>
+            <v-list-item-title>About</v-list-item-title>
+          </v-list-item>
+
+          <v-divider class="mx-3"></v-divider>
+
+          <v-list-item @click="toggleHighlight">
+            <template v-slot:prepend>
+              <v-icon icon="mdi-marker"></v-icon>
+            </template>
+            <v-list-item-title>
+              {{ highlightEnabled ? 'Disable Syntax Highlight' : 'Enable Syntax Highlight' }}
+            </v-list-item-title>
+          </v-list-item>
+
+          <v-list-item @click="toggleTheme">
+            <template v-slot:prepend>
+              <v-icon :icon="theme.global.current.value.dark ? 'mdi-weather-sunny' : 'mdi-weather-night'"
+                     :color="theme.global.current.value.dark ? 'yellow' : 'indigo'">
+              </v-icon>
+            </template>
+            <v-list-item-title>
+              {{ theme.global.current.value.dark ? 'Light Mode' : 'Dark Mode' }}
+            </v-list-item-title>
+          </v-list-item>
+        </v-list>
+      </v-menu>
     </v-app-bar>
+
+    <!-- Add expandable search dialog -->
+    <v-dialog
+      v-model="showSearchDialog"
+      transition="dialog-top-transition"
+      maxWidth="56rem"
+    >
+      <v-card>
+        <v-toolbar dark color="primary">
+          <v-btn icon dark @click="showSearchDialog = false">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+          <v-toolbar-title>Query Builder</v-toolbar-title>
+        </v-toolbar>
+
+        <v-container class="pt-6">
+          <Search_Component
+            :key="searchComponentKey"
+            :searchQuery="route.query.query"
+            :inline="true"
+            :queryBuilder="false"
+            :simpleBuilder="true"
+            @searchData="(data) => { searchData(data); showSearchDialog = false; }"
+          />
+        </v-container>
+      </v-card>
+    </v-dialog>
+
     <NuxtLayout>
       <NuxtPage />
     </NuxtLayout>
@@ -31,14 +109,21 @@
   import { useRoute } from 'vue-router'
   import Logo from '~/components/Logo.vue'
 
+
   function gotoHome() {
     console.log('go to home')
     return navigateTo({path:'/'})
   }
 
+  const { loadResults } = useSearchOperations();
   const route = useRoute();
   const theme = useTheme();
+  const { query, fainder_mode, currentPage, selectedResultIndex } = useSearchState();
   const colorMode = useColorMode();
+  const highlightEnabled = useCookie('highlight-enabled', { default: () => true })
+
+  const internalSearchQuery = ref(route.query.query);
+  const searchComponentKey = ref(0);
 
   let currentTheme = route.query.theme || colorMode.value;
   theme.global.name.value = currentTheme === "dark" ? "dark" : "light";
@@ -56,4 +141,49 @@
     });
 
   }
+
+  function toggleHighlight() {
+    highlightEnabled.value = !highlightEnabled.value
+  }
+
+  const showSearchDialog = ref(false);
+
+  async function searchData({ query: searchQuery, fainder_mode: newfainder_mode }) {
+    console.log(searchQuery)
+    query.value = searchQuery;
+    fainder_mode.value = newfainder_mode;
+
+    currentPage.value = 1;
+    selectedResultIndex.value = 0;
+
+    await loadResults(searchQuery, 1, newfainder_mode);
+
+    await navigateTo({
+      path: '/results',
+      query: {
+        query: searchQuery,
+        page: 1,
+        index: 0,
+        fainder_mode: newfainder_mode,
+        theme: theme.global.name.value,
+      },
+    });
+
+    // change the searchQuery in app bar
+    internalSearchQuery.value = searchQuery;
+    searchComponentKey.value++; // Increment key to force component reload
+
+
+  }
 </script>
+
+<style scoped>
+.app-bar-search {
+  max-width: 800px;  /* Increased from 600px */
+  flex-grow: 1;
+}
+
+.app-bar-search :deep(.v-field) {
+  border-radius: 20px;
+}
+</style>

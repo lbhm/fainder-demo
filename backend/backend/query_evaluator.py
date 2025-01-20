@@ -52,7 +52,12 @@ class QueryEvaluator:
         self.lucene_connector = lucene_connector
         self.grammar = Lark(GRAMMAR, start="start")
         self.annotator = QueryAnnotator()
-        self.executor = QueryExecutor(self.lucene_connector, rebinning_index, hnsw_index, metadata)
+        self.executor_rebinning = QueryExecutor(
+            self.lucene_connector, rebinning_index, hnsw_index, metadata
+        )
+        self.executor_conversion = QueryExecutor(
+            self.lucene_connector, conversion_index, hnsw_index, metadata
+        )
 
         # NOTE: Don't use lru_cache on methods
         # See https://docs.astral.sh/ruff/rules/cached-instance-method/ for details
@@ -61,18 +66,26 @@ class QueryEvaluator:
     def parse(self, query: str) -> Tree:
         return self.grammar.parse(query)
 
-    def _execute(self, query: str, enable_filtering: bool = True) -> list[int]:
+    def _execute(
+        self, query: str, enable_filtering: bool = True, fainder_mode: str = "low_memory"
+    ) -> list[int]:
         self.annotator.reset()
-        self.executor.reset()
-        self.executor.enable_filtering = enable_filtering
+        executor: QueryExecutor
+
+        # TODO: add fainder_mode
+
+        executor = self.executor_rebinning
+
+        executor.reset()
+        executor.enable_filtering = enable_filtering
 
         parse_tree = self.parse(query)
         self.annotator.visit(parse_tree)
         logger.trace(f"Parse tree: {parse_tree.pretty()}")
 
-        result: list[int] = list(self.executor.transform(parse_tree))
+        result: list[int] = list(executor.transform(parse_tree))
         # Sort the results by score (descending), append to the end if no score is available
-        result.sort(key=lambda x: self.executor.scores.get(x, -1), reverse=True)
+        result.sort(key=lambda x: executor.scores.get(x, -1), reverse=True)
         return result
 
     def clear_cache(self) -> None:
@@ -247,7 +260,9 @@ class QueryExecutor(Transformer):
 
         match operator:
             case "AND":
-                return left & right
+                left_docs = col_to_doc_ids(left, self.metadata.col_to_doc)
+                right_docs = col_to_doc_ids(right, self.metadata.col_to_doc)
+                return doc_to_col_ids(left_docs & right_docs, self.metadata.doc_to_cols)
             case "OR":
                 return left | right
             case "XOR":

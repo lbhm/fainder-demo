@@ -4,7 +4,7 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from lark import UnexpectedInput
 from loguru import logger
@@ -39,7 +39,9 @@ croissant_store = CroissantStore(settings.croissant_path)
 lucene_connector = LuceneConnector(settings.lucene_host, settings.lucene_port)
 rebinning_index = FainderIndex(settings.rebinning_index_path, metadata)
 conversion_index = FainderIndex(settings.conversion_index_path, metadata)
+logger.info("starting to column index")
 column_index = ColumnIndex(settings.hnsw_index_path, metadata)
+logger.info("All indexes loaded successfully.")
 query_evaluator = QueryEvaluator(
     lucene_connector=lucene_connector,
     rebinning_index=rebinning_index,
@@ -85,7 +87,8 @@ async def query(request: QueryRequest) -> QueryResponse:
 
     try:
         start_time = time.perf_counter()
-        doc_ids = query_evaluator.execute(request.query)
+        # Pass index type to execute
+        doc_ids = query_evaluator.execute(request.query, fainder_mode=request.fainder_mode)
 
         # Calculate pagination
         start_idx = (request.page - 1) * request.per_page
@@ -123,6 +126,25 @@ async def query(request: QueryRequest) -> QueryResponse:
     except Exception as e:
         logger.error(f"Unknown query execution error: {e}")
         raise HTTPException(status_code=500, detail="Internal server error") from e
+
+
+@app.post("/upload")
+async def upload_files(files: list[UploadFile]):
+    """Handle upload of JSON files."""
+    try:
+        for file in files:
+            if not file.filename:
+                raise HTTPException(status_code=400, detail="No file uploaded")
+            if not file.filename.endswith(".json"):
+                raise HTTPException(status_code=400, detail="Only .json files are accepted")
+            _ = await file.read()
+            # TODO: Add a function to handle JSON content
+
+        # TODO: Add the reindexing process
+        return {"message": "Files uploaded successfully"}
+    except Exception as e:
+        logger.error(f"Upload error: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.get("/cache_statistics")
