@@ -1,6 +1,6 @@
 <template>
   <v-app>
-    <v-app-bar :elevation="0" height="80">
+    <v-app-bar :elevation="0" height="85">
       <Logo size="medium" class="mr-4" @click="gotoHome"/>
       <v-spacer></v-spacer>
 

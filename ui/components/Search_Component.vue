@@ -7,20 +7,22 @@ words # The search page will contain multiple search bars
       <v-row :class="{ 'inline-layout': inline }">
         <v-col cols="11">
           <div class="input-wrapper">
-            <v-text-field
+            <v-textarea
               v-model="searchQuery"
               label="Search"
               variant="outlined"
               density="comfortable"
               :error="!isValid"
               :rules="[validateSyntax]"
-              :error-messages="syntaxError"
               @update:model-value="highlightSyntax"
-              hide-details="auto"
+              hide-details="true"
+              rows="1"
               class="search-input"
               append-inner-icon="mdi-magnify"
+              auto-grow
             />
             <div class="syntax-highlight" v-html="highlightedQuery"></div>
+            <div v-if="syntaxError" class="error-message">{{ syntaxError }}</div>
           </div>
         </v-col>
         <v-col cols="1">
@@ -900,8 +902,11 @@ function saveSettings() {
   width: 100%;
 }
 
+.search-input {
+  margin-bottom: 4px;
+}
 
-.search-input :deep(input) {
+.search-input :deep(textarea) {
   position: relative;
   color: transparent !important;
   background: transparent !important;
@@ -912,15 +917,16 @@ function saveSettings() {
   font-size: 16px;
   letter-spacing: normal;
   line-height: normal;
-  padding: 0 16px;
+  padding: 8px 16px;
+  min-height: 45px;
+  resize: none;
 }
 
 .syntax-highlight {
   position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
+  top: 8px;
   left: 16px;
-  right: 48px; /* Account for the append-inner icon width */
+  right: 48px;
   pointer-events: none;
   font-family: 'Roboto Mono', monospace;
   font-size: 16px;
@@ -932,6 +938,14 @@ function saveSettings() {
   text-overflow: ellipsis;
   letter-spacing: normal;
   line-height: normal;
+}
+
+.error-message {
+  color: rgb(var(--v-theme-error));
+  font-size: 12px;
+  margin-top: 4px;
+  min-height: 20px;
+  padding-left: 16px;
 }
 
 /* Remove background colors from syntax highlighting */
