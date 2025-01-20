@@ -900,9 +900,6 @@ function saveSettings() {
   width: 100%;
 }
 
-.search-input {
-  position: relative;
-}
 
 .search-input :deep(input) {
   position: relative;
@@ -910,23 +907,31 @@ function saveSettings() {
   background: transparent !important;
   caret-color: black;
   z-index: 2;
-  padding-left: 5 !important; /* Remove input padding */
+  white-space: pre;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 16px;
+  letter-spacing: normal;
+  line-height: normal;
+  padding: 0 16px;
 }
 
 .syntax-highlight {
   position: absolute;
-  top: 12px;
-  left: 15px; /* Fine-tuned positioning */
-  right: 0px;
+  top: 50%;
+  transform: translateY(-50%);
+  left: 16px;
+  right: 48px; /* Account for the append-inner icon width */
   pointer-events: none;
-  font-family: inherit;
-  font-size: inherit;
-  white-space: pre;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 16px;
   z-index: 1;
   color: rgba(0, 0, 0, 0.87);
   mix-blend-mode: normal;
-  letter-spacing: normal; /* Ensure normal letter spacing */
-  padding-left: 5 !important; /* Remove input padding */
+  white-space: pre;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: normal;
+  line-height: normal;
 }
 
 /* Remove background colors from syntax highlighting */
