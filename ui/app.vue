@@ -122,7 +122,7 @@
   const colorMode = useColorMode();
   const highlightEnabled = useCookie('highlight-enabled', { default: () => true })
 
-  const internalSearchQuery = ref(route.query.query);
+  const internalSearchQuery = computed(() => route.query.query);
   const searchComponentKey = ref(0);
 
   let currentTheme = route.query.theme || colorMode.value;
@@ -169,11 +169,7 @@
       },
     });
 
-    // change the searchQuery in app bar
-    internalSearchQuery.value = searchQuery;
     searchComponentKey.value++; // Increment key to force component reload
-
-
   }
 </script>
 
