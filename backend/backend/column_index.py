@@ -10,12 +10,19 @@ from backend.config import ColumnSearchError, Metadata
 
 class ColumnIndex:
     def __init__(
-        self, path: Path, metadata: Metadata, model: str = "all-MiniLM-L6-v2", ef: int = 50
+        self,
+        path: Path,
+        metadata: Metadata,
+        model: str = "all-MiniLM-L6-v2",
+        ef: int = 50,
+        disable_transforner: bool = False,
     ) -> None:
         self.name_to_vector = metadata.name_to_vector
         self.vector_to_name = {v: k for k, v in self.name_to_vector.items()}
         self.vector_to_cols = metadata.vector_to_cols
 
+        if disable_transforner:
+            return
         # Embedding model
         # TODO: Expose model and ef parameters in the settings
         self.embedder = SentenceTransformer(
@@ -42,6 +49,9 @@ class ColumnIndex:
                 col_ids = self.vector_to_cols.get(vector_id, set())
                 result |= {uint32(col_id) for col_id in col_ids}
         else:
+            if self.embedder is None:
+                raise ColumnSearchError("Embedding model is not available for approximate search")
+
             # Nearest neighbor search
             embedding = self.embedder.encode(
                 column_name, convert_to_numpy=True, normalize_embeddings=True

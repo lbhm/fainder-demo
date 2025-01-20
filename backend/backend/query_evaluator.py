@@ -16,17 +16,21 @@ GRAMMAR = """
     query: expression (OPERATOR query)?
     expression: not_expr | term | "(" query ")"
     not_expr: "NOT" term | "NOT" "(" query ")"
-    term: PERCENTILE_OPERATOR "(" percentileterm ")"
-        | KEYWORD_OPERATOR "(" keywordterm ")"
-        | COLUMN_OPERATOR "(" columnterm ")"
+    term: KEYWORD_OPERATOR "(" keywordterm ")"
+        | COLUMN_OPERATOR "(" column_expression ")"
+    column_expression: col_expr (OPERATOR column_expression)?
+    col_expr: not_col_expr | columnterm | "(" column_expression ")"
+    not_col_expr: "NOT" columnterm | "NOT" "(" column_expression ")"
+    columnterm: NAME_OPERATOR "(" nameterm ")" | PERCENTILE_OPERATOR "(" percentileterm ")"
     percentileterm: FLOAT ";" COMPARISON ";" FLOAT
     keywordterm: KEYWORD
-    columnterm: IDENTIFIER ";" NUMBER
+    nameterm: IDENTIFIER ";" NUMBER
     OPERATOR: "AND" | "OR" | "XOR"
     COMPARISON: "ge" | "gt" | "le" | "lt"
     PERCENTILE_OPERATOR: ("pp"i | "percentile"i) " "*
     KEYWORD_OPERATOR: ("kw"i | "keyword"i) " "*
     COLUMN_OPERATOR: ("col"i | "column"i) " "*
+    NAME_OPERATOR: ("name"i) " "*
     NUMBER: /[0-9]+/
     FLOAT: /[0-9]+(\\.[0-9]+)?/
     IDENTIFIER: /[a-zA-Z0-9_]+/
@@ -193,35 +197,32 @@ class QueryExecutor(Transformer):
             operator = items[-2]
             side = items[-1]
 
-        column_filter = self._get_column_filter(operator, side)
+        # TODO: add filter
         hist_filter = None
-        if column_filter:
-            hist_filter = col_to_hist_ids(column_filter, self.metadata.col_to_hist)
 
         result_hists = self.fainder_index.search(percentile, comparison, reference, hist_filter)
         result = hist_to_col_ids(result_hists, self.metadata.hist_to_col)
-        self.last_result = result
+        # TODO: update results
+
         return result
 
-    def keywordterm(self, items: list[Token]) -> set[uint32]:
+    def keywordterm(self, items: list[Token]) -> set[int]:
         # TODO: Investigate length of items and annotations
         logger.trace(f"Evaluating keyword term: {items}")
         keyword = items[0].value.strip()
         operator = items[-2] if len(items) > 2 else None
         side = items[-1] if len(items) > 2 else None
 
-        column_filter = self._get_column_filter(operator, side)
+        # TODO: add filter
         doc_filter = None
-        if column_filter:
-            doc_filter = col_to_doc_ids(column_filter, self.metadata.col_to_doc)
 
         result_docs, scores = self.lucene_connector.evaluate_query(keyword, doc_filter)
         self.updates_scores(result_docs, scores)
-        result_set = doc_to_col_ids(set(result_docs), self.metadata.doc_to_cols)
-        self.last_result = result_set
-        return result_set
+        # TODO: update results
 
-    def columnterm(self, items: list[Token]) -> set[uint32]:
+        return set(result_docs)
+
+    def nameterm(self, items: list[Token]) -> set[uint32]:
         logger.trace(f"Evaluating column term: {items}")
         column = items[0].value.strip()
         k = int(items[1].value.strip())
@@ -229,32 +230,16 @@ class QueryExecutor(Transformer):
         side = items[-1] if len(items) > 2 else None
 
         # TODO: fix this
-        column_filter = self._get_column_filter(operator, side)
+        column_filter = None
 
         result = self.hnsw_index.search(column, k, column_filter)
         logger.trace(f"Result of column search with column:{column} k:{k}r: {result}")
-        self.last_result = result
+        # TODO: update results
+
         return result
 
-    def term(self, items: tuple[Token, set[uint32]]) -> set[uint32]:
-        logger.trace(f"Evaluating term with items: {items}")
-        return items[1]
-
-    def not_expr(self, items: list[set[uint32]]) -> set[uint32]:
-        logger.trace(f"Evaluating NOT expression with {len(items)} items")
-        # TODO: Same "Problem" as in the query function with xor
-        to_negate = items[0]
-        doc_ids = col_to_doc_ids(to_negate, self.metadata.col_to_doc)
-        all_docs = set(self.metadata.doc_to_cols.keys())
-        result = all_docs - doc_ids
-        return doc_to_col_ids(result, self.metadata.doc_to_cols)
-
-    def expression(self, items: list[set[uint32]]) -> set[uint32]:
-        logger.trace(f"Evaluating expression with {len(items[0])} items")
-        return items[0]
-
-    def query(self, items: list[set[uint32] | Token]) -> set[uint32]:
-        logger.trace(f"Evaluating query with {len(items)} items")
+    def column_expression(self, items: list[set[uint32] | Token]) -> set[uint32]:
+        logger.trace(f"Evaluating column expression with {len(items)} items")
         if len(items) == 1 and isinstance(items[0], set):
             return items[0]
 
@@ -264,23 +249,71 @@ class QueryExecutor(Transformer):
 
         match operator:
             case "AND":
-                left_docs = col_to_doc_ids(left, self.metadata.col_to_doc)              
-                right_docs = col_to_doc_ids(right, self.metadata.col_to_doc)
-                return doc_to_col_ids(left_docs & right_docs, self.metadata.doc_to_cols)
+                return left & right
             case "OR":
                 return left | right
             case "XOR":
-                # TODO: Document 2-level XOR
-                left_docs = col_to_doc_ids(left, self.metadata.col_to_doc)
-                right_docs = col_to_doc_ids(right, self.metadata.col_to_doc)
-                return doc_to_col_ids(left_docs ^ right_docs, self.metadata.doc_to_cols)
+                return left ^ right
             case _:
                 raise ValueError(f"Unknown operator: {operator}")
 
-    def start(self, items: list[set[uint32]]) -> set[int]:
-        logger.trace("Starting query evaluation")
-        logger.debug(f"Final result: {[int(i) for i in items[0]]}")
-        return col_to_doc_ids(items[0], self.metadata.col_to_doc)
+    def col_expr(self, items: list[set[uint32]]) -> set[uint32]:
+        logger.trace(f"Evaluating column expression with {len(items)} items")
+        return items[0]
+
+    def not_col_expr(self, items: list[set[uint32]]) -> set[uint32]:
+        logger.trace(f"Evaluating NOT column expression with {len(items)} items")
+        to_negate = items[0]
+        # For column expressions, we negate using the set of all column IDs
+        all_columns = {uint32(col_id) for col_id in self.metadata.col_to_doc.keys()}
+        return all_columns - to_negate
+
+    def columnterm(self, items: tuple[Token, set[uint32]]) -> set[uint32]:
+        logger.trace(f"Evaluating column term with {items} items")
+        return items[1]
+
+    def term(self, items: tuple[Token, set[uint32]] | tuple[Token, set[int]]) -> set[int]:
+        logger.trace(f"Evaluating term with items: {items}")
+        if items[0].value.strip().lower() == "column" or items[0].value.strip().lower() == "col":
+            item: set[uint32] = items[1]  # type: ignore
+            items_doc = col_to_doc_ids(item, self.metadata.col_to_doc)
+            return items_doc
+        item: set[int] = items[1]  # type: ignore
+        return item
+
+    def not_expr(self, items: list[set[int]]) -> set[int]:
+        logger.trace(f"Evaluating NOT expression with {len(items)} items")
+        # TODO: Same "Problem" as in the query function with xor
+        to_negate = items[0]
+        all_docs = set(self.metadata.doc_to_cols.keys())
+        return all_docs - to_negate
+
+    def expression(self, items: list[set[int]]) -> set[int]:
+        logger.trace(f"Evaluating expression with {len(items[0])} items")
+        return items[0]
+
+    def query(self, items: list[set[int] | Token]) -> set[int]:
+        logger.debug(f"Evaluating query with {len(items)} items")
+        if len(items) == 1 and isinstance(items[0], set):
+            return items[0]
+
+        left: set[int] = items[0]  # type: ignore
+        operator: str = items[1].value.strip()  # type: ignore
+        right: set[int] = items[2]  # type: ignore
+
+        match operator:
+            case "AND":
+                return left & right
+            case "OR":
+                return left | right
+            case "XOR":
+                return left ^ right
+            case _:
+                raise ValueError(f"Unknown operator: {operator}")
+
+    def start(self, items: list[set[int]]) -> set[int]:
+        logger.debug(f"returning {items[0]}")
+        return items[0]
 
 
 def doc_to_col_ids(doc_ids: set[int], doc_to_columns: dict[int, set[int]]) -> set[uint32]:

@@ -12,42 +12,47 @@ VALID_TEST_CASES = {
     },
     "basic_percentile": {
         "queries": [
-            "pp(0.5;ge;20.0)",
-            "percentile(0.5;ge;20.0)",
+            "col(pp(0.5;ge;20.0))",
+            "col(percentile(0.5;ge;20.0))",
         ]
     },
     "combined": {
         "queries": [
-            "kw(test) AND pp(0.5;ge;20.0)",
-            "keyword(hello) OR percentile(0.5;ge;20.0)",
-            "kw(test) XOR pp(0.5;ge;20.0)",
+            "kw(test) AND col(pp(0.5;ge;20.0))",
+            "keyword(hello) OR col(percentile(0.5;ge;20.0))",
+            "kw(test) XOR col(pp(0.5;ge;20.0))",
         ]
     },
     "nested": {
         "queries": [
-            "(kw(test) AND pp(0.5;ge;20.0)) OR keyword(other)",
-            "(keyword(hello) OR kw(world)) AND pp(0.5;ge;20.0)",
+            "(kw(test) AND col(pp(0.5;ge;20.0))) OR keyword(other)",
+            "(keyword(hello) OR kw(world)) AND col(pp(0.5;ge;20.0))",
         ]
     },
     "not_operations": {
         "queries": [
             "NOT kw(test)",
-            "NOT pp(0.5;ge;20.0)",
-            "NOT (kw(test) AND pp(0.5;ge;20.0))",
+            "NOT col(pp(0.5;ge;20.0))",
+            "NOT (kw(test) AND col(pp(0.5;ge;20.0)))",
         ]
     },
     "optional_whitespaces": {
         "queries": [
-            "kw(test) AND pp (0.5;ge;20.0)",
-            "kw(test) AND pp (0.5;ge;20.0)",
-            "keyword (test) AND pp  (0.5;ge;20.0)",
-            "keyword(test)ANDpp(0.5;ge;20.0)",
+            "kw(test) AND col(pp (0.5;ge;20.0))",
+            "kw(test) AND col(pp (0.5;ge;20.0))",
+            "keyword (test) AND col(pp  (0.5;ge;20.0))",
+            "keyword(test)ANDcol(pp(0.5;ge;20.0))",
         ]
     },
     "column_operator": {
         "queries": [
-            "col(test; 0)",
-            "column(hello; 1)",
+            "col(name(test; 0))",
+            "column(name(hello; 1))",
+            "col(pp(0.5;ge;20.0))",
+            "col(name(test; 0) AND pp(0.5;ge;20.0))",
+            "col(NOT name(test; 0))",
+            "col((name(test; 0) AND pp(0.5;ge;20.0)) OR name(other; 1))",
+            "col(NOT (name(test; 0) AND pp(0.5;ge;20.0)))",
         ]
     },
 }
@@ -90,6 +95,15 @@ INVALID_TEST_CASES = {
             "(kw(test) AND",
             "kw(test)) OR pp(0.5;ge;20.0)",
             "AND kw(test)",
+        ]
+    },
+    "invalid_column": {
+        "queries": [
+            "col(keyword(test))",  # Keywords not allowed in column expressions
+            "col(kw(test))",  # Keywords not allowed in column expressions
+            "col()",  # Empty column expression
+            "col(name(test))",  # Missing k parameter
+            "col(name(; 0))",  # Missing name parameter
         ]
     },
 }

@@ -16,26 +16,26 @@ TEST_CASES: dict[str, dict[str, dict[str, dict[str, Any]]]] = {
     },
     "basic_percentile": {
         "queries": {
-            "simple_percentile": {"query": "pp(0.5;ge;2000)", "expected": [0, 1, 2]},
-            "high_percentile": {"query": "pp(0.9;ge;1000000)", "expected": [1, 2]},
+            "simple_percentile": {"query": "col(pp(0.5;ge;2000))", "expected": [0, 1, 2]},
+            "high_percentile": {"query": "col(pp(0.9;ge;1000000))", "expected": [1, 2]},
         }
     },
     "combined_operations": {
         "queries": {
             "keyword_and_percentile": {
-                "query": "kw(germany) AND pp(0.5;ge;20.0)",
+                "query": "kw(germany) AND col(pp(0.5;ge;20.0))",
                 "expected": [0],
             },
             "high_percentile_and_keyword": {
-                "query": "pp(0.9;ge;1000000) AND kw(germany)",
+                "query": "col(pp(0.9;ge;1000000)) AND kw(germany)",
                 "expected": [],
             },
             "high_percentile_or_keyword": {
-                "query": "pp(0.9;ge;1000000) OR kw(germany)",
+                "query": "col(pp(0.9;ge;1000000)) OR kw(germany)",
                 "expected": [0, 1, 2],
             },
             "high_percentile_xor_simple_keyword_a": {
-                "query": "pp(0.9;ge;1000000) XOR kw(a)",
+                "query": "col(pp(0.9;ge;1000000)) XOR kw(a)",
                 "expected": [0],
             },
         }
@@ -43,43 +43,61 @@ TEST_CASES: dict[str, dict[str, dict[str, dict[str, Any]]]] = {
     "nested_queries": {
         "queries": {
             "nested_query_1": {
-                "query": "(kw(a) AND pp(0.9;ge;1000000)) OR kw(germany)",
+                "query": "(kw(a) AND col(pp(0.9;ge;1000000))) OR kw(germany)",
                 "expected": [0, 2, 1],
             },
             "nested_query_2": {
-                "query": "(kw(a) AND pp(0.9;ge;1000000)) XOR kw(germany)",
+                "query": "(kw(a) AND col(pp(0.9;ge;1000000))) XOR kw(germany)",
                 "expected": [0, 2, 1],
             },
             "nested_query_3": {
-                "query": "(kw(a) AND pp(0.9;ge;1000000)) AND kw(germany)",
+                "query": "(kw(a) AND col(pp(0.9;ge;1000000))) AND kw(germany)",
                 "expected": [],
             },
-            "nested_not_query": {"query": "NOT (kw(a) AND pp(0.9;ge;1000000))", "expected": [0]},
+            "nested_not_query": {
+                "query": "NOT (kw(a) AND col(pp(0.9;ge;1000000)))",
+                "expected": [0],
+            },
         }
     },
     "syntax_variations": {
         "queries": {
-            "optional_whitespaces": {"query": "kw(a) AND pp (0.9;ge;1000000)", "expected": [2, 1]},
-            "no_whitespaces": {"query": "kw(a)ANDpp(0.9;ge;1000000)", "expected": [2, 1]},
-            "case_insensitive": {"query": "KW(a)AND Pp(0.9;ge;1000000)", "expected": [2, 1]},
+            "optional_whitespaces": {
+                "query": "kw(a) AND col(pp (0.9;ge;1000000))",
+                "expected": [2, 1],
+            },
+            "no_whitespaces": {"query": "kw(a)ANDcol(pp(0.9;ge;1000000))", "expected": [2, 1]},
+            "case_insensitive": {"query": "KW(a)AND col(Pp(0.9;ge;1000000))", "expected": [2, 1]},
         }
     },
     "column_operations": {
         "queries": {
-            "column_name": {"query": "col(Latitude; 0)", "expected": [0]},
+            "column_name": {"query": "col(name(Latitude; 0))", "expected": [0]},
             "percentile_with_identifer": {
-                "query": "col(Latitude; 0) AND pp(0.5;ge;50)",
+                "query": "col(name(Latitude; 0) AND pp(0.5;ge;50))",
                 "expected": [0],
             },
             "keyword_filter": {
-                "query": "col(Latitude; 0) AND pp(0.5;ge;50) AND kw(a)",
+                "query": "col(name(Latitude; 0) AND pp(0.5;ge;50)) AND kw(a)",
                 "expected": [0],
+            },
+            "nested_column": {
+                "query": "col(name(Latitude; 0) AND pp(0.5;ge;50))",
+                "expected": [0],
+            },
+            "not_column": {"query": "NOT col(name(Latitude; 0))", "expected": [1, 2]},
+            "complex_column": {
+                "query": "col((name(Latitude; 0) AND pp(0.5;ge;50)) OR name(Longitude; 0))",
+                "expected": [0],
+            },
+            "not_complex_column": {
+                "query": "NOT col((name(Latitude; 0) AND pp(0.5;ge;50)))",
+                "expected": [1, 2],
             },
             "multiple_columns": {
-                "query": "col(Latitude; 0) AND col(Longitude; 1)",
+                "query": "col(name(Latitude; 0)) AND col(name(Longitude; 0))",
                 "expected": [0],
             },
-            # TODO: Add tests for semantic similarity search
         }
     },
 }
