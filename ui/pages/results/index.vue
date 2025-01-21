@@ -138,7 +138,19 @@ page
                   >
                   <v-expansion-panel-text>
                     <div class="markdown-wrapper">
-                      <MDC :value="selectedResult.description"></MDC>
+                      <div :class="{ 'description-truncated': !showFullDescription && isLongDescription }">
+                        <MDC :value="displayedContent" />
+                      </div>
+                      <v-btn
+                        v-if="isLongDescription"
+                        variant="text"
+                        density="comfortable"
+                        class="mt-2 text-medium-emphasis"
+                        @click="toggleDescription"
+                      >
+                        {{ showFullDescription ? 'Show less' : 'Show more' }}
+                        <v-icon :icon="showFullDescription ? 'mdi-chevron-up' : 'mdi-chevron-down'" class="ml-1" />
+                      </v-btn>
                     </div>
                   </v-expansion-panel-text>
                 </v-expansion-panel>
@@ -258,6 +270,25 @@ const selectedResult = computed(() =>
 // Initialize state from route
 query.value = route.query.query;
 fainder_mode.value = route.query.fainder_mode || 'low_memory';
+
+const showFullDescription = ref(false);
+const maxLength = 1000;
+
+const isLongDescription = computed(() => {
+  return selectedResult.value?.description?.length > maxLength;
+});
+
+const displayedContent = computed(() => {
+  if (!selectedResult.value?.description) return '';
+  if (!isLongDescription.value || showFullDescription.value) {
+    return selectedResult.value.description;
+  }
+  return selectedResult.value.description.slice(0, maxLength) + '...';
+});
+
+const toggleDescription = () => {
+  showFullDescription.value = !showFullDescription.value;
+};
 
 const descriptionPanel = ref([0]);
 const recordSetPanels = ref([]);
@@ -578,5 +609,21 @@ const getChartData = (field, index) => {
   font-family: monospace;
   font-size: 0.9em;
   color: rgba(var(--v-theme-on-error), 0.7);
+}
+
+.description-truncated {
+  position: relative;
+  max-height: 200px;
+  overflow: hidden;
+}
+
+.description-truncated::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 50px;
+  background: linear-gradient(transparent, rgb(var(--v-theme-surface)));
 }
 </style>
