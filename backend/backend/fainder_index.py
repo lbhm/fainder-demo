@@ -23,6 +23,13 @@ class FainderIndex:
         self.col_to_hist = metadata.col_to_hist
         self.hist_to_col = metadata.hist_to_col
 
+    def update(self, path: Path, metadata: Metadata) -> None:
+        self.index = load_input(path, "index")
+        self.doc_to_cols = metadata.doc_to_cols
+        self.col_to_doc = metadata.col_to_doc
+        self.col_to_hist = metadata.col_to_hist
+        self.hist_to_col = metadata.hist_to_col
+
     def search(
         self,
         percentile: float,

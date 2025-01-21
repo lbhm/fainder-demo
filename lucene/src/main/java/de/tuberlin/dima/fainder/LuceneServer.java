@@ -111,5 +111,29 @@ public class LuceneServer {
             responseObserver.onNext(response);
             responseObserver.onCompleted();
         }
+
+        @Override
+        public void recreateIndex(RecreateIndexRequest request, StreamObserver<RecreateIndexResponse> responseObserver) {
+            try {
+                LuceneIndexer.createIndex(indexPath, dataPath);
+                luceneSearch = new LuceneSearch(indexPath);
+
+                RecreateIndexResponse response = RecreateIndexResponse.newBuilder()
+                    .setSuccess(true)
+                    .setMessage("Index successfully recreated")
+                    .build();
+
+                responseObserver.onNext(response);
+                responseObserver.onCompleted();
+            } catch (Exception e) {
+                RecreateIndexResponse response = RecreateIndexResponse.newBuilder()
+                    .setSuccess(false)
+                    .setMessage("Failed to recreate index: " + e.getMessage())
+                    .build();
+
+                responseObserver.onNext(response);
+                responseObserver.onCompleted();
+            }
+        }
     }
 }

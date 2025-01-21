@@ -1,3 +1,4 @@
+import json
 import sys
 import time
 from collections.abc import AsyncGenerator
@@ -22,6 +23,11 @@ from backend.croissant_store import CroissantStore
 from backend.fainder_index import FainderIndex
 from backend.lucene_connector import LuceneConnector
 from backend.query_evaluator import QueryEvaluator
+from backend.scripts.generate_indices import (
+    generate_embedding_index,
+    generate_fainder_indices,
+    load_metadata,
+)
 
 try:
     settings = Settings()  # type: ignore
@@ -40,7 +46,7 @@ lucene_connector = LuceneConnector(settings.lucene_host, settings.lucene_port)
 rebinning_index = FainderIndex(settings.rebinning_index_path, metadata)
 conversion_index = FainderIndex(settings.conversion_index_path, metadata)
 logger.info("starting to column index")
-column_index = ColumnIndex(settings.hnsw_index_path, metadata)
+column_index = ColumnIndex(settings.hnsw_index_path, metadata, bypass_transformer=True)
 logger.info("All indexes loaded successfully.")
 query_evaluator = QueryEvaluator(
     lucene_connector=lucene_connector,
@@ -137,10 +143,33 @@ async def upload_files(files: list[UploadFile]):
                 raise HTTPException(status_code=400, detail="No file uploaded")
             if not file.filename.endswith(".json"):
                 raise HTTPException(status_code=400, detail="Only .json files are accepted")
-            _ = await file.read()
-            # TODO: Add a function to handle JSON content
+            file_content = await file.read()
+            content = file_content.decode("utf-8")
+            doc = json.loads(content)
+            croissant_store.save_document(doc)
+            logger.debug(f"Uploaded file: {file.filename}")
 
+        logger.info("Files uploaded successfully")
         # TODO: Add the reindexing process
+
+        base_path = settings.data_dir / settings.collection_name
+
+        hists, name_to_vector, documents = load_metadata(base_path)
+        # 1. generate indices
+        _ = generate_embedding_index(name_to_vector, settings.embedding_path)
+        generate_fainder_indices(hists, settings.fainder_path)
+
+        # Recreate Lucene index
+        await query_evaluator.recreate_lucene_index()
+
+        # 2. update global variables
+        croissant_store.replace_documents(documents)
+        rebinning_index.update(settings.rebinning_index_path, metadata)
+        conversion_index.update(settings.conversion_index_path, metadata)
+        column_index.update(metadata)
+
+        logger.info("Indices updated successfully")
+
         return {"message": "Files uploaded successfully"}
     except Exception as e:
         logger.error(f"Upload error: {e}")

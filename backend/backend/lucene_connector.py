@@ -60,3 +60,19 @@ class LuceneConnector:
         except grpc.RpcError as e:
             logger.error(f"Calling Lucene raised an error: {e}")
             return [], []
+
+    async def recreate_index(self) -> None:
+        """
+        Triggers the recreation of the Lucene index on the server side.
+        """
+        if not self.channel:
+            self.connect()
+
+        try:
+            response = self.stub.RecreateIndex(RecreateIndexRequest())
+            if not response.success:
+                raise RuntimeError(f"Failed to recreate index: {response.message}")
+            logger.info("Lucene index recreation completed")
+        except grpc.RpcError as e:
+            logger.error(f"Lucene index recreation failed: {e}")
+            raise

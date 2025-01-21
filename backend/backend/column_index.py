@@ -37,6 +37,11 @@ class ColumnIndex:
         self.index.load_index(str(path))
         self.index.set_ef(ef)
 
+    def update(self, metadata: Metadata) -> None:
+        self.name_to_vector = metadata.name_to_vector
+        self.vector_to_name = {v: k for k, v in self.name_to_vector.items()}
+        self.vector_to_cols = metadata.vector_to_cols
+
     def search(self, column_name: str, k: int, column_filter: set[uint32] | None) -> set[uint32]:
         if k < 0:
             raise ColumnSearchError(f"k must be a non-negative integer: {k}")

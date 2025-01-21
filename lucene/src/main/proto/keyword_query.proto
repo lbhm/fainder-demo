@@ -6,6 +6,7 @@ option java_multiple_files = true;
 
 service KeywordQuery {
   rpc Evaluate (QueryRequest) returns (QueryResponse);
+  rpc RecreateIndex (RecreateIndexRequest) returns (RecreateIndexResponse);
 }
 
 message QueryRequest {
@@ -20,4 +21,14 @@ message QueryResponse {
   repeated int32 results = 1;
   // Relevance scores of documents
   repeated float scores = 2;
+}
+
+message RecreateIndexRequest {
+  // Empty request as no parameters needed
+}
+
+message RecreateIndexResponse {
+  // Status of the recreation
+  bool success = 1;
+  string message = 2;
 }
