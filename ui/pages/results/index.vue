@@ -156,18 +156,23 @@ page
                 </v-expansion-panel>
               </v-expansion-panels>
 
-              <v-expansion-panels
-                v-if="selectedResult.recordSet"
-                v-for="(file, index) in selectedResult.recordSet"
-                :key="file.id"
-                v-model="recordSetPanels[index]"
-              >
+              <v-expansion-panels v-if="selectedResult?.recordSet?.length > 0" v-model="recordSetPanel">
                 <v-expansion-panel>
-                  <v-expansion-panel-title class="panel-title">{{
-                    "file: " + file.name
-                  }}</v-expansion-panel-title>
+                  <v-expansion-panel-title class="panel-title">
+                    Data Explorer
+                  </v-expansion-panel-title>
                   <v-expansion-panel-text>
-                    <v-table>
+                    <div class="d-flex align-center mb-4">
+                      <v-select
+                        v-model="selectedFileIndex"
+                        :items="recordSetItems"
+                        label="Select File"
+                        density="comfortable"
+                        hide-details
+                        class="max-w-xs"
+                      />
+                    </div>
+                    <v-table v-if="selectedFile">
                       <thead>
                         <tr>
                           <th>Field</th>
@@ -176,10 +181,7 @@ page
                         </tr>
                       </thead>
                       <tbody>
-                        <tr
-                          v-for="(field, fieldIndex) in file.field"
-                          :key="field.id"
-                        >
+                        <tr v-for="(field, fieldIndex) in selectedFile.field" :key="field.id">
                           <td>{{ field.name }}</td>
                           <td>{{ field.dataType[0] }}</td>
                           <td v-if="field.histogram">
@@ -271,6 +273,12 @@ const selectedResult = computed(() =>
 query.value = route.query.query;
 fainder_mode.value = route.query.fainder_mode || 'low_memory';
 
+const descriptionPanel = ref([0]); // Array with 0 means first panel is open
+const recordSetPanel = ref([0]);  // Single panel
+const totalVisible = ref(7);
+const selectedFileIndex = ref(0);
+
+
 const showFullDescription = ref(false);
 const maxLength = 1000;
 
@@ -290,9 +298,20 @@ const toggleDescription = () => {
   showFullDescription.value = !showFullDescription.value;
 };
 
-const descriptionPanel = ref([0]);
-const recordSetPanels = ref([]);
-const totalVisible = ref(7);
+// Computed property for dropdown items
+const recordSetItems = computed(() => {
+  if (!selectedResult.value?.recordSet) return [];
+  return selectedResult.value.recordSet.map((file, index) => ({
+    title: file.name,
+    value: index,
+  }));
+});
+
+// Computed property for the currently selected file
+const selectedFile = computed(() => {
+  if (!selectedResult.value?.recordSet) return null;
+  return selectedResult.value.recordSet[selectedFileIndex.value];
+});
 
 // Add ref for window height
 const windowHeight = ref(window.innerHeight);
@@ -369,6 +388,7 @@ const selectResult = (result) => {
   if (result.recordSet) {
     descriptionPanel.value = [0];
     recordSetPanels.value = result.recordSet.map(() => [0]);
+    selectedFileIndex.value = 0; // Reset to first file when selecting new result
   }
 
   // Update URL with all necessary parameters
