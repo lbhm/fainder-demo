@@ -19,28 +19,26 @@ words # The search page will contain multiple search bars
               rows="1"
               class="search-input"
               append-inner-icon="mdi-magnify"
-              auto-grow
+              :auto-grow="true"
             />
             <div class="syntax-highlight" v-html="highlightedQuery"></div>
             <div v-if="syntaxError" class="error-message">{{ syntaxError }}</div>
           </div>
         </v-col>
         <v-col cols="1">
-          <v-btn icon="mdi-cog" @click="showSettings = true" variant="text">
+          <v-btn icon="mdi-cog" @click="showSettings = true" variant="text" elevation="0" density="compact">
           </v-btn>
         </v-col>
       </v-row>
 
       <!-- Simple Query Builder Toggle Button -->
-      <v-row v-if="simpleBuilder" class="mt-4">
+      <v-row v-if="simpleBuilder" class="mt-1">
         <v-col cols="12">
           <v-btn
             v-if="!showSimpleBuilder"
-            block
-            variant="outlined"
             @click="showSimpleBuilder = true"
             prepend-icon="mdi-plus"
-            color="primary"
+            elevation="0"
           >
             Add Column Filters
           </v-btn>
@@ -53,8 +51,7 @@ words # The search page will contain multiple search bars
           <v-col cols="12">
             <div class="d-flex align-center justify-space-between mb-2">
               <div class="builder-header">
-                <v-icon icon="mdi-database-search" class="mr-2" />
-                <span class="text-h6">Query Builder</span>
+                <span class="text-h5">Query Builder</span>
               </div>
               <v-btn
                 variant="text"
@@ -65,7 +62,7 @@ words # The search page will contain multiple search bars
             </div>
 
             <!-- Combined filters list -->
-            <v-chip-group class="mb-4">
+            <v-chip-group class="mb-4" column>
               <v-chip
                 v-for="(term, index) in columnTerms"
                 :key="`col-${index}`"
@@ -73,7 +70,7 @@ words # The search page will contain multiple search bars
                 @click:close="removeColumnTerm(index)"
                 color="primary"
               >
-                col({{ term.column }};{{ term.threshold }})
+                COLUMN(NAME({{ term.column }};{{ term.threshold }}))
               </v-chip>
               <v-chip
                 v-for="(term, index) in percentileTerms"
@@ -82,14 +79,14 @@ words # The search page will contain multiple search bars
                 @click:close="removePercentileTerm(index)"
                 color="indigo"
               >
-                pp({{ term.percentile }};{{ term.comparison }};{{ term.value }})
+                COLUMN(PERCENTILE({{ term.percentile }};{{ term.comparison }};{{ term.value }}))
               </v-chip>
             </v-chip-group>
 
             <!-- Split into separate rows -->
             <v-row>
               <v-col cols="12">
-                <div class="text-subtitle-1 mb-2">Column Filter</div>
+                <div class="text-subtitle-1 mb-2">Column Name Predicate</div>
                 <v-row>
                   <v-col cols="5">
                     <v-text-field
@@ -128,7 +125,7 @@ words # The search page will contain multiple search bars
 
             <v-row>
               <v-col cols="12">
-                <div class="text-subtitle-1 mb-2">Percentile Filter</div>
+                <div class="text-subtitle-1 mb-2">Percentile Predicate</div>
                 <v-row>
                   <v-col cols="3">
                     <v-text-field
@@ -202,7 +199,7 @@ words # The search page will contain multiple search bars
     <!-- Settings Dialog -->
     <v-dialog v-model="showSettings" width="500">
       <v-card>
-        <v-card-title class="text-h5"> Search Settings </v-card-title>
+        <v-card-title class="text-h5 mt-2"> Search Settings </v-card-title>
 
         <v-card-text>
           <v-select
@@ -222,10 +219,10 @@ words # The search page will contain multiple search bars
             icon="mdi-close"
           />
           <v-btn
-            color="primary"
+            color="success"
             variant="text"
             @click="saveSettings"
-            icon="mdi-content-save-all"
+            icon="mdi-check"
           />
         </v-card-actions>
       </v-card>
@@ -268,10 +265,10 @@ console.log("Initial fainder_mode:", fainder_mode?.value);
 
 const showSettings = ref(false);
 const fainder_modes = [
-  { title: "Low Memory Mode", value: "low_memory" },
-  { title: "Full Precision Mode", value: "full_precision" },
-  { title: "Full Recall Mode", value: "full_recall" },
-  { title: "Exact Mode", value: "exact" },
+  { title: "Low Memory", value: "low_memory" },
+  { title: "Full Precision", value: "full_precision" },
+  { title: "Full Recall", value: "full_recall" },
+  { title: "Exact Results", value: "exact" },
 ];
 
 
@@ -650,13 +647,15 @@ function saveSettings() {
   letter-spacing: normal;
   line-height: normal;
   padding: 8px 16px;
-  min-height: 45px;
+  padding-top: 15px;
+  min-height: 50px;
   resize: none;
 }
 
 .syntax-highlight {
   position: absolute;
-  top: 8px;
+  padding-top: 15px;
+  top: 0px;
   left: 16px;
   right: 48px;
   pointer-events: none;
@@ -753,7 +752,6 @@ function saveSettings() {
   align-items: center;
   color: rgba(var(--v-theme-on-surface), 0.87);
   padding-bottom: 8px;
-  border-bottom: 1px solid rgba(var(--v-theme-on-surface), 0.12);
   margin-bottom: 12px;
 }
 

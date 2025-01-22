@@ -1,7 +1,7 @@
 <template>
   <v-app>
     <v-app-bar :elevation="0" height="85">
-      <Logo size="medium" class="mr-4" @click="gotoHome"/>
+      <Logo size="medium" class="mr-4 ml-4" @click="gotoHome"/>
       <v-spacer></v-spacer>
 
       <!-- Add search component in app bar only on results page -->
@@ -17,6 +17,8 @@
         <v-btn
           icon
           @click="showSearchDialog = true"
+          density="compact"
+          class="-ml-100"
         >
           <v-icon>mdi-arrow-expand</v-icon>
         </v-btn>
@@ -24,7 +26,7 @@
 
       <v-spacer></v-spacer>
 
-      <v-menu>
+      <v-menu class="mr">
         <template v-slot:activator="{ props }">
           <v-btn icon v-bind="props">
             <v-icon>mdi-menu</v-icon>

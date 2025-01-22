@@ -47,6 +47,7 @@ async function searchData({query: searchQuery, fainder_mode: newfainder_mode}) {
 .search-wrapper {
   width: 100%;
   max-width: 800px;
-  padding: 24px;
+  padding: 0px;
+  margin-bottom: 150px;
 }
 </style>
