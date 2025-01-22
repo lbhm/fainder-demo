@@ -162,6 +162,7 @@ page
                     Data Explorer
                   </v-expansion-panel-title>
                   <v-expansion-panel-text>
+                  <div v-if="selectedFile">
                     <div class="d-flex align-center mb-4">
                       <v-select
                         v-model="selectedFileIndex"
@@ -172,27 +173,21 @@ page
                         class="max-w-xs"
                       />
                     </div>
-                    <v-table v-if="selectedFile">
-                      <thead>
-                        <tr>
-                          <th>Field</th>
-                          <th>Type</th>
-                          <th>Histogram</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr v-for="(field, fieldIndex) in selectedFile.field" :key="field.id">
-                          <td>{{ field.name }}</td>
-                          <td>{{ field.dataType[0] }}</td>
-                          <td v-if="field.histogram">
-                            <Bar
-                              :chart-data="getChartData(field, fieldIndex)"
-                              :chart-options="chartOptions"
-                            />
-                          </td>
-                        </tr>
-                      </tbody>
-                    </v-table>
+                    <div class="field-list">
+                      <div v-for="(field, fieldIndex) in selectedFile.field" :key="field.id" class="field-item mb-6">
+                        <div class="field-header mb-2">
+                          <span class="text-h6">{{ field.name }}:</span>
+                          <span class="text-subtitle-1 ml-2">{{ field.dataType[0] }}</span>
+                        </div>
+                        <div v-if="field.histogram" class="histogram-container" style="height: 300px;">
+                          <Bar
+                            :chart-data="getChartData(field, fieldIndex)"
+                            :chart-options="chartOptions"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                   </v-expansion-panel-text>
                 </v-expansion-panel>
               </v-expansion-panels>
@@ -435,24 +430,10 @@ const chartOptions = ref({
       grid: {
         offset: false,
       },
-      title: {
-        display: true,
-        text: "Value",
-        font: {
-          size: 14,
-        },
-      },
     },
     y: {
       beginAtZero: true,
-      title: {
-        display: true,
-        text: "Density",
-        font: {
-          size: 14,
-        },
-      },
-    },
+    }
   },
   plugins: {
     tooltip: {
@@ -469,12 +450,23 @@ const chartOptions = ref({
         },
         label: (item) => {
           return `Count: ${item.parsed.y.toFixed(4)}`;
-        },
-      },
+        }
+      }
     },
+    legend: {
+      display: false
+    }
   },
   responsive: true,
   maintainAspectRatio: false,
+  layout: {
+    padding: {
+      left: 10,
+      right: 30,
+      top: 10,
+      bottom: 20
+    }
+  }
 });
 
 const chartColors = [
@@ -645,5 +637,29 @@ const getChartData = (field, index) => {
   right: 0;
   height: 50px;
   background: linear-gradient(transparent, rgb(var(--v-theme-surface)));
+}
+
+.field-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.field-item {
+  background-color: rgb(var(--v-theme-surface));
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.field-header {
+  display: flex;
+  align-items: baseline;
+}
+
+.histogram-container {
+  margin-top: 12px;
+  border-radius: 4px;
+  overflow: hidden;
 }
 </style>
