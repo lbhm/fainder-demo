@@ -109,8 +109,68 @@ page
             <v-card v-if="selectedResult">
               <div class="d-flex align-center pa-4">
                 <div class="flex-grow-1">
-                  <v-card-title><strong>{{ selectedResult.name }}</strong></v-card-title>
-                  <v-card-subtitle>{{ selectedResult.alternateName }}</v-card-subtitle>
+                  <!-- Wrap title, subtitle, and download in a container with consistent padding -->
+                  <div class="content-container">
+                    <v-card-title><strong>{{ selectedResult.name }}</strong></v-card-title>
+                    <v-card-subtitle>{{ selectedResult.alternateName }}</v-card-subtitle>
+
+                    <!-- Download section -->
+                    <div v-if="selectedResult.distribution?.length" class="mt-2">
+                      <!-- Single file case -->
+                      <v-btn
+                        v-if="selectedResult.distribution.length === 1"
+                        :href="selectedResult.distribution[0].contentUrl"
+                        target="_blank"
+                        color="primary"
+                        prepend-icon="mdi-download"
+                        variant="tonal"
+                        class="download-btn"
+                      >
+                        Download {{ selectedResult.distribution[0].name }}
+                        <template v-if="selectedResult.distribution[0].contentSize" #append>
+                          ({{ selectedResult.distribution[0].contentSize }})
+                        </template>
+                      </v-btn>
+
+                      <!-- Multiple files case -->
+                      <v-menu
+                        v-else
+                        location="bottom"
+                      >
+                        <template v-slot:activator="{ props }">
+                          <v-btn
+                            color="primary"
+                            v-bind="props"
+                            prepend-icon="mdi-download"
+                            variant="tonal"
+                            class="download-btn"
+                          >
+                            Download
+                          </v-btn>
+                        </template>
+
+                        <v-list>
+                          <v-list-item
+                            v-for="file in selectedResult.distribution"
+                            :key="file['@id']"
+                            :href="file.contentUrl"
+                            target="_blank"
+                            :title="file.description"
+                          >
+                            <v-list-item-title>
+                              {{ file.name }}
+                            </v-list-item-title>
+                            <v-list-item-subtitle>
+                              {{ file.encodingFormat }}
+                              <template v-if="file.contentSize">
+                                ({{ file.contentSize }})
+                              </template>
+                            </v-list-item-subtitle>
+                          </v-list-item>
+                        </v-list>
+                      </v-menu>
+                    </div>
+                  </div>
                 </div>
                 <v-img
                   :src="selectedResult.thumbnailUrl || '/FAINDER_LOGO_SVG_01.svg'"
@@ -775,5 +835,17 @@ const processedKeywords = computed(() => {
   right: 0;
   height: 50px;
   background: linear-gradient(transparent, rgb(var(--v-theme-surface)));
+}
+
+.content-container {
+  padding: 0 16px;
+}
+
+.content-container .v-card-title {
+  padding-left: 0;
+}
+
+.content-container .v-card-subtitle {
+  padding-left: 0;
 }
 </style>
