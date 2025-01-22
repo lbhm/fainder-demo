@@ -18,7 +18,6 @@
           icon
           @click="showSearchDialog = true"
           density="compact"
-          class="-ml-100"
         >
           <v-icon>mdi-arrow-expand</v-icon>
         </v-btn>

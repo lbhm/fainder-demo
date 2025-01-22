@@ -81,6 +81,15 @@ words # The search page will contain multiple search bars
               >
                 COLUMN(PERCENTILE({{ term.percentile }};{{ term.comparison }};{{ term.value }}))
               </v-chip>
+              <v-chip
+                v-for="(term, index) in combinedTerms"
+                :key="`combined-${index}`"
+                closable
+                @click:close="combinedTerms.splice(index, 1)"
+                color="success"
+              >
+                COLUMN(NAME({{ term.column }};{{ term.threshold }}) AND PERCENTILE({{ term.percentile }};{{ term.comparison }};{{ term.value }}))
+              </v-chip>
             </v-chip-group>
 
             <!-- Split into separate rows -->
@@ -106,16 +115,6 @@ words # The search page will contain multiple search bars
                       density="comfortable"
                       hide-details="auto"
                     />
-                  </v-col>
-                  <v-col cols="2" class="d-flex align-center">
-                    <v-btn
-                      color="primary"
-                      @click="addColumnFilter"
-                      :disabled="!isColumnFilterValid"
-                      prepend-icon="mdi-plus"
-                    >
-                      Add
-                    </v-btn>
                   </v-col>
                 </v-row>
               </v-col>
@@ -160,16 +159,6 @@ words # The search page will contain multiple search bars
                       hide-details="auto"
                     />
                   </v-col>
-                  <v-col cols="2" class="d-flex align-center">
-                    <v-btn
-                      color="indigo"
-                      @click="addPercentileFilter"
-                      :disabled="!isPercentileFilterValid"
-                      prepend-icon="mdi-plus"
-                    >
-                      Add
-                    </v-btn>
-                  </v-col>
                 </v-row>
               </v-col>
             </v-row>
@@ -179,12 +168,12 @@ words # The search page will contain multiple search bars
                 <div class="d-flex justify-end">
                   <v-btn
                     color="success"
-                    @click="addBothFilters"
-                    :disabled="!isColumnFilterValid || !isPercentileFilterValid"
-                    prepend-icon="mdi-plus-circle-multiple"
+                    @click="addFilters"
+                    :disabled="!isColumnFilterValid && !isPercentileFilterValid"
+                    prepend-icon="mdi-plus"
                     class="mr-2"
                   >
-                    Add Both
+                    Add 
                   </v-btn>
                 </div>
               </v-col>
@@ -231,7 +220,7 @@ words # The search page will contain multiple search bars
 </template>
 
 <script setup>
-import { onMounted, onUnmounted, ref, watch, nextTick, computed } from "vue";
+import { onMounted, onUnmounted, ref, watch, computed } from "vue";
 
 const props = defineProps({
   searchQuery: String,
@@ -332,12 +321,17 @@ async function searchData() {
 
   // Add column terms
   const columnQueryTerms = columnTerms.value.map(term =>
-    `name(${term.column};${term.threshold})`
+    `COLUMN(NAME(${term.column};${term.threshold}))`
   );
 
   // Add percentile terms
   const percentileQueryTerms = percentileTerms.value.map(term =>
-    `pp(${term.percentile};${term.comparison};${term.value})`
+    `COLUMN(PERCENTILE(${term.percentile};${term.comparison};${term.value}))`
+  );
+
+  // Add combined terms
+  const combinedQueryTerms = combinedTerms.value.map(term =>
+    `COLUMN(NAME(${term.column};${term.threshold}) AND PERCENTILE(${term.percentile};${term.comparison};${term.value}))`
   );
   if (columnQueryTerms.length) {
     terms.push(columnQueryTerms.join(' AND '));
@@ -346,11 +340,14 @@ async function searchData() {
   if (percentileQueryTerms.length) {
     terms.push(percentileQueryTerms.join(' AND '));
   }
+  
+  if (combinedQueryTerms.length) {
+    terms.push(combinedQueryTerms.join(' AND '));
+  }
   // Combine filter terms
   const filterTerms = terms.join(' AND ');
 
-  // wrap filter terms in col() function
-  const filterQuery = filterTerms ? `col(${filterTerms})` : '';
+  const filterQuery = filterTerms ? `${filterTerms}` : '';
 
 
   let query = searchQuery.value?.trim() || '';
@@ -498,6 +495,7 @@ const highlightSyntax = (value) => {
 // Add these new refs for column terms management
 const columnTerms = ref([]);
 const percentileTerms = ref([]);
+const combinedTerms = ref([]);
 
 // Remove a column term
 const removeColumnTerm = (index) => {
@@ -561,14 +559,10 @@ const addPercentileFilter = () => {
 const addBothFilters = () => {
   if (!isColumnFilterValid.value || !isPercentileFilterValid.value) return;
 
-  // Add column filter
-  columnTerms.value.push({
+  // Add combined term
+  combinedTerms.value.push({
     column: columnFilter.value.column,
-    threshold: parseFloat(columnFilter.value.threshold)
-  });
-
-  // Add percentile filter
-  percentileTerms.value.push({
+    threshold: parseFloat(columnFilter.value.threshold),
     percentile: parseFloat(percentileFilter.value.percentile),
     comparison: percentileFilter.value.comparison,
     value: parseFloat(percentileFilter.value.value)
@@ -586,6 +580,21 @@ const addBothFilters = () => {
     value: ''
   };
 };
+
+const addFilters = () => {
+  // choose which filter to add based on the current state
+  if (isColumnFilterValid.value && !isPercentileFilterValid.value) {
+    addColumnFilter();
+  } else if (isPercentileFilterValid.value && !isColumnFilterValid.value) {
+    addPercentileFilter();
+  }
+  else if (isColumnFilterValid.value && isPercentileFilterValid.value) {
+    addBothFilters();
+  }
+  else {
+    console.error("Invalid filter values");
+  }
+}
 
 function cancelSettings() {
   showSettings.value = false;
