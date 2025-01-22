@@ -531,7 +531,7 @@ const chartOptions = ref({
           ].toFixed(2)}`;
         },
         label: (item) => {
-          return `Count: ${item.parsed.y.toFixed(4)}`;
+          return `Density: ${item.parsed.y.toFixed(4)}`;
         }
       }
     },
@@ -539,14 +539,14 @@ const chartOptions = ref({
       display: false
     }
   },
-  responsive: true,
+  responsive: false,
   maintainAspectRatio: false,
   layout: {
     padding: {
       left: 10,
       right: 30,
       top: 10,
-      bottom: 20
+      bottom: 100 // I made this quite a large value to be safe
     }
   }
 });
@@ -568,15 +568,15 @@ const getChartData = (field, index) => {
   if (!field.histogram) return null;
 
   const binEdges = field.histogram.bins;
-  const counts = field.histogram.densities;
+  const densities = field.histogram.densities;
 
-  if (counts == null || binEdges == null) return null;
+  if (densities == null || binEdges == null) return null;
 
   // Create array of bar objects with correct positioning and width
-  const bars = counts.map((count, i) => ({
-    x0: binEdges[i], // Start of bin
+  const bars = densities.map((density, i) => ({
+    x0: binEdges[i],     // Start of bin
     x1: binEdges[i + 1], // End of bin
-    y: count / (binEdges[i + 1] - binEdges[i]), // Density
+    y: density           // Density
   }));
 
   return {
