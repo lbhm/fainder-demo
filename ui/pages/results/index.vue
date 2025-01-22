@@ -82,7 +82,7 @@ page
                       <v-icon size="48" color="grey-lighten-2">mdi-image</v-icon>
                     </template>
                   </v-img>
-                  <div class="flex-grow-1">
+                  <div class="flex-grow-1 min-w-0">
                     <v-card-title class="text-truncate"><strong>{{ item.name }}</strong></v-card-title>
                     <v-card-subtitle class="text-truncate">{{ item.alternateName }}</v-card-subtitle>
                   </div>
@@ -849,5 +849,18 @@ const processedKeywords = computed(() => {
 
 .content-container .v-card-subtitle {
   padding-left: 0;
+}
+
+.flex-grow-1.min-w-0 {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.text-truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  display: block;
 }
 </style>
