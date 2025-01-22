@@ -261,6 +261,7 @@ page
                           <span class="text-h6">{{ field.name }}:</span>
                           <span class="text-subtitle-1 ml-2">{{ field.dataType[0] }}</span>
                         </div>
+                        <!-- Numerical Data with Histogram -->
                         <div v-if="field.histogram" class="field-content">
                           <div class="histogram-container">
                             <Bar
@@ -303,6 +304,35 @@ page
                                   <td class="stat-label">Max:</td>
                                   <td class="stat-value">{{ formatNumber(field.statistics.max) }}</td>
                                 </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                        <!-- Categorical Data -->
+                        <div v-else class="field-content categorical">
+                          <div class="categorical-summary">
+                            <table class="statistics-table">
+                              <tbody>
+                                <tr>
+                                  <td class="stat-label">Unique Values:</td>
+                                  <td class="stat-value">{{ formatNumber(field.n_unique) }}</td>
+                                </tr>
+                              </tbody>
+                            </table>
+                            <table class="statistics-table">
+                              <thead>
+                                <tr>
+                                  <th class="text-left">Value</th>
+                                  <th class="text-right">Count</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                <template v-for="(count, value) in field.most_common" :key="value">
+                                  <tr>
+                                    <td class="value-label">{{ value }}</td>
+                                    <td class="stat-value">{{ formatNumber(count) }}</td>
+                                  </tr>
+                                </template>
                               </tbody>
                             </table>
                           </div>
@@ -831,13 +861,6 @@ const formatNumber = (value) => {
   height: fit-content;
 }
 
-.statistics-title {
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin-bottom: 16px;
-  color: rgb(var(--v-theme-on-surface));
-}
-
 .statistics-table {
   width: 100%;
   border-collapse: collapse;
@@ -905,6 +928,41 @@ const formatNumber = (value) => {
   word-break: break-word;
 }
 
+.field-content.categorical {
+  grid-template-columns: 1fr 1fr;
+}
+
+.categorical-summary {
+  background-color: rgba(var(--v-theme-surface), 0.8);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.mt-6 {
+  margin-top: 24px;
+}
+
+.value-label {
+  padding: 8px 0;
+  color: rgb(var(--v-theme-on-surface));
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.statistics-table thead th {
+  padding: 8px 0;
+  font-weight: 600;
+  color: rgba(var(--v-theme-on-surface), 0.87);
+  border-bottom: 2px solid rgba(var(--v-border-opacity), 0.12);
+}
+
+/* Add tooltip for truncated values */
+.value-label {
+  position: relative;
+}
+
 /* Make the layout responsive */
 @media (max-width: 768px) {
   .content-wrapper {
@@ -931,6 +989,18 @@ const formatNumber = (value) => {
 
   .statistics-container {
     max-width: 100%;
+  }
+
+  .field-content.categorical {
+    grid-template-columns: 1fr;
+  }
+
+  .categorical-summary {
+    max-width: 100%;
+  }
+
+  .value-label {
+    max-width: none;
   }
 }
 
