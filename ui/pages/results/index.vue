@@ -111,10 +111,6 @@ page
                 <div class="flex-grow-1">
                   <v-card-title><strong>{{ selectedResult.name }}</strong></v-card-title>
                   <v-card-subtitle>{{ selectedResult.alternateName }}</v-card-subtitle>
-                  <v-card-subtitle><strong>Creator:</strong> {{selectedResult.creator.name }}</v-card-subtitle>
-                  <v-card-subtitle><strong>License:</strong> {{selectedResult.license.name }}</v-card-subtitle>
-                  <v-card-subtitle><strong>Published:</strong> {{selectedResult.datePublished.substring(0, 10) }}</v-card-subtitle>
-                  <v-card-subtitle><strong>Modified:</strong> {{selectedResult.dateModified.substring(0, 10) }}</v-card-subtitle>
                 </div>
                 <v-img
                   :src="selectedResult.thumbnailUrl || '/FAINDER_LOGO_SVG_01.svg'"
@@ -124,7 +120,6 @@ page
                   cover
                   class="flex-shrink-0 ml-4"
                 >
-                  <!-- Fallback for failed image load -->
                   <template v-slot:placeholder>
                     <v-icon size="48" color="grey-lighten-2">mdi-image</v-icon>
                   </template>
@@ -133,24 +128,49 @@ page
 
               <v-expansion-panels v-model="descriptionPanel">
                 <v-expansion-panel>
-                  <v-expansion-panel-title class="panel-title"
-                    >Description</v-expansion-panel-title
-                  >
+                  <v-expansion-panel-title class="panel-title">Details</v-expansion-panel-title>
                   <v-expansion-panel-text>
-                    <div class="markdown-wrapper">
-                      <div :class="{ 'description-truncated': !showFullDescription && isLongDescription }">
+                    <div class="content-wrapper">
+                      <div class="description-section">
                         <MDC :value="displayedContent" />
+                        <v-btn
+                          v-if="isLongDescription"
+                          variant="text"
+                          density="comfortable"
+                          class="mt-2 text-medium-emphasis"
+                          @click="toggleDescription"
+                        >
+                          {{ showFullDescription ? 'Show less' : 'Show more' }}
+                          <v-icon :icon="showFullDescription ? 'mdi-chevron-up' : 'mdi-chevron-down'" class="ml-1" />
+                        </v-btn>
                       </div>
-                      <v-btn
-                        v-if="isLongDescription"
-                        variant="text"
-                        density="comfortable"
-                        class="mt-2 text-medium-emphasis"
-                        @click="toggleDescription"
-                      >
-                        {{ showFullDescription ? 'Show less' : 'Show more' }}
-                        <v-icon :icon="showFullDescription ? 'mdi-chevron-up' : 'mdi-chevron-down'" class="ml-1" />
-                      </v-btn>
+
+                      <div class="metadata-section">
+                        <div class="metadata-item">
+                          <span class="metadata-label">Creator</span>
+                          <span class="metadata-value">{{ selectedResult?.creator?.name || '-' }}</span>
+                        </div>
+                        <div class="metadata-item">
+                          <span class="metadata-label">Publisher</span>
+                          <span class="metadata-value">{{ selectedResult?.publisher?.name || '-' }}</span>
+                        </div>
+                        <div class="metadata-item">
+                          <span class="metadata-label">License</span>
+                          <span class="metadata-value">{{ selectedResult?.license?.name || '-' }}</span>
+                        </div>
+                        <div class="metadata-item">
+                          <span class="metadata-label">Date Published</span>
+                          <span class="metadata-value">{{ selectedResult?.datePublished.substring(0, 10) || '-' }}</span>
+                        </div>
+                        <div class="metadata-item">
+                          <span class="metadata-label">Date Modified</span>
+                          <span class="metadata-value">{{ selectedResult?.dateModified.substring(0, 10) || '-' }}</span>
+                        </div>
+                        <div class="metadata-item">
+                          <span class="metadata-label">Keywords</span>
+                          <span class="metadata-value keywords-value">{{ processedKeywords.join(', ') || '-' }}</span>
+                        </div>
+                      </div>
                     </div>
                   </v-expansion-panel-text>
                 </v-expansion-panel>
@@ -521,7 +541,29 @@ const getChartData = (field, index) => {
   };
 };
 
+async function searchData({query: searchQuery}) {
+  showSearchModal.value = false;
+  await loadResults(searchQuery);
+  query.value = searchQuery;
 
+  return await navigateTo({
+    path: '/results',
+    query: {
+      query: searchQuery,
+      index: 0,
+      theme: theme.global.name.value
+    }
+  });
+
+}
+
+const processedKeywords = computed(() => {
+  if (!selectedResult.value?.keywords) return [];
+  return selectedResult.value.keywords.map(keyword => {
+    const parts = keyword.split(' > ');
+    return parts[parts.length - 1];
+  });
+});
 
 </script>
 
@@ -661,5 +703,77 @@ const getChartData = (field, index) => {
   margin-top: 12px;
   border-radius: 4px;
   overflow: hidden;
+}
+
+.content-wrapper {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 32px;
+  padding: 16px 0;
+}
+
+.description-section {
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.metadata-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-left: 32px;
+  border-left: 1px solid rgba(var(--v-border-opacity), 0.12);
+}
+
+.metadata-item {
+  display: grid;
+  gap: 4px;
+}
+
+.metadata-label {
+  font-weight: 700;
+  color: rgb(var(--v-theme-on-surface));
+  font-size: 1.125rem;
+  margin-bottom: 4px;
+}
+
+.metadata-value {
+  color: rgb(var(--v-theme-on-surface));
+  font-size: 0.875rem;
+}
+
+.keywords-value {
+  word-break: break-word;
+}
+
+/* Make the layout responsive */
+@media (max-width: 768px) {
+  .content-wrapper {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .metadata-section {
+    padding-left: 0;
+    border-left: none;
+    border-top: 1px solid rgba(var(--v-border-opacity), 0.12);
+    padding-top: 24px;
+  }
+}
+
+.description-truncated {
+  position: relative;
+  max-height: 200px;
+  overflow: hidden;
+}
+
+.description-truncated::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 50px;
+  background: linear-gradient(transparent, rgb(var(--v-theme-surface)));
 }
 </style>
