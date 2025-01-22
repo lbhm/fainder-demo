@@ -4,7 +4,7 @@ from collections.abc import Sequence
 import grpc
 from loguru import logger
 
-from backend.proto.keyword_query_pb2 import QueryRequest  # type: ignore
+from backend.proto.keyword_query_pb2 import QueryRequest, RecreateIndexRequest  # type: ignore
 from backend.proto.keyword_query_pb2_grpc import KeywordQueryStub
 
 

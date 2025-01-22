@@ -39,12 +39,23 @@ class KeywordQueryStub(object):
                 request_serializer=backend_dot_proto_dot_keyword__query__pb2.QueryRequest.SerializeToString,
                 response_deserializer=backend_dot_proto_dot_keyword__query__pb2.QueryResponse.FromString,
                 _registered_method=True)
+        self.RecreateIndex = channel.unary_unary(
+                '/fainder.KeywordQuery/RecreateIndex',
+                request_serializer=backend_dot_proto_dot_keyword__query__pb2.RecreateIndexRequest.SerializeToString,
+                response_deserializer=backend_dot_proto_dot_keyword__query__pb2.RecreateIndexResponse.FromString,
+                _registered_method=True)
 
 
 class KeywordQueryServicer(object):
     """Missing associated documentation comment in .proto file."""
 
     def Evaluate(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def RecreateIndex(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -57,6 +68,11 @@ def add_KeywordQueryServicer_to_server(servicer, server):
                     servicer.Evaluate,
                     request_deserializer=backend_dot_proto_dot_keyword__query__pb2.QueryRequest.FromString,
                     response_serializer=backend_dot_proto_dot_keyword__query__pb2.QueryResponse.SerializeToString,
+            ),
+            'RecreateIndex': grpc.unary_unary_rpc_method_handler(
+                    servicer.RecreateIndex,
+                    request_deserializer=backend_dot_proto_dot_keyword__query__pb2.RecreateIndexRequest.FromString,
+                    response_serializer=backend_dot_proto_dot_keyword__query__pb2.RecreateIndexResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -86,6 +102,33 @@ class KeywordQuery(object):
             '/fainder.KeywordQuery/Evaluate',
             backend_dot_proto_dot_keyword__query__pb2.QueryRequest.SerializeToString,
             backend_dot_proto_dot_keyword__query__pb2.QueryResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def RecreateIndex(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/fainder.KeywordQuery/RecreateIndex',
+            backend_dot_proto_dot_keyword__query__pb2.RecreateIndexRequest.SerializeToString,
+            backend_dot_proto_dot_keyword__query__pb2.RecreateIndexResponse.FromString,
             options,
             channel_credentials,
             insecure,

@@ -124,4 +124,8 @@ public class LuceneSearch {
         return builder.build();
     }
 
+    public void close() throws IOException {
+        searcher.getIndexReader().close();
+    }
+
 }

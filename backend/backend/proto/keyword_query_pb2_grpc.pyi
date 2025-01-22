@@ -24,10 +24,20 @@ class KeywordQueryStub:
         backend.proto.keyword_query_pb2.QueryResponse,
     ]
 
+    RecreateIndex: grpc.UnaryUnaryMultiCallable[
+        backend.proto.keyword_query_pb2.RecreateIndexRequest,
+        backend.proto.keyword_query_pb2.RecreateIndexResponse,
+    ]
+
 class KeywordQueryAsyncStub:
     Evaluate: grpc.aio.UnaryUnaryMultiCallable[
         backend.proto.keyword_query_pb2.QueryRequest,
         backend.proto.keyword_query_pb2.QueryResponse,
+    ]
+
+    RecreateIndex: grpc.aio.UnaryUnaryMultiCallable[
+        backend.proto.keyword_query_pb2.RecreateIndexRequest,
+        backend.proto.keyword_query_pb2.RecreateIndexResponse,
     ]
 
 class KeywordQueryServicer(metaclass=abc.ABCMeta):
@@ -37,5 +47,12 @@ class KeywordQueryServicer(metaclass=abc.ABCMeta):
         request: backend.proto.keyword_query_pb2.QueryRequest,
         context: _ServicerContext,
     ) -> typing.Union[backend.proto.keyword_query_pb2.QueryResponse, collections.abc.Awaitable[backend.proto.keyword_query_pb2.QueryResponse]]: ...
+
+    @abc.abstractmethod
+    def RecreateIndex(
+        self,
+        request: backend.proto.keyword_query_pb2.RecreateIndexRequest,
+        context: _ServicerContext,
+    ) -> typing.Union[backend.proto.keyword_query_pb2.RecreateIndexResponse, collections.abc.Awaitable[backend.proto.keyword_query_pb2.RecreateIndexResponse]]: ...
 
 def add_KeywordQueryServicer_to_server(servicer: KeywordQueryServicer, server: typing.Union[grpc.Server, grpc.aio.Server]) -> None: ...

@@ -115,6 +115,18 @@ public class LuceneServer {
         @Override
         public void recreateIndex(RecreateIndexRequest request, StreamObserver<RecreateIndexResponse> responseObserver) {
             try {
+                // Close existing searcher to release file handles
+                if (luceneSearch != null) {
+                    luceneSearch.close();
+                }
+
+                // Delete existing index directory
+                Files.walk(indexPath)
+                    .sorted(java.util.Comparator.reverseOrder())
+                    .map(Path::toFile)
+                    .forEach(java.io.File::delete);
+
+                // Create new index
                 LuceneIndexer.createIndex(indexPath, dataPath);
                 luceneSearch = new LuceneSearch(indexPath);
 
@@ -126,6 +138,7 @@ public class LuceneServer {
                 responseObserver.onNext(response);
                 responseObserver.onCompleted();
             } catch (Exception e) {
+                logger.error("Failed to recreate index: {}", e.getMessage());
                 RecreateIndexResponse response = RecreateIndexResponse.newBuilder()
                     .setSuccess(false)
                     .setMessage("Failed to recreate index: " + e.getMessage())

@@ -159,20 +159,21 @@ async def upload_files(files: list[UploadFile]):
         _ = generate_embedding_index(name_to_vector, settings.embedding_path)
         generate_fainder_indices(hists, settings.fainder_path)
 
-        # Recreate Lucene index
-        await query_evaluator.recreate_lucene_index()
-
         # 2. update global variables
         croissant_store.replace_documents(documents)
-        rebinning_index.update(settings.rebinning_index_path, metadata)
+        rebinning_index.update(settings.rebinning_index_path, settings.metadata)
         conversion_index.update(settings.conversion_index_path, metadata)
-        column_index.update(metadata)
+        column_index.update(metadata, settings.hnsw_index_path)
+        query_evaluator.update_indices(rebinning_index, conversion_index, column_index)
+        # Recreate Lucene index
+        await lucene_connector.recreate_index()
 
         logger.info("Indices updated successfully")
 
         return {"message": "Files uploaded successfully"}
     except Exception as e:
         logger.error(f"Upload error: {e}")
+        logger.debug(f"Upload error traceback: {e.__traceback__}")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 

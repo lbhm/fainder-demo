@@ -57,3 +57,34 @@ class QueryResponse(google.protobuf.message.Message):
     def ClearField(self, field_name: typing.Literal["results", b"results", "scores", b"scores"]) -> None: ...
 
 global___QueryResponse = QueryResponse
+
+@typing.final
+class RecreateIndexRequest(google.protobuf.message.Message):
+    """Empty request as no parameters needed"""
+
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    def __init__(
+        self,
+    ) -> None: ...
+
+global___RecreateIndexRequest = RecreateIndexRequest
+
+@typing.final
+class RecreateIndexResponse(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    SUCCESS_FIELD_NUMBER: builtins.int
+    MESSAGE_FIELD_NUMBER: builtins.int
+    success: builtins.bool
+    """Status of the recreation"""
+    message: builtins.str
+    def __init__(
+        self,
+        *,
+        success: builtins.bool = ...,
+        message: builtins.str = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing.Literal["message", b"message", "success", b"success"]) -> None: ...
+
+global___RecreateIndexResponse = RecreateIndexResponse

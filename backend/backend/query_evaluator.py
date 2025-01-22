@@ -63,6 +63,20 @@ class QueryEvaluator:
         # See https://docs.astral.sh/ruff/rules/cached-instance-method/ for details
         self.execute = lru_cache(maxsize=cache_size)(self._execute)
 
+    def update_indices(
+        self,
+        rebinning_index: FainderIndex,
+        conversion_index: FainderIndex,
+        hnsw_index: ColumnIndex,
+    ) -> None:
+        self.executor_rebinning = QueryExecutor(
+            self.lucene_connector, rebinning_index, hnsw_index, self.executor_rebinning.metadata
+        )
+        self.executor_conversion = QueryExecutor(
+            self.lucene_connector, conversion_index, hnsw_index, self.executor_conversion.metadata
+        )
+        self.execute.cache_clear()
+
     def parse(self, query: str) -> Tree:
         return self.grammar.parse(query)
 
