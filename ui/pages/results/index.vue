@@ -72,6 +72,8 @@ page
                     :alt="item.name"
                     height="100"
                     width="100"
+                    max-height="100"
+                    max-width="100"
                     cover
                     class="flex-shrink-0"
                   >
