@@ -256,16 +256,56 @@ page
                       />
                     </div>
                     <div class="field-list">
-                      <div v-for="(field, fieldIndex) in selectedFile.field" :key="field.id" class="field-item mb-6">
+                    <div v-for="(field, fieldIndex) in selectedFile.field" :key="field.id" class="field-item mb-6">
                         <div class="field-header mb-2">
                           <span class="text-h6">{{ field.name }}:</span>
                           <span class="text-subtitle-1 ml-2">{{ field.dataType[0] }}</span>
                         </div>
-                        <div v-if="field.histogram" class="histogram-container" style="height: 300px;">
-                          <Bar
-                            :chart-data="getChartData(field, fieldIndex)"
-                            :chart-options="chartOptions"
-                          />
+                        <div v-if="field.histogram" class="field-content">
+                          <div class="histogram-container">
+                            <Bar
+                              :chart-data="getChartData(field, fieldIndex)"
+                              :chart-options="chartOptions"
+                            />
+                          </div>
+                          <div class="statistics-container">
+                            <table class="statistics-table">
+                              <tbody>
+                                <tr>
+                                  <td class="stat-label">Count:</td>
+                                  <td class="stat-value">{{ formatNumber(field.statistics.count) }}</td>
+                                </tr>
+                                <tr>
+                                  <td class="stat-label">Mean:</td>
+                                  <td class="stat-value">{{ formatNumber(field.statistics.mean) }}</td>
+                                </tr>
+                                <tr>
+                                  <td class="stat-label">Std Dev:</td>
+                                  <td class="stat-value">{{ formatNumber(field.statistics.std) }}</td>
+                                </tr>
+                                <tr>
+                                  <td class="stat-label">Min:</td>
+                                  <td class="stat-value">{{ formatNumber(field.statistics.min) }}</td>
+                                </tr>
+                                <tr>
+                                  <td class="stat-label">25%:</td>
+                                  <td class="stat-value">{{ formatNumber(field.statistics['25%']) }}</td>
+                                </tr>
+                                <tr>
+                                  <td class="stat-label">Median:</td>
+                                  <td class="stat-value">{{ formatNumber(field.statistics['50%']) }}</td>
+                                </tr>
+                                <tr>
+                                  <td class="stat-label">75%:</td>
+                                  <td class="stat-value">{{ formatNumber(field.statistics['75%']) }}</td>
+                                </tr>
+                                <tr>
+                                  <td class="stat-label">Max:</td>
+                                  <td class="stat-value">{{ formatNumber(field.statistics.max) }}</td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -547,7 +587,7 @@ const chartOptions = ref({
       left: 10,
       right: 30,
       top: 10,
-      bottom: 100 // I made this quite a large value to be safe
+      bottom: 80
     }
   }
 });
@@ -627,6 +667,17 @@ const processedKeywords = computed(() => {
     return parts[parts.length - 1];
   });
 });
+
+const formatNumber = (value) => {
+  if (value === undefined || value === null) return '-';
+  // Check if the value is an integer
+  if (Number.isInteger(value)) return value.toLocaleString();
+  // For floating point numbers, limit to 4 decimal places
+  return Number(value).toLocaleString(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 4
+  });
+};
 
 </script>
 
@@ -762,10 +813,55 @@ const processedKeywords = computed(() => {
   align-items: baseline;
 }
 
+.field-content {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
 .histogram-container {
-  margin-top: 12px;
-  border-radius: 4px;
-  overflow: hidden;
+  height: 300px;
+}
+
+.statistics-container {
+  background-color: rgba(var(--v-theme-surface), 0.8);
+  border-radius: 8px;
+  padding: 16px;
+  height: fit-content;
+}
+
+.statistics-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: rgb(var(--v-theme-on-surface));
+}
+
+.statistics-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.statistics-table tr {
+  border-bottom: 1px solid rgba(var(--v-border-opacity), 0.12);
+}
+
+.statistics-table tr:last-child {
+  border-bottom: none;
+}
+
+.stat-label {
+  padding: 8px 0;
+  font-weight: 500;
+  color: rgba(var(--v-theme-on-surface), 0.7);
+}
+
+.stat-value {
+  padding: 8px 0;
+  text-align: right;
+  font-family: monospace;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .content-wrapper {
@@ -821,6 +917,20 @@ const processedKeywords = computed(() => {
     border-left: none;
     border-top: 1px solid rgba(var(--v-border-opacity), 0.12);
     padding-top: 24px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .field-content {
+    grid-template-columns: 1fr;
+  }
+
+  .histogram-container {
+    height: 250px;
+  }
+
+  .statistics-container {
+    max-width: 100%;
   }
 }
 
