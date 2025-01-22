@@ -68,6 +68,7 @@ words # The search page will contain multiple search bars
                 :key="`col-${index}`"
                 closable
                 @click:close="removeColumnTerm(index)"
+                @click="transferColumnTerm(term, index)"
                 color="primary"
               >
                 COLUMN(NAME({{ term.column }};{{ term.threshold }}))
@@ -77,6 +78,7 @@ words # The search page will contain multiple search bars
                 :key="`percentile-${index}`"
                 closable
                 @click:close="removePercentileTerm(index)"
+                @click="transferPercentileTerm(term, index)"
                 color="indigo"
               >
                 COLUMN(PERCENTILE({{ term.percentile }};{{ term.comparison }};{{ term.value }}))
@@ -86,6 +88,7 @@ words # The search page will contain multiple search bars
                 :key="`combined-${index}`"
                 closable
                 @click:close="combinedTerms.splice(index, 1)"
+                @click="transferCombinedTerm(term, index)"
                 color="success"
               >
                 COLUMN(NAME({{ term.column }};{{ term.threshold }}) AND PERCENTILE({{ term.percentile }};{{ term.comparison }};{{ term.value }}))
@@ -595,6 +598,36 @@ const addFilters = () => {
     console.error("Invalid filter values");
   }
 }
+
+const transferColumnTerm = (term, index) => {
+  columnFilter.value = {
+    column: term.column,
+    threshold: term.threshold.toString()
+  };
+  removeColumnTerm(index);
+};
+
+const transferPercentileTerm = (term, index) => {
+  percentileFilter.value = {
+    percentile: term.percentile.toString(),
+    comparison: term.comparison,
+    value: term.value.toString()
+  };
+  removePercentileTerm(index);
+};
+
+const transferCombinedTerm = (term, index) => {
+  columnFilter.value = {
+    column: term.column,
+    threshold: term.threshold.toString()
+  };
+  percentileFilter.value = {
+    percentile: term.percentile.toString(),
+    comparison: term.comparison,
+    value: term.value.toString()
+  };
+  combinedTerms.value.splice(index, 1);
+};
 
 function cancelSettings() {
   showSettings.value = false;
