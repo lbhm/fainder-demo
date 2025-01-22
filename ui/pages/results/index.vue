@@ -352,6 +352,7 @@ fainder_mode.value = route.query.fainder_mode || 'low_memory';
 
 const descriptionPanel = ref([0]); // Array with 0 means first panel is open
 const recordSetPanel = ref([0]);  // Single panel
+const metadataPanel = ref([0]); // Initialize metadata panel
 const totalVisible = ref(7);
 const selectedFileIndex = ref(0);
 
