@@ -75,7 +75,7 @@ public class LuceneServer {
     private void start(int port) throws IOException {
         logger.info("Starting Lucene Server");
 
-        grpcServer = ServerBuilder.forPort(port).addService(new KeywordQueryImpl()).build().start();
+        grpcServer = ServerBuilder.forPort(port).addService(new LuceneConnectorImpl()).build().start();
         logger.info("Server started, listening on {}", grpcServer.getPort());
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -97,7 +97,7 @@ public class LuceneServer {
         }
     }
 
-    static class KeywordQueryImpl extends KeywordQueryGrpc.KeywordQueryImplBase {
+    static class LuceneConnectorImpl extends LuceneConnectorGrpc.LuceneConnectorImplBase {
         @Override
         public void evaluate(QueryRequest queryRequest, StreamObserver<QueryResponse> responseObserver) {
             String query = queryRequest.getQuery();

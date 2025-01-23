@@ -14,6 +14,9 @@ from backend.column_index import ColumnIndex
 from backend.config import (
     CacheInfo,
     ColumnSearchError,
+    IndexingError,
+    MessageResponse,
+    Metadata,
     PercentileError,
     QueryRequest,
     QueryResponse,
@@ -21,17 +24,18 @@ from backend.config import (
 )
 from backend.croissant_store import CroissantStore
 from backend.fainder_index import FainderIndex
-from backend.lucene_connector import LuceneConnector
-from backend.query_evaluator import QueryEvaluator
-from backend.scripts.generate_indices import (
+from backend.indexing import (
     generate_embedding_index,
     generate_fainder_indices,
-    load_metadata,
+    generate_metadata,
 )
+from backend.lucene_connector import LuceneConnector
+from backend.query_evaluator import QueryEvaluator
 
 try:
     settings = Settings()  # type: ignore
-    metadata = settings.metadata
+    with settings.metadata_path.open() as file:
+        metadata = Metadata(**json.load(file))
 except Exception as e:
     logger.error(f"Error loading settings: {e}")
     sys.exit(1)
@@ -45,9 +49,13 @@ croissant_store = CroissantStore(settings.croissant_path)
 lucene_connector = LuceneConnector(settings.lucene_host, settings.lucene_port)
 rebinning_index = FainderIndex(settings.rebinning_index_path, metadata)
 conversion_index = FainderIndex(settings.conversion_index_path, metadata)
-logger.info("starting to column index")
-column_index = ColumnIndex(settings.hnsw_index_path, metadata, bypass_transformer=True)
-logger.info("All indexes loaded successfully.")
+column_index = ColumnIndex(
+    settings.hnsw_index_path,
+    metadata,
+    model=settings.embedding_model,
+    use_embeddings=settings.use_embeddings,
+    ef=settings.hnsw_ef,
+)
 query_evaluator = QueryEvaluator(
     lucene_connector=lucene_connector,
     rebinning_index=rebinning_index,
@@ -68,12 +76,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[Any, Any]:
     # Startup
     croissant_store.load_documents()
     query_evaluator.lucene_connector.connect()
-    # TODO: Add a language model and HNSW index here
 
     yield
 
     # Shutdown
-    query_evaluator.lucene_connector.connect()
+    query_evaluator.lucene_connector.close()
 
 
 app = FastAPI(lifespan=lifespan)
@@ -135,7 +142,7 @@ async def query(request: QueryRequest) -> QueryResponse:
 
 
 @app.post("/upload")
-async def upload_files(files: list[UploadFile]):
+async def upload_files(files: list[UploadFile]) -> MessageResponse:
     """Handle upload of JSON files."""
     try:
         for file in files:
@@ -143,38 +150,66 @@ async def upload_files(files: list[UploadFile]):
                 raise HTTPException(status_code=400, detail="No file uploaded")
             if not file.filename.endswith(".json"):
                 raise HTTPException(status_code=400, detail="Only .json files are accepted")
-            file_content = await file.read()
-            content = file_content.decode("utf-8")
-            doc = json.loads(content)
-            croissant_store.save_document(doc)
+            content = await file.read()
+            doc = json.loads(content.decode("utf-8"))
+            croissant_store.add_document(doc)
             logger.debug(f"Uploaded file: {file.filename}")
 
-        logger.info("Files uploaded successfully")
-        # TODO: Add the reindexing process
-
-        base_path = settings.data_dir / settings.collection_name
-
-        hists, name_to_vector, documents = load_metadata(base_path)
-        # 1. generate indices
-        _ = generate_embedding_index(name_to_vector, settings.embedding_path)
-        generate_fainder_indices(hists, settings.fainder_path)
-
-        # 2. update global variables
-        croissant_store.replace_documents(documents)
-        rebinning_index.update(settings.rebinning_index_path, settings.metadata)
-        conversion_index.update(settings.conversion_index_path, metadata)
-        column_index.update(metadata, settings.hnsw_index_path)
-        query_evaluator.update_indices(rebinning_index, conversion_index, column_index)
-        # Recreate Lucene index
-        await lucene_connector.recreate_index()
-
-        logger.info("Indices updated successfully")
-
-        return {"message": "Files uploaded successfully"}
+        logger.info(f"{len(files)} files uploaded successfully")
+        return MessageResponse(message=f"{len(files)} files uploaded successfully")
     except Exception as e:
         logger.error(f"Upload error: {e}")
         logger.debug(f"Upload error traceback: {e.__traceback__}")
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@app.get("/update_indices")
+async def update_indices() -> MessageResponse:
+    """Recreate all indices from the current state of the Croissant store."""
+    try:
+        # NOTE: Our approach increases memory usage since we load the new indices without deleting
+        # the old ones, we should consider optimizing this in the future
+
+        # Generate indices
+        hists, name_to_vector, documents = generate_metadata(
+            croissant_path=settings.croissant_path, metadata_path=settings.metadata_path
+        )
+        generate_embedding_index(
+            name_to_vector=name_to_vector,
+            output_path=settings.embedding_path,
+            model_name=settings.embedding_model,
+            batch_size=settings.embedding_batch_size,
+            ef_construction=settings.hnsw_ef_construction,
+            n_bidirectional_links=settings.hnsw_n_bidirectional_links,
+        )
+        generate_fainder_indices(
+            hists=hists,
+            output_path=settings.fainder_path,
+            n_clusters=settings.fainder_n_clusters,
+            bin_budget=settings.fainder_bin_budget,
+            alpha=settings.fainder_alpha,
+            transform=settings.fainder_transform,
+            algorithm=settings.fainder_cluster_algorithm,
+        )
+
+        # Update global variables
+        croissant_store.replace_documents(documents)
+        rebinning_index.update(settings.rebinning_index_path, metadata)
+        conversion_index.update(settings.conversion_index_path, metadata)
+        column_index.update(settings.hnsw_index_path, metadata)
+        query_evaluator.update_indices(rebinning_index, conversion_index, column_index, metadata)
+
+        # Recreate Lucene index
+        await lucene_connector.recreate_index()
+
+        logger.info("Indices update successfully")
+        return MessageResponse(message="Indices updated successfully")
+    except IndexingError as e:
+        logger.error(f"Indexing error: {e}")
+        raise HTTPException(status_code=500, detail="Indexing error") from e
+    except Exception as e:
+        logger.error(f"Unknown indexing error: {e}, {e.args}")
+        raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
 @app.get("/cache_statistics")

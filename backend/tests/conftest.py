@@ -1,3 +1,4 @@
+import json
 import sys
 from collections.abc import Generator
 from pathlib import Path
@@ -7,7 +8,7 @@ import pytest
 from loguru import logger
 
 from backend.column_index import ColumnIndex
-from backend.config import Settings
+from backend.config import Metadata, Settings
 from backend.fainder_index import FainderIndex
 from backend.lucene_connector import LuceneConnector
 from backend.query_evaluator import QueryEvaluator
@@ -36,14 +37,15 @@ def evaluator() -> QueryEvaluator:
         collection_name="toy_collection",
         _env_file=None,  # type: ignore
     )
-    metadata = settings.metadata
+    with settings.metadata_path.open() as file:
+        metadata = Metadata(**json.load(file))
 
     lucene_connector = LuceneConnector(settings.lucene_host, settings.lucene_port)
     # Fainder indices for testing are generated with the following parameters:
     # n_clusters = 27, bin_budget = 270, alpha = 1, transform = None,
     rebinning_index = FainderIndex(settings.rebinning_index_path, metadata)
     conversion_index = FainderIndex(settings.conversion_index_path, metadata)
-    column_search = ColumnIndex(settings.hnsw_index_path, metadata, bypass_transformer=True)
+    column_index = ColumnIndex(settings.hnsw_index_path, metadata, use_embeddings=False)
     return QueryEvaluator(
-        lucene_connector, rebinning_index, conversion_index, column_search, metadata
+        lucene_connector, rebinning_index, conversion_index, column_index, metadata, cache_size=0
     )

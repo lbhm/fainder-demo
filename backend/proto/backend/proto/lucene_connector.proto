@@ -4,7 +4,7 @@ package fainder;
 option java_package = "de.tuberlin.dima.fainder";
 option java_multiple_files = true;
 
-service KeywordQuery {
+service LuceneConnector {
   rpc Evaluate (QueryRequest) returns (QueryResponse);
   rpc RecreateIndex (RecreateIndexRequest) returns (RecreateIndexResponse);
 }

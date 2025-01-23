@@ -4,8 +4,9 @@ from collections.abc import Sequence
 import grpc
 from loguru import logger
 
-from backend.proto.keyword_query_pb2 import QueryRequest, RecreateIndexRequest  # type: ignore
-from backend.proto.keyword_query_pb2_grpc import KeywordQueryStub
+from backend.config import IndexingError
+from backend.proto.lucene_connector_pb2 import QueryRequest, RecreateIndexRequest  # type: ignore
+from backend.proto.lucene_connector_pb2_grpc import LuceneConnectorStub
 
 
 class LuceneConnector:
@@ -21,7 +22,7 @@ class LuceneConnector:
 
     def connect(self) -> None:
         self.channel = grpc.insecure_channel(f"{self.host}:{self.port}")
-        self.stub = KeywordQueryStub(self.channel)
+        self.stub = LuceneConnectorStub(self.channel)
         logger.debug(f"Connected to Lucene server with host: {self.host} and port: {self.port}")
 
     def close(self) -> None:
@@ -62,17 +63,15 @@ class LuceneConnector:
             return [], []
 
     async def recreate_index(self) -> None:
-        """
-        Triggers the recreation of the Lucene index on the server side.
-        """
+        """Triggers the recreation of the Lucene index on the server side."""
         if not self.channel:
             self.connect()
 
         try:
             response = self.stub.RecreateIndex(RecreateIndexRequest())
             if not response.success:
-                raise RuntimeError(f"Failed to recreate index: {response.message}")
+                raise IndexingError(f"Failed to recreate Lucene index: {response.message}")
             logger.info("Lucene index recreation completed")
         except grpc.RpcError as e:
             logger.error(f"Lucene index recreation failed: {e}")
-            raise
+            raise IndexingError("Failed to recreate Lucene index") from e

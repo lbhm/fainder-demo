@@ -3,7 +3,7 @@
 import grpc
 import warnings
 
-from backend.proto import keyword_query_pb2 as backend_dot_proto_dot_keyword__query__pb2
+from backend.proto import lucene_connector_pb2 as backend_dot_proto_dot_lucene__connector__pb2
 
 GRPC_GENERATED_VERSION = '1.69.0'
 GRPC_VERSION = grpc.__version__
@@ -18,14 +18,14 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + f' but the generated code in backend/proto/keyword_query_pb2_grpc.py depends on'
+        + f' but the generated code in backend/proto/lucene_connector_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
     )
 
 
-class KeywordQueryStub(object):
+class LuceneConnectorStub(object):
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -35,18 +35,18 @@ class KeywordQueryStub(object):
             channel: A grpc.Channel.
         """
         self.Evaluate = channel.unary_unary(
-                '/fainder.KeywordQuery/Evaluate',
-                request_serializer=backend_dot_proto_dot_keyword__query__pb2.QueryRequest.SerializeToString,
-                response_deserializer=backend_dot_proto_dot_keyword__query__pb2.QueryResponse.FromString,
+                '/fainder.LuceneConnector/Evaluate',
+                request_serializer=backend_dot_proto_dot_lucene__connector__pb2.QueryRequest.SerializeToString,
+                response_deserializer=backend_dot_proto_dot_lucene__connector__pb2.QueryResponse.FromString,
                 _registered_method=True)
         self.RecreateIndex = channel.unary_unary(
-                '/fainder.KeywordQuery/RecreateIndex',
-                request_serializer=backend_dot_proto_dot_keyword__query__pb2.RecreateIndexRequest.SerializeToString,
-                response_deserializer=backend_dot_proto_dot_keyword__query__pb2.RecreateIndexResponse.FromString,
+                '/fainder.LuceneConnector/RecreateIndex',
+                request_serializer=backend_dot_proto_dot_lucene__connector__pb2.RecreateIndexRequest.SerializeToString,
+                response_deserializer=backend_dot_proto_dot_lucene__connector__pb2.RecreateIndexResponse.FromString,
                 _registered_method=True)
 
 
-class KeywordQueryServicer(object):
+class LuceneConnectorServicer(object):
     """Missing associated documentation comment in .proto file."""
 
     def Evaluate(self, request, context):
@@ -62,27 +62,27 @@ class KeywordQueryServicer(object):
         raise NotImplementedError('Method not implemented!')
 
 
-def add_KeywordQueryServicer_to_server(servicer, server):
+def add_LuceneConnectorServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'Evaluate': grpc.unary_unary_rpc_method_handler(
                     servicer.Evaluate,
-                    request_deserializer=backend_dot_proto_dot_keyword__query__pb2.QueryRequest.FromString,
-                    response_serializer=backend_dot_proto_dot_keyword__query__pb2.QueryResponse.SerializeToString,
+                    request_deserializer=backend_dot_proto_dot_lucene__connector__pb2.QueryRequest.FromString,
+                    response_serializer=backend_dot_proto_dot_lucene__connector__pb2.QueryResponse.SerializeToString,
             ),
             'RecreateIndex': grpc.unary_unary_rpc_method_handler(
                     servicer.RecreateIndex,
-                    request_deserializer=backend_dot_proto_dot_keyword__query__pb2.RecreateIndexRequest.FromString,
-                    response_serializer=backend_dot_proto_dot_keyword__query__pb2.RecreateIndexResponse.SerializeToString,
+                    request_deserializer=backend_dot_proto_dot_lucene__connector__pb2.RecreateIndexRequest.FromString,
+                    response_serializer=backend_dot_proto_dot_lucene__connector__pb2.RecreateIndexResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'fainder.KeywordQuery', rpc_method_handlers)
+            'fainder.LuceneConnector', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
-    server.add_registered_method_handlers('fainder.KeywordQuery', rpc_method_handlers)
+    server.add_registered_method_handlers('fainder.LuceneConnector', rpc_method_handlers)
 
 
  # This class is part of an EXPERIMENTAL API.
-class KeywordQuery(object):
+class LuceneConnector(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
@@ -99,9 +99,9 @@ class KeywordQuery(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/fainder.KeywordQuery/Evaluate',
-            backend_dot_proto_dot_keyword__query__pb2.QueryRequest.SerializeToString,
-            backend_dot_proto_dot_keyword__query__pb2.QueryResponse.FromString,
+            '/fainder.LuceneConnector/Evaluate',
+            backend_dot_proto_dot_lucene__connector__pb2.QueryRequest.SerializeToString,
+            backend_dot_proto_dot_lucene__connector__pb2.QueryResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -126,9 +126,9 @@ class KeywordQuery(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/fainder.KeywordQuery/RecreateIndex',
-            backend_dot_proto_dot_keyword__query__pb2.RecreateIndexRequest.SerializeToString,
-            backend_dot_proto_dot_keyword__query__pb2.RecreateIndexResponse.FromString,
+            '/fainder.LuceneConnector/RecreateIndex',
+            backend_dot_proto_dot_lucene__connector__pb2.RecreateIndexRequest.SerializeToString,
+            backend_dot_proto_dot_lucene__connector__pb2.RecreateIndexResponse.FromString,
             options,
             channel_credentials,
             insecure,

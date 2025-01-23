@@ -26,6 +26,7 @@ dependencies = [
     "hnswlib~=0.8.0",
     "lark~=1.2",
     "loguru~=0.7.3",
+    "mypy-protobuf~=3.6",
     "numpy~=2.0",
     "protobuf~=5.29",
     "pydantic~=2.10",

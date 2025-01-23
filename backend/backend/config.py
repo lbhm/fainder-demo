@@ -1,6 +1,5 @@
-import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, DirectoryPath, computed_field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -16,6 +15,7 @@ class Metadata(BaseModel):
 
 
 class Settings(BaseSettings):
+    # Path settings
     data_dir: DirectoryPath
     collection_name: str
     croissant_dir: Path = Path("croissant")
@@ -23,9 +23,27 @@ class Settings(BaseSettings):
     fainder_dir: Path = Path("fainder")
     metadata_file: Path = Path("metadata.json")
 
+    # QueryEvaluator settings
     query_cache_size: int = 128
+
+    # Lucene settings
     lucene_host: str = "127.0.0.1"
     lucene_port: str = "8001"
+
+    # Fainder settings
+    fainder_n_clusters: int = 50
+    fainder_bin_budget: int = 1000
+    fainder_alpha: float = 1.0
+    fainder_transform: Literal["standard", "robust", "quantile", "power"] | None = None
+    fainder_cluster_algorithm: Literal["agglomerative", "hdbscan", "kmeans"] = "kmeans"
+
+    # Embedding/HNSW settings
+    use_embeddings: bool = True
+    embedding_model: str = "all-MiniLM-L6-v2"
+    embedding_batch_size: int = 32
+    hnsw_ef_construction: int = 400
+    hnsw_n_bidirectional_links: int = 64
+    hnsw_ef: int = 50
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
@@ -68,30 +86,15 @@ class Settings(BaseSettings):
 
     @computed_field  # type: ignore[misc]
     @property
-    def metadata(self) -> Metadata:
-        with (self.data_dir / self.collection_name / self.metadata_file).open() as f:
-            data = json.load(f)
-
-        return Metadata(**data)
-
-
-class PercentileError(Exception):
-    pass
-
-
-class ColumnSearchError(Exception):
-    pass
-
-
-class ReindexError(Exception):
-    pass
+    def metadata_path(self) -> Path:
+        return self.data_dir / self.collection_name / self.metadata_file
 
 
 class QueryRequest(BaseModel):
     query: str
     page: int = 1
     per_page: int = 10
-    fainder_mode: str = "low_memory"
+    fainder_mode: Literal["low_memory", "full_precision", "full_recall", "exact"] = "low_memory"
 
 
 class QueryResponse(BaseModel):
@@ -103,8 +106,28 @@ class QueryResponse(BaseModel):
     total_pages: int
 
 
+class MessageResponse(BaseModel):
+    message: str
+
+
 class CacheInfo(BaseModel):
     hits: int
     misses: int
     max_size: int | None
     curr_size: int
+
+
+class ColumnSearchError(Exception):
+    pass
+
+
+class CroissantError(Exception):
+    pass
+
+
+class IndexingError(Exception):
+    pass
+
+
+class PercentileError(Exception):
+    pass

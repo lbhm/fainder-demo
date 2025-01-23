@@ -9,10 +9,10 @@ WORKDIR /app
 COPY pyproject.toml .
 COPY backend ./backend
 
-RUN pip install -U pip setuptools \
-    && pip install .
+RUN pip install uv
+RUN uv sync
 
 ENV FAINDER_DEMO_HOME=/app
 EXPOSE 8000
 
-CMD ["fastapi", "dev", "backend/main.py", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uv", "run", "fastapi", "dev", "backend/main.py", "--host", "0.0.0.0", "--port", "8000"]
