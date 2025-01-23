@@ -742,6 +742,8 @@ const formatNumber = (value) => {
 .details-container {
   flex: 1;
   min-width: 0; /* Prevents flex child from overflowing */
+  max-width: 1200px; /* Add maximum width */
+  margin: 0 auto; /* Center the container */
 }
 
 .mb-6 {
