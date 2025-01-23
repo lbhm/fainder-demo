@@ -213,20 +213,8 @@ page
                           <span class="metadata-value">{{ selectedResult?.creator?.name || '-' }}</span>
                         </div>
                         <div class="metadata-item">
-                          <span class="metadata-label">Publisher</span>
-                          <span class="metadata-value">{{ selectedResult?.publisher?.name || '-' }}</span>
-                        </div>
-                        <div class="metadata-item">
                           <span class="metadata-label">License</span>
                           <span class="metadata-value">{{ selectedResult?.license?.name || '-' }}</span>
-                        </div>
-                        <div class="metadata-item">
-                          <span class="metadata-label">Date Published</span>
-                          <span class="metadata-value">{{ selectedResult?.datePublished.substring(0, 10) || '-' }}</span>
-                        </div>
-                        <div class="metadata-item">
-                          <span class="metadata-label">Date Modified</span>
-                          <span class="metadata-value">{{ selectedResult?.dateModified.substring(0, 10) || '-' }}</span>
                         </div>
                         <div class="metadata-item">
                           <span class="metadata-label">Keywords</span>
@@ -327,8 +315,7 @@ page
                                 </tr>
                               </thead>
                               <tbody>
-                                <template v-for="(count, value) in field.most_common" :key="value">
-                                  <tr>
+                                <template v-for="([value, count], index) in Object.entries(field.most_common).slice(0, 3)" :key="value">                                  <tr>
                                     <td class="value-label">{{ value }}</td>
                                     <td class="stat-value">{{ formatNumber(count) }}</td>
                                   </tr>
