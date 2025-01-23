@@ -681,7 +681,7 @@ function saveSettings() {
   position: relative;
   color: transparent !important;
   background: transparent !important;
-  caret-color: black;
+  caret-color: rgb(var(--v-theme-on-surface)); /* Updated: theme-aware caret color */
   z-index: 2;
   white-space: pre;
   font-family: 'Roboto Mono', monospace;
@@ -704,7 +704,7 @@ function saveSettings() {
   font-family: 'Roboto Mono', monospace;
   font-size: 16px;
   z-index: 1;
-  color: rgba(0, 0, 0, 0.87);
+  color: rgba(var(--v-theme-on-surface), 0.87);
   mix-blend-mode: normal;
   white-space: pre;
   overflow: hidden;
