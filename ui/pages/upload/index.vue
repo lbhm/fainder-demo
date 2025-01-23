@@ -5,7 +5,7 @@
       <v-divider></v-divider>
       <div class="pa-5">
       <h1>Upload Page</h1>
-      <p>Upload the croissant metadata json files in a zip or as json files.</p>
+      <p>Upload the croissant metadata json files.</p>
       <v-form @submit.prevent="handleSubmit" class="mt-4">
         <v-file-input
           v-model="files"
@@ -14,6 +14,7 @@
           prepend-icon="mdi-file"
           class="mb-4"
           accept=".json"
+          width="40rem"
           :rules="[v => !v || v.every(file => file?.type === 'application/json') || 'Only JSON files are allowed']"
         ></v-file-input>
         <v-btn
