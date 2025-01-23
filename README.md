@@ -81,9 +81,16 @@ must place your Croissant files into a folder and set the `DATA_DIR` and `COLLEC
 accordingly (see above, we recommend `./data/<collection_name/croissant` if you want to use the
 Docker setup).
 
-The backend automtically generates the necessary index files for Fainder, HNSW, and Lucene if the
-respective folders do not exist. In order to recreate the indices, delete the folders and restart
-the apllication or call the `/update_indices` endpoint.
+**Note:** Currently, you have to manually have to trigger the intial index creation. To do so, you
+have to install the `backend` dependencies and run the following command:
+
+```bash
+python -m backend.indexing
+```
+
+<!-- The backend automtically generates the necessary index files for Fainder, HNSW, and Lucene if
+the respective folders do not exist. In order to recreate the indices, delete the folders and
+restart the apllication or call the `/update_indices` endpoint. -->
 
 ### Run with Docker
 
