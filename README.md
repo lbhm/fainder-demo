@@ -31,10 +31,6 @@ fainder/
 
 ## Getting Started
 
-### Data Preparation
-
-TODO: describe how to prepare the dataset profiles and index files
-
 ### Environment Configuration
 
 The demo uses environment variables to configure its components. You can export these variables
@@ -45,7 +41,7 @@ following variables are available (no default means it must be set):
 # Frontend
 NUXT_API_BASE=http://localhost:8000  # Backend API base URL
 
-# Backend
+# General backend
 DATA_DIR=                    # Directory containing dataset collections
 COLLECTION_NAME=             # Name of the dataset collection (subdirectoy in DATA_DIR)
 CROISSANT_DIR=croissant      # Subdirectory containing the Croissant files of a collection
@@ -54,11 +50,40 @@ FAINDER_DIR=fainder          # Subdirectory containing Fainder indices for a col
 LUCENE_DIR=lucene            # Subdirectory containing a Lucene index for keyword predicates
 METADATA_FILE=metadata.json  # JSON or Pickle file with metadata about a collection
 QUERY_CACHE_SIZE=128         # Maximum number of query resuls to cache
+
+# Lucene
 LUCENE_HOST=127.0.0.1        # Hostname of the Lucene service
 LUCENE_PORT=8001             # Port of the Lucene service
 LUCENE_MAX_RESULTS=100       # Maximum number of results returned by Lucene for a keyword predicate
 LUCENE_MIN_SCORE=1.0         # Minimum score for a keyword predicate to be considered
+
+# Fainder
+FAINDER_N_CLUSTERS=50
+FAINDER_BIN_BUDGET=1000
+FAINDER_ALPHA=1.0
+FAINDER_TRANSFORM=None
+FAINDER_CLUSTER_ALGORITHM=kmeans
+
+# Embeddings
+USE_EMBEDDINGS=True
+EMBEDDING_MODEL=all-MiniLM-L6-v2
+EMBEDDING_BATCH_SIZE=32
+HNSW_EF_CONSTRUCTION=400
+HNSW_N_BIDIRECTIONAL_LINKS=64
+HNSW_EF=50
 ```
+
+### Data Preparation
+
+You only need to bring a collection of Croissant files enriched with statistical information to
+use our demo. All index datastructures are generated automatically by the backend. For that, you
+must place your Croissant files into a folder and set the `DATA_DIR` and `COLLECTION_NAME`
+accordingly (see above, we recommend `./data/<collection_name/croissant` if you want to use the
+Docker setup).
+
+The backend automtically generates the necessary index files for Fainder, HNSW, and Lucene if the
+respective folders do not exist. In order to recreate the indices, delete the folders and restart
+the apllication or call the `/update_indices` endpoint.
 
 ### Run with Docker
 
