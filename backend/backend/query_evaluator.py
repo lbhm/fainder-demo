@@ -1,6 +1,7 @@
 from collections import defaultdict
 from collections.abc import Sequence
 from functools import lru_cache
+from typing import TypeAlias
 
 from lark import Lark, Token, Transformer, Tree, Visitor
 from loguru import logger
@@ -10,6 +11,8 @@ from backend.column_index import ColumnIndex
 from backend.config import CacheInfo, Metadata
 from backend.fainder_index import FainderIndex
 from backend.lucene_connector import LuceneConnector
+
+import re
 
 GRAMMAR = """
     start: query
@@ -38,6 +41,8 @@ GRAMMAR = """
     %ignore " "
 """
 
+# Type alias for highlights
+Highlights: TypeAlias = dict[int, dict[str, str]]
 
 class QueryEvaluator:
     def __init__(
@@ -85,7 +90,7 @@ class QueryEvaluator:
 
     def _execute(
         self, query: str, enable_filtering: bool = True, fainder_mode: str = "low_memory", enable_highlighting: bool = True
-    ) -> tuple[list[int], dict[int, dict[str, str]]]:
+    ) -> tuple[list[int], Highlights]:
         self.annotator.reset()
         executor: QueryExecutor
 
@@ -99,11 +104,16 @@ class QueryEvaluator:
         logger.trace(f"Parse tree: {parse_tree.pretty()}")
         
         # Execute query and cache highlights
-        result: list[int] = list(executor.transform(parse_tree))
+        result: set[int]
+        highlights: Highlights
+        result, highlights = executor.transform(parse_tree)
+
+        logger.debug(f"Query result: {result}")
 
         # Sort by score
-        result.sort(key=lambda x: executor.scores.get(x, -1), reverse=True)
-        return result, executor.highlights
+        list_result = list(result)
+        list_result.sort(key=lambda x: executor.scores.get(x, -1), reverse=True)
+        return list_result, highlights
 
     def clear_cache(self) -> None:
         if not hasattr(self.execute, "cache_clear"):
@@ -176,6 +186,7 @@ class QueryExecutor(Transformer):
     scores: dict[int, float]
     last_result: set[uint32] | None  # ids of the columns
     current_side: str | None
+    highlights: Highlights
 
     def __init__(
         self,
@@ -190,7 +201,7 @@ class QueryExecutor(Transformer):
         self.lucene_connector = lucene_connector
         self.enable_filtering = enable_filtering
         self.hnsw_index = hnsw_index
-        self.highlights: dict[int, dict[str, str]]= {}
+        self.highlights: Highlights = {}
         self.metadata = metadata
         self.enable_highlighting = enable_highlighting
         self.reset()
@@ -243,8 +254,7 @@ class QueryExecutor(Transformer):
         # TODO: update results
         return hist_to_col_ids(result_hists, self.metadata.hist_to_col)
 
-    def keywordterm(self, items: list[Token]) -> set[int]:
-        # TODO: Investigate length of items and annotations
+    def keywordterm(self, items: list[Token]) -> tuple[set[int], Highlights]:
         logger.trace(f"Evaluating keyword term: {items}")
         keyword = items[0].value.strip()
         # operator = items[-2] if len(items) > 2 else None
@@ -259,19 +269,13 @@ class QueryExecutor(Transformer):
 
         logger.debug(f"Keyword search for '{keyword}' returned {len(result_docs)} documents with scores: {scores} and highlights: {highlights}")
         
+        term_highlights = {}
         if self.enable_highlighting:
             # Store highlights for later use
             for doc_id, doc_highlights in zip(result_docs, highlights):
-                if doc_id not in self.highlights:
-                    self.highlights[doc_id] = doc_highlights
-                    logger.debug(f"Highlights for document {doc_id}: {doc_highlights}")
-                else:
-                    # TODO: Merge highlights if we already have some for this document
-                    self.highlights[doc_id].update(doc_highlights)
+                term_highlights[doc_id] = doc_highlights
 
-            logger.debug(f"Highlights for keyword '{keyword}': {highlights}")
-
-        return set(result_docs)
+        return set(result_docs), term_highlights
 
     def nameterm(self, items: list[Token]) -> set[uint32]:
         logger.trace(f"Evaluating column term: {items}")
@@ -323,47 +327,110 @@ class QueryExecutor(Transformer):
         logger.trace(f"Evaluating column term with {items} items")
         return items[1]
 
-    def term(self, items: tuple[Token, set[uint32]] | tuple[Token, set[int]]) -> set[int]:
+    def term(self, items: tuple[Token, tuple[set[uint32], Highlights] | tuple[set[int], Highlights]]) -> tuple[set[int], Highlights]:
         logger.trace(f"Evaluating term with items: {items}")
         if items[0].value.strip().lower() == "column" or items[0].value.strip().lower() == "col":
-            return col_to_doc_ids(items[1], self.metadata.col_to_doc)  # type: ignore
+            return col_to_doc_ids(items[1][0], self.metadata.col_to_doc), {}  # Column terms don't have highlights
 
         return items[1]  # type: ignore
 
-    def not_expr(self, items: list[set[int]]) -> set[int]:
+    def not_expr(self, items: list[tuple[set[int], Highlights]]) -> tuple[set[int], Highlights]:
         logger.trace(f"Evaluating NOT expression with {len(items)} items")
-        # TODO: Same "Problem" as in the query function with xor
-        to_negate = items[0]
+        to_negate, _ = items[0]
         all_docs = set(self.metadata.doc_to_cols.keys())
-        return all_docs - to_negate
+        return all_docs - to_negate, {}  # Negate all documents
 
-    def expression(self, items: list[set[int]]) -> set[int]:
+    def expression(self, items: list[tuple[set[int], Highlights]]) -> tuple[set[int], Highlights]:
         logger.trace(f"Evaluating expression with {len(items[0])} items")
         return items[0]
 
-    def query(self, items: list[set[int] | Token]) -> set[int]:
+    def query(self, items: list[tuple[set[int], Highlights] | Token]) -> tuple[set[int], Highlights]:
         logger.debug(f"Evaluating query with {len(items)} items")
-        if len(items) == 1 and isinstance(items[0], set):
+        if len(items) == 1 and isinstance(items[0], tuple):
             return items[0]
+        
+        logger.debug(f"Query items: {items}")
 
-        left: set[int] = items[0]  # type: ignore
+        left_set: set[int]
+        left_highlights: Highlights
+        left_set, left_highlights = items[0]  # type: ignore
         operator: str = items[1].value.strip()  # type: ignore
-        right: set[int] = items[2]  # type: ignore
+        right_set: set[int]
+        right_highlights: Highlights
+        right_set, right_highlights = items[2]  # type: ignore
 
         match operator:
             case "AND":
-                return left & right
+                result_set = left_set & right_set
+                result_highlights = self._merge_highlights(left_highlights, right_highlights, result_set)
+                return result_set, result_highlights
             case "OR":
-                return left | right
+                result_set = left_set | right_set
+                result_highlights = self._merge_highlights(left_highlights, right_highlights, result_set)
+                return result_set, result_highlights
             case "XOR":
-                return left ^ right
+                result_set = left_set ^ right_set
+                result_highlights = self._merge_highlights(left_highlights, right_highlights, result_set)
+                return result_set, result_highlights
             case _:
                 raise ValueError(f"Unknown operator: {operator}")
 
-    def start(self, items: list[set[int]]) -> set[int]:
+    def start(self, items: list[tuple[set[int], Highlights]]) -> tuple[set[int], Highlights]:
+        logger.debug(f"returning items: {items}")
         logger.debug(f"returning {items[0]}")
         return items[0]
 
+    def _merge_highlights(self, left_highlights: Highlights, 
+                         right_highlights: Highlights, 
+                         doc_ids: set[int]) -> Highlights:
+        """Merge highlights for documents that are in the result set."""
+        pattern = r"<mark>(.*?)</mark>"
+        regex = re.compile(pattern, re.DOTALL)
+
+        result_highlights: Highlights = {}
+        for doc_id in doc_ids:
+            left_doc_highlights = left_highlights.get(doc_id, {})
+            right_doc_highlights = right_highlights.get(doc_id, {})
+            
+            # Only process if either side has highlights
+            if left_doc_highlights or right_doc_highlights:
+                merged_highlights = {}
+                
+                # Process each field that appears in either highlight set
+                all_keys = set(left_doc_highlights.keys()) | set(right_doc_highlights.keys())
+                for key in all_keys:
+                    left_text = left_doc_highlights.get(key, "")
+                    right_text = right_doc_highlights.get(key, "")
+                    
+                    # If either text is empty, use the non-empty one
+                    if not left_text:
+                        merged_highlights[key] = right_text
+                        continue
+                    if not right_text:
+                        merged_highlights[key] = left_text
+                        continue
+                    
+                    # Both texts have content, merge their marks
+                    base_text = left_text
+                    other_text = right_text
+                    
+                    # Extract all marked words from other text
+                    other_marks = set(regex.findall(other_text))
+                    
+                    # Add marks from other text to base text
+                    for word in other_marks:
+                        if word not in base_text:
+                            # Word doesn't exist in base text at all
+                            base_text += f" <mark>{word}</mark>"
+                        elif f"<mark>{word}</mark>" not in base_text:
+                            # Word exists but isn't marked
+                            base_text = base_text.replace(word, f"<mark>{word}</mark>")
+                    
+                    merged_highlights[key] = base_text
+                
+                result_highlights[doc_id] = merged_highlights
+
+        return result_highlights
 
 def doc_to_col_ids(doc_ids: set[int], doc_to_columns: dict[int, set[int]]) -> set[uint32]:
     return {
