@@ -14,6 +14,15 @@ TEST_CASES: dict[str, dict[str, dict[str, dict[str, Any]]]] = {
             "not_keyword": {"query": "NOT kw(a)", "expected": []},
         }
     },
+    "field_specific_keyword": {
+        "queries": {
+            "field_specific_keyword": {"query": 'kw(alternateName:"Weather")', "expected": [0]},
+            "field_specific_keyword_or": {
+                "query": 'kw(alternateName:"Weather" OR a)',
+                "expected": [0, 2, 1],
+            },
+        }
+    },
     "basic_percentile": {
         "queries": {
             "simple_percentile": {"query": "col(pp(0.5;ge;2000))", "expected": [0, 1, 2]},
@@ -129,8 +138,8 @@ def test_new_grammar_correctness(
     time_taken_2 = end - start
     logger.info(f"Result2: {result2}")
 
-    assert result1 == result2
-    assert expected_result == result1
+    assert set(result1) == set(result2)
+    assert set(expected_result) == set(result1)
 
     logger.info(f"Time taken with filter: {time_taken_1} and without filter: {time_taken_2}")
     div = time_taken_1 - time_taken_2

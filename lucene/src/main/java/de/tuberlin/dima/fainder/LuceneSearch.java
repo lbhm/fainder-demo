@@ -19,12 +19,21 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class LuceneSearch {
     private static final Logger logger = LoggerFactory.getLogger(LuceneSearch.class);
     private final IndexSearcher searcher;
-    private final QueryParser parser;
+    private final Map<String, Float> searchFields = Map.of(
+        "name", 2.0f,           // Boost name matches
+        "description", 1.0f,    // Normal weight for description
+        "keywords", 1.5f,       // Slightly boost keyword matches
+        "creator_name", 0.8f,   // Lower weight for creator
+        "publisher_name", 0.8f, // Lower weight for publisher
+        "alternateName", 0.5f   // Lowest weight for alternate names
+    );
+    private final QueryParser[] fieldParsers;
 
     // Constant flag for testing different implementations
     private final Boolean BOOL_FILTER;
@@ -35,9 +44,44 @@ public class LuceneSearch {
         searcher = new IndexSearcher(reader);
         // Configure analyzer to keep stop words
         StandardAnalyzer analyzer = new StandardAnalyzer(CharArraySet.EMPTY_SET);
-        parser = new QueryParser("all", analyzer);
-        // parser.setAllowLeadingWildcard(true); // Allow wildcards at start of term
+
+        // Create a parser for each field
+        fieldParsers = searchFields.entrySet().stream()
+            .map(entry -> {
+                QueryParser parser = new QueryParser(entry.getKey(), analyzer);
+                parser.setDefaultOperator(QueryParser.Operator.OR);
+                return parser;
+            })
+            .toArray(QueryParser[]::new);
+
         BOOL_FILTER = false;
+    }
+
+    private Query createMultiFieldQuery(String queryText) throws ParseException {
+        BooleanQuery.Builder queryBuilder = new BooleanQuery.Builder();
+        String escapedQuery = QueryParser.escape(queryText);
+
+        // Add a subquery for each field with its boost
+        int i = 0;
+        for (Map.Entry<String, Float> field : searchFields.entrySet()) {
+            // Create boosted queries for each type of match
+            Float boost = field.getValue();
+            QueryParser parser = fieldParsers[i++];
+
+            // Exact match (highest boost)
+            Query exactQuery = parser.parse("(" + escapedQuery + ")^" + (boost * 2.0f));
+            queryBuilder.add(exactQuery, BooleanClause.Occur.SHOULD);
+
+            // Fuzzy match for typos
+            Query fuzzyQuery = parser.parse("(" + escapedQuery + "~)^" + boost);
+            queryBuilder.add(fuzzyQuery, BooleanClause.Occur.SHOULD);
+
+            // Prefix match for partial words
+            Query prefixQuery = parser.parse("(" + escapedQuery + "*)^" + (boost * 0.5f));
+            queryBuilder.add(prefixQuery, BooleanClause.Occur.SHOULD);
+        }
+
+        return queryBuilder.build();
     }
 
     /**
@@ -53,19 +97,9 @@ public class LuceneSearch {
         }
 
         try {
-            // Escape special characters
-            String escapedQuery = QueryParser.escape(query);
+            Query multiFieldQuery = createMultiFieldQuery(query);
 
-            // Create a boolean query combining exact and fuzzy matching
-            BooleanQuery.Builder queryBuilder = new BooleanQuery.Builder();
-            // Exact match gets highest boost
-            queryBuilder.add(parser.parse(escapedQuery), BooleanClause.Occur.SHOULD);
-            // Fuzzy match for typos
-            queryBuilder.add(parser.parse(escapedQuery + "~"), BooleanClause.Occur.SHOULD);
-            // Prefix match for partial words
-            queryBuilder.add(parser.parse(escapedQuery + "*"), BooleanClause.Occur.SHOULD);
-
-            logger.info("Executing query {}. With filter: {} ", queryBuilder.build(), docIds);
+            logger.info("Executing query {}. With filter: {} ", multiFieldQuery, docIds);
 
             ScoreDoc[] hits = null;
             if (docIds != null && !docIds.isEmpty()) {
@@ -73,17 +107,17 @@ public class LuceneSearch {
                 // TODO: Does the docFilter actually help to reduce query execution time?
                 if (BOOL_FILTER) {
                     Query docFilter = createDocFilter(docIds);
+                    BooleanQuery.Builder queryBuilder = new BooleanQuery.Builder();
+                    queryBuilder.add(multiFieldQuery, BooleanClause.Occur.MUST);
                     queryBuilder.add(docFilter, BooleanClause.Occur.FILTER);
                     Query parsedQuery = queryBuilder.build();
                     hits = searcher.search(parsedQuery, maxResults).scoreDocs;
                 } else {
-                    Query parsedQuery = queryBuilder.build();
                     CustomCollectorManager collectorManager = new CustomCollectorManager(maxResults, docIds);
-                    hits = searcher.search(parsedQuery, collectorManager).scoreDocs;
+                    hits = searcher.search(multiFieldQuery, collectorManager).scoreDocs;
                 }
             } else {
-                Query parsedQuery = queryBuilder.build();
-                hits = searcher.search(parsedQuery, maxResults).scoreDocs;
+                hits = searcher.search(multiFieldQuery, maxResults).scoreDocs;
             }
 
             StoredFields storedFields = searcher.storedFields();

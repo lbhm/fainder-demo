@@ -18,7 +18,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoField;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -61,15 +65,38 @@ public class LuceneIndexer {
     private static JsonElement getNestedValue(JsonObject jsonObject, String fieldPath) {
         String[] parts = fieldPath.split("\\.");
         JsonElement current = jsonObject;
-        
+
         for (String part : parts) {
             if (current == null || !current.isJsonObject()) {
                 return null;
             }
             current = current.getAsJsonObject().get(part);
         }
-        
+
         return current;
+    }
+
+    private static long parseDate(String dateStr) throws DateTimeParseException {
+        try {
+            // Try parsing as Instant (with timezone)
+            return Instant.parse(dateStr).toEpochMilli();
+        } catch (DateTimeParseException e1) {
+            try {
+                // Try parsing as LocalDateTime (without timezone) and convert to UTC
+                LocalDateTime localDateTime = LocalDateTime.parse(dateStr);
+                return localDateTime.toInstant(ZoneOffset.UTC).toEpochMilli();
+            } catch (DateTimeParseException e2) {
+                try {
+                    // Try parsing with custom formatter for other formats
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss[.SSS]");
+                    LocalDateTime localDateTime = LocalDateTime.parse(dateStr, formatter);
+                    return localDateTime.toInstant(ZoneOffset.UTC).toEpochMilli();
+                } catch (DateTimeParseException e3) {
+                    logger.error("Failed to parse date '{}' with all attempted formats", dateStr);
+                    throw e3;
+                }
+            }
+        }
     }
 
     private static void addFieldToDocument(Document document, String fieldName, JsonElement value, FieldConfig config) {
@@ -83,16 +110,16 @@ public class LuceneIndexer {
             }
             case DATE -> {
                 try {
-                    // Parse ISO-8601 date string to timestamp
-                    long timestamp = Instant.parse(value.getAsString()).toEpochMilli();
-                    document.add(new StoredField(fieldName, value.getAsString()));
+                    String dateStr = value.getAsString();
+                    long timestamp = parseDate(dateStr);
+                    document.add(new StoredField(fieldName, dateStr));
                     yield new NumericDocValuesField(fieldName, timestamp);
                 } catch (DateTimeParseException e) {
-                    logger.error("Failed to parse date: " + value.getAsString());
+                    logger.error("Date parsing failed for '{}': {}", value.getAsString(), e.getMessage());
                     yield null;
                 }
             }
-            case STRING -> new StringField(fieldName, value.getAsString(), 
+            case STRING -> new StringField(fieldName, value.getAsString(),
                 config.stored ? Field.Store.YES : Field.Store.NO);
             case TEXT -> {
                 String textValue;
@@ -106,11 +133,13 @@ public class LuceneIndexer {
                 } else {
                     textValue = value.getAsString();
                 }
-                yield new TextField(fieldName, textValue, 
+                yield new TextField(fieldName, textValue,
                     config.stored ? Field.Store.YES : Field.Store.NO);
             }
         };
-        document.add(field);
+        if (field != null) {
+            document.add(field);
+        }
     }
 
     public static void createIndex(Path indexPath, Path dataPath) {
@@ -153,12 +182,12 @@ public class LuceneIndexer {
                 // Add configured fields
                 for (Map.Entry<String, FieldConfig> entry : FIELD_CONFIGS.entrySet()) {
                     String fieldName = entry.getKey();
-                    JsonElement value = fieldName.contains(".") ? 
-                        getNestedValue(jsonObject, fieldName) : 
+                    JsonElement value = fieldName.contains(".") ?
+                        getNestedValue(jsonObject, fieldName) :
                         jsonObject.get(fieldName);
-                        
+
                     if (value != null) {
-                        addFieldToDocument(document, fieldName.replace(".", "_"), 
+                        addFieldToDocument(document, fieldName.replace(".", "_"),
                             value, entry.getValue());
                     }
                 }
