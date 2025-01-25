@@ -32,49 +32,46 @@ class LuceneConnector:
             logger.debug("gRPC channel closed")
 
     def evaluate_query(
-        self, query: str, doc_ids: set[int] | None = None
-    ) -> tuple[Sequence[int], Sequence[float], Sequence[dict[str, str]]]:
+        self, query: str, doc_ids: set[int] | None = None, enable_highlighting: bool = True
+    ) -> tuple[Sequence[int], Sequence[float], list[dict[str, str]]]:
         """
         Evaluates a keyword query using the Lucene server.
 
         Args:
             query: The query string to be evaluated by Lucene.
             doc_ids: A set of document IDs to consider as a filter (none by default).
+            enable_highlighting: Whether to enable highlighting (default True).
 
         Returns:
             list[int]: A list of document IDs that match the query.
             list[float]: A list of scores for each document ID.
             list[dict[str, str]]: A list of dictionaries mapping field names to highlighted snippets.
         """
-        start = time.perf_counter()
         if not self.channel:
             self.connect()
 
         try:
             logger.debug(f"Executing query: '{query}' with filter: {doc_ids}")
-            response = self.stub.Evaluate(QueryRequest(query=query, doc_ids=doc_ids or []))
+            response = self.stub.Evaluate(
+                QueryRequest(
+                    query=query, 
+                    doc_ids=doc_ids or [], 
+                    enable_highlighting=enable_highlighting
+                )
+            )
 
-            # Group highlights by document
+            # Convert map<int32, HighlightEntry> to list of dicts aligned with results
             highlights = []
-            current_highlights: dict[str, str] = {}
-            doc_count = len(response.results)
-            entries_per_doc = len(response.highlights) // doc_count if doc_count > 0 else 0
+            for doc_id in response.results:
+                highlight_dict = {}
+                if doc_id in response.highlights:
+                    entry = response.highlights[doc_id]
+                    highlight_dict[entry.field] = entry.text
+                highlights.append(highlight_dict)
 
-            for i, entry in enumerate(response.highlights):
-                if i > 0 and i % entries_per_doc == 0:
-                    highlights.append(current_highlights)
-                    current_highlights = {}
-                current_highlights[entry.field] = entry.text
-
-            # Don't forget the last document's highlights
-            if current_highlights:
-                highlights.append(current_highlights)
-
-            logger.debug(f"Lucene query execution took {time.perf_counter() - start:.3f} seconds")
-            logger.debug(f"Keyword query result: {response.results}")
-            logger.debug(f"Found highlights: {highlights}")
-
+            logger.debug(f"Processed highlights: {highlights}")
             return response.results, response.scores, highlights
+
         except grpc.RpcError as e:
             logger.error(f"Calling Lucene raised an error: {e}")
             return [], [], []

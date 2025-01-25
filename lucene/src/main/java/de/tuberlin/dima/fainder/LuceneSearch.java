@@ -112,30 +112,33 @@ public class LuceneSearch {
      * @param docIds     Set of document IDs to filter (optional)
      * @param minScore   The minimum score for a document to be included in the results
      * @param maxResults The maximum number of documents to return
+     * @param enableHighlighting Flag to enable or disable highlighting
      * @return A pair of lists: document IDs and their scores
      */
-    public SearchResult search(String query, Set<Integer> docIds, Float minScore, int maxResults) {
+    public SearchResult search(String query, Set<Integer> docIds, Float minScore, int maxResults, boolean enableHighlighting) {
         if (query == null || query.isEmpty()) {
             return new SearchResult(List.of(), List.of(), List.of());
         }
 
         try {
             Query multiFieldQuery = createMultiFieldQuery(query);
-
-            // Create a simplified version of the query for highlighting (without boosts)
-            BooleanQuery.Builder highlightQueryBuilder = new BooleanQuery.Builder();
-            for (String fieldName : searchFields.keySet()) {
-                QueryParser parser = new QueryParser(fieldName, analyzer);
-                parser.setDefaultOperator(QueryParser.Operator.OR);
-                Query fieldQuery = parser.parse(QueryParser.escape(query));
-                highlightQueryBuilder.add(fieldQuery, BooleanClause.Occur.SHOULD);
+            Highlighter highlighter = null;
+            
+            if (enableHighlighting) {
+                // Create simplified query for highlighting only if needed
+                BooleanQuery.Builder highlightQueryBuilder = new BooleanQuery.Builder();
+                for (String fieldName : searchFields.keySet()) {
+                    QueryParser parser = new QueryParser(fieldName, analyzer);
+                    parser.setDefaultOperator(QueryParser.Operator.OR);
+                    Query fieldQuery = parser.parse(QueryParser.escape(query));
+                    highlightQueryBuilder.add(fieldQuery, BooleanClause.Occur.SHOULD);
+                }
+                
+                QueryScorer scorer = new QueryScorer(highlightQueryBuilder.build());
+                SimpleHTMLFormatter htmlFormatter = new SimpleHTMLFormatter("<mark>", "</mark>");
+                highlighter = new Highlighter(htmlFormatter, scorer);
+                highlighter.setTextFragmenter(new SimpleSpanFragmenter(scorer, 100000));
             }
-
-            // Create highlighter with the simplified query
-            QueryScorer scorer = new QueryScorer(highlightQueryBuilder.build());
-            SimpleHTMLFormatter htmlFormatter = new SimpleHTMLFormatter("<mark>", "</mark>");
-            Highlighter highlighter = new Highlighter(htmlFormatter, scorer);
-            //highlighter.setTextFragmenter(new SimpleSpanFragmenter(scorer, 150));
 
             logger.info("Executing query {}. With filter: {} ", multiFieldQuery, docIds);
 
@@ -169,20 +172,21 @@ public class LuceneSearch {
 
                 Document doc = storedFields.document(scoreDoc.doc);
                 int resultId = Integer.parseInt(doc.get("id"));
-
                 Map<String, String> docHighlights = new HashMap<>();
 
-                // Try to get highlights for each searchable field
-                for (String fieldName : searchFields.keySet()) {
-                    String fieldContent = doc.get(fieldName);
-                    if (fieldContent != null && !fieldContent.isEmpty()) {
-                        try {
-                            String highlight = highlighter.getBestFragment(analyzer, fieldName, fieldContent);
-                            if (highlight != null) {
-                                docHighlights.put(fieldName, highlight);
+                if (enableHighlighting && highlighter != null) {
+                    // Only process highlights if enabled
+                    for (String fieldName : searchFields.keySet()) {
+                        String fieldContent = doc.get(fieldName);
+                        if (fieldContent != null && !fieldContent.isEmpty()) {
+                            try {
+                                String highlight = highlighter.getBestFragment(analyzer, fieldName, fieldContent);
+                                if (highlight != null) {
+                                    docHighlights.put(fieldName, highlight);
+                                }
+                            } catch (InvalidTokenOffsetsException e) {
+                                logger.warn("Failed to highlight field {}: {}", fieldName, e.getMessage());
                             }
-                        } catch (InvalidTokenOffsetsException e) {
-                            logger.warn("Failed to highlight field {}: {}", fieldName, e.getMessage());
                         }
                     }
                 }

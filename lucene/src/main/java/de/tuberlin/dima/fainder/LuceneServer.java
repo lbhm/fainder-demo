@@ -108,21 +108,25 @@ public class LuceneServer {
             String query = queryRequest.getQuery();
             Set<Integer> docIds = new HashSet<>(queryRequest.getDocIdsList());
 
-            SearchResult searchResults = luceneSearch.search(query, docIds, minScore, maxResults);
+            SearchResult searchResults = luceneSearch.search(query, docIds, minScore, maxResults, queryRequest.getEnableHighlighting());
 
             // Create the response builder
             QueryResponse.Builder responseBuilder = QueryResponse.newBuilder()
                 .addAllResults(searchResults.docIds)
                 .addAllScores(searchResults.scores);
 
-            // Add highlights for each document
-            for (Map<String, String> docHighlights : searchResults.highlights) {
-                for (Map.Entry<String, String> entry : docHighlights.entrySet()) {
-                    HighlightEntry highlight = HighlightEntry.newBuilder()
-                        .setField(entry.getKey())
-                        .setText(entry.getValue())
-                        .build();
-                    responseBuilder.addHighlights(highlight);
+            // Add highlights as a map for each document
+            for (int i = 0; i < searchResults.docIds.size(); i++) {
+                int docId = searchResults.docIds.get(i);
+                Map<String, String> docHighlights = searchResults.highlights.get(i);
+                if (docHighlights != null && !docHighlights.isEmpty()) {
+                    for (Map.Entry<String, String> entry : docHighlights.entrySet()) {
+                        HighlightEntry highlight = HighlightEntry.newBuilder()
+                            .setField(entry.getKey())
+                            .setText(entry.getValue())
+                            .build();
+                        responseBuilder.putHighlights(docId, highlight);
+                    }
                 }
             }
 

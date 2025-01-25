@@ -49,6 +49,7 @@ class QueryEvaluator:
         metadata: Metadata,
         cache_size: int = 128,
         disable_caching: bool = False,
+        enable_highlighting: bool = True,
     ):
         self.lucene_connector = lucene_connector
         self.grammar = Lark(GRAMMAR, start="start")
@@ -59,11 +60,10 @@ class QueryEvaluator:
         self.executor_conversion = QueryExecutor(
             self.lucene_connector, conversion_index, hnsw_index, metadata
         )
-
+        
         # Use lru_cache only if caching is enabled
-        self.execute = (
-            self._execute if disable_caching else lru_cache(maxsize=cache_size)(self._execute)
-        )
+        self.execute = (self._execute if disable_caching 
+                       else lru_cache(maxsize=cache_size)(self._execute))
 
     def update_indices(
         self,
@@ -84,26 +84,26 @@ class QueryEvaluator:
         return self.grammar.parse(query)
 
     def _execute(
-        self, query: str, enable_filtering: bool = True, fainder_mode: str = "low_memory"
-    ) -> list[int]:
+        self, query: str, enable_filtering: bool = True, fainder_mode: str = "low_memory", enable_highlighting: bool = True
+    ) -> tuple[list[int], dict[int, dict[str, str]]]:
         self.annotator.reset()
         executor: QueryExecutor
 
-        # TODO: add fainder_mode
-
+   
         executor = self.executor_rebinning
-
-        executor.reset()
+        executor.reset(enable_highlighting)
         executor.enable_filtering = enable_filtering
 
         parse_tree = self.parse(query)
         self.annotator.visit(parse_tree)
         logger.trace(f"Parse tree: {parse_tree.pretty()}")
-
+        
+        # Execute query and cache highlights
         result: list[int] = list(executor.transform(parse_tree))
-        # Sort the results by score (descending), append to the end if no score is available
+
+        # Sort by score
         result.sort(key=lambda x: executor.scores.get(x, -1), reverse=True)
-        return result
+        return result, executor.highlights
 
     def clear_cache(self) -> None:
         if not hasattr(self.execute, "cache_clear"):
@@ -184,12 +184,15 @@ class QueryExecutor(Transformer):
         hnsw_index: ColumnIndex,
         metadata: Metadata,
         enable_filtering: bool = False,
+        enable_highlighting: bool = True,
     ):
         self.fainder_index = fainder_index
         self.lucene_connector = lucene_connector
         self.enable_filtering = enable_filtering
         self.hnsw_index = hnsw_index
+        self.highlights: dict[int, dict[str, str]]= {}
         self.metadata = metadata
+        self.enable_highlighting = enable_highlighting
         self.reset()
 
     def _get_column_filter(self, operator: str | None, side: str | None) -> set[uint32] | None:
@@ -206,11 +209,12 @@ class QueryExecutor(Transformer):
         logger.trace(f"Applying filter from previous result: {self.last_result}")
         return self.last_result
 
-    def reset(self) -> None:
+    def reset(self, enable_highlighting: bool = True) -> None:
         self.scores = defaultdict(float)
-        self.highlights = {}  # Add highlights dictionary
+        self.highlights = {}  
         self.last_result = None
         self.current_side = None
+        self.enable_highlighting = enable_highlighting
 
     def updates_scores(self, doc_ids: Sequence[int], scores: Sequence[float]) -> None:
         logger.trace(f"Updating scores for {len(doc_ids)} documents")
@@ -250,16 +254,22 @@ class QueryExecutor(Transformer):
         doc_filter = None
 
         # Get results and highlights
-        result_docs, scores, highlights = self.lucene_connector.evaluate_query(keyword, doc_filter)
+        result_docs, scores, highlights = self.lucene_connector.evaluate_query(keyword, doc_filter, self.enable_highlighting)
         self.updates_scores(result_docs, scores)
 
-        # Store highlights for later use
-        for doc_id, doc_highlights in zip(result_docs, highlights, strict=False):
-            if doc_id not in self.highlights:
-                self.highlights[doc_id] = doc_highlights
-            else:
-                # Merge highlights if we already have some for this document
-                self.highlights[doc_id].update(doc_highlights)
+        logger.debug(f"Keyword search for '{keyword}' returned {len(result_docs)} documents with scores: {scores} and highlights: {highlights}")
+        
+        if self.enable_highlighting:
+            # Store highlights for later use
+            for doc_id, doc_highlights in zip(result_docs, highlights):
+                if doc_id not in self.highlights:
+                    self.highlights[doc_id] = doc_highlights
+                    logger.debug(f"Highlights for document {doc_id}: {doc_highlights}")
+                else:
+                    # TODO: Merge highlights if we already have some for this document
+                    self.highlights[doc_id].update(doc_highlights)
+
+            logger.debug(f"Highlights for keyword '{keyword}': {highlights}")
 
         return set(result_docs)
 

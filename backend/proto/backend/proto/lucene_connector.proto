@@ -12,6 +12,7 @@ service LuceneConnector {
 message QueryRequest {
   string query = 1;
   repeated int32 doc_ids = 2;
+  bool enable_highlighting = 3;  // Add highlighting flag
 }
 
 // Add a new message type for highlight entries
@@ -23,7 +24,7 @@ message HighlightEntry {
 message QueryResponse {
   repeated int32 results = 1;
   repeated float scores = 2;
-  repeated HighlightEntry highlights = 3;  // Changed from string to HighlightEntry
+  map<int32, HighlightEntry> highlights = 3;  // Changed to map from int32 to HighlightEntry
 }
 
 message RecreateIndexRequest {}

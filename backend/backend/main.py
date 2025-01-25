@@ -3,6 +3,7 @@ import sys
 import time
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+import traceback
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, UploadFile
@@ -101,7 +102,7 @@ async def query(request: QueryRequest) -> QueryResponse:
     try:
         start_time = time.perf_counter()
         query_evaluator.executor_rebinning.reset()  # Reset executor state
-        doc_ids = query_evaluator.execute(request.query, fainder_mode=request.fainder_mode)
+        doc_ids, highlights = query_evaluator.execute(request.query, fainder_mode=request.fainder_mode)
 
         # Calculate pagination
         start_idx = (request.page - 1) * request.per_page
@@ -109,24 +110,20 @@ async def query(request: QueryRequest) -> QueryResponse:
         paginated_doc_ids = doc_ids[start_idx:end_idx]
         total_pages = (len(doc_ids) + request.per_page - 1) // request.per_page
 
-        # Get documents and merge highlights
+        # Get documents and merge highlights only if enabled
+        logger.debug(f"Fetching documents: {paginated_doc_ids}")
         docs = croissant_store.get_documents(paginated_doc_ids)
-        executor = query_evaluator.executor_rebinning
+        if request.enable_highlighting:
+            # Merge highlights with documents
+            for doc, doc_id in zip(docs, paginated_doc_ids, strict=False):
+                doc_highlights = highlights.get(doc_id, {})
+                logger.debug(f"Highlights for document {doc_id}: {doc_highlights}")
+                # Replace text with highlighted version where available
+                for field in ["name", "description", "alternateName", "keywords"]:
+                    if field in doc_highlights:
+                        doc[field] = doc_highlights[field]
+                # Store all highlights for reference
 
-        # Merge highlights with documents
-        for doc, doc_id in zip(docs, paginated_doc_ids, strict=False):
-            doc_highlights = executor.highlights.get(doc_id, {})
-            # Replace text with highlighted version where available
-            if "name" in doc_highlights:
-                doc["name"] = doc_highlights["name"]
-            if "description" in doc_highlights:
-                doc["description"] = doc_highlights["description"]
-            if "alternateName" in doc_highlights:
-                doc["alternateName"] = doc_highlights["alternateName"]
-            if "keywords" in doc_highlights:
-                doc["keywords"] = doc_highlights["keywords"]
-            # Store all highlights for reference
-            doc["highlights"] = doc_highlights
 
         end_time = time.perf_counter()
         search_time = end_time - start_time
@@ -137,8 +134,7 @@ async def query(request: QueryRequest) -> QueryResponse:
             search_time=search_time,
             result_count=len(doc_ids),
             page=request.page,
-            total_pages=total_pages,
-            highlights=[],  # No need for separate highlights anymore
+            total_pages=total_pages
         )
     except UnexpectedInput as e:
         logger.info(f"Bad user query: {e.get_context(request.query)}")
@@ -154,6 +150,7 @@ async def query(request: QueryRequest) -> QueryResponse:
     # TODO: Add other known errors for specific error handling
     except Exception as e:
         logger.error(f"Unknown query execution error: {e}")
+        logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
