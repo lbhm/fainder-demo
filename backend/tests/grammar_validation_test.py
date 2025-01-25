@@ -1,5 +1,7 @@
 import pytest
-from lark import UnexpectedInput
+from lark import UnexpectedCharacters, UnexpectedInput, UnexpectedEOF
+import time
+from loguru import logger
 
 from backend.query_evaluator import QueryEvaluator
 
@@ -114,14 +116,24 @@ INVALID_TEST_CASES = {
     [(cat, q) for cat, data in VALID_TEST_CASES.items() for q in data["queries"]],
 )
 def test_query_evaluation_success(category: str, query: str, evaluator: QueryEvaluator) -> None:
+    start_time = time.perf_counter()
     r = evaluator.parse(query)
+    duration = time.perf_counter() - start_time
+    
+    validation_log = {
+        "type": "valid",
+        "category": category,
+        "query": query,
+        "parse_time": duration
+    }
+    
+    logger.info("VALIDATION_DATA: " + str(validation_log))
     assert not isinstance(r, Exception)
-
 
 @pytest.mark.parametrize(
     ("category", "query"),
     [(cat, q) for cat, data in INVALID_TEST_CASES.items() for q in data["queries"]],
 )
 def test_query_evaluation_fail(category: str, query: str, evaluator: QueryEvaluator) -> None:
-    with pytest.raises((UnexpectedInput, SyntaxError)):
+    with pytest.raises((UnexpectedInput, SyntaxError, UnexpectedCharacters, UnexpectedEOF)):
         evaluator.parse(query)

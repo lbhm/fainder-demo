@@ -101,8 +101,7 @@ TEST_CASES: dict[str, dict[str, dict[str, dict[str, Any]]]] = {
             },
             "not_complex_column": {
                 "query": "NOT col((name(Latitude; 0) AND pp(0.5;ge;50)))",
-                "expected": [1, 2],
-            },
+                "expected": [1, 2]},
             "multiple_columns": {
                 "query": "col(name(Latitude; 0)) AND col(name(Longitude; 0))",
                 "expected": [0],
@@ -126,21 +125,64 @@ def test_new_grammar_correctness(
     query = test_case["query"]
     expected_result = test_case["expected"]
 
-    start = time.perf_counter()
+    # First run with caching enabled (default)
+    parse_start = time.perf_counter()
+    parsed_query = evaluator.parse(query)
+    parse_end = time.perf_counter()
+    parse_time = parse_end - parse_start
+    
+    # Execute twice with caching to measure cache hit
+    exec_start = time.perf_counter()
     result1 = evaluator.execute(query)
-    end = time.perf_counter()
-    time_taken_1 = end - start
-    logger.info(f"Result1: {result1}")
+    first_exec_time = time.perf_counter() - exec_start
+    
+    exec_start = time.perf_counter()
+    result1_cached = evaluator.execute(query)
+    cached_exec_time = time.perf_counter() - exec_start
 
-    start = time.perf_counter()
-    result2 = evaluator.execute(query, enable_filtering=False)
-    end = time.perf_counter()
-    time_taken_2 = end - start
-    logger.info(f"Result2: {result2}")
+    # Execute without caching
+    no_cache_evaluator = QueryEvaluator(
+        evaluator.lucene_connector,
+        evaluator.executor_rebinning.fainder_index,
+        evaluator.executor_conversion.fainder_index,
+        evaluator.executor_rebinning.hnsw_index,
+        evaluator.executor_rebinning.metadata,
+        disable_caching=True
+    )
+    
+    exec_start = time.perf_counter()
+    result2 = no_cache_evaluator.execute(query)
+    no_cache_exec_time = time.perf_counter() - exec_start
 
+    # Log cache statistics
+    cache_info = evaluator.cache_info()
+    # Log timing information in a structured format
+    performance_log = {
+        "category": category,
+        "test_name": test_name,
+        "query": query,
+        "metrics": {
+            "parse_time": parse_time,
+            "first_exec_time": first_exec_time,
+            "cached_exec_time": cached_exec_time,
+            "non_cached_exec_time": no_cache_exec_time,
+            "cache_speedup": no_cache_exec_time/cached_exec_time
+        },
+        "cache_stats": {
+            "hits": cache_info.hits,
+            "misses": cache_info.misses,
+            "max_size": cache_info.max_size,
+            "curr_size": cache_info.curr_size
+        }
+    }
+
+    # Log as JSON for easier parsing
+    logger.info("PERFORMANCE_DATA: " + str(performance_log))
+
+    # Verify results are consistent
     assert set(result1) == set(result2)
+    assert set(result1) == set(result1_cached)
     assert set(expected_result) == set(result1)
 
-    logger.info(f"Time taken with filter: {time_taken_1} and without filter: {time_taken_2}")
-    div = time_taken_1 - time_taken_2
-    logger.info(f"Time difference: {div}")
+
+

@@ -48,6 +48,7 @@ class QueryEvaluator:
         hnsw_index: ColumnIndex,
         metadata: Metadata,
         cache_size: int = 128,
+        disable_caching: bool = False,
     ):
         self.lucene_connector = lucene_connector
         self.grammar = Lark(GRAMMAR, start="start")
@@ -58,10 +59,10 @@ class QueryEvaluator:
         self.executor_conversion = QueryExecutor(
             self.lucene_connector, conversion_index, hnsw_index, metadata
         )
-
-        # NOTE: Don't use lru_cache on methods
-        # See https://docs.astral.sh/ruff/rules/cached-instance-method/ for details
-        self.execute = lru_cache(maxsize=cache_size)(self._execute)
+        
+        # Use lru_cache only if caching is enabled
+        self.execute = (self._execute if disable_caching 
+                       else lru_cache(maxsize=cache_size)(self._execute))
 
     def update_indices(
         self,
@@ -104,9 +105,13 @@ class QueryEvaluator:
         return result
 
     def clear_cache(self) -> None:
+        if not hasattr(self.execute, "cache_clear"):
+            return
         self.execute.cache_clear()
 
     def cache_info(self) -> CacheInfo:
+        if not hasattr(self.execute, "cache_info"):
+            return CacheInfo(hits=0, misses=0, max_size=0, curr_size=0)
         hits, misses, max_size, curr_size = self.execute.cache_info()
         return CacheInfo(hits=hits, misses=misses, max_size=max_size, curr_size=curr_size)
 

@@ -30,6 +30,29 @@ def _setup_and_teardown() -> Generator[None, Any, None]:
     pass
 
 
+@pytest.fixture(autouse=True)
+def setup_logging():
+    # Create logs directory if it doesn't exist
+    log_dir = Path("logs")
+    log_dir.mkdir(exist_ok=True)
+    
+    # Remove default handler
+    logger.remove()
+    
+    # Add handlers for both file and console
+    logger.add(
+        sys.stdout,
+        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | {message}",
+        filter=lambda record: record["level"].name == "INFO",
+    )
+    logger.add(
+        "logs/query_performance {time:YYYY-MM-DD HH:mm:ss}.log",
+        format="{time:YYYY-MM-DD HH:mm:ss} | {message}",
+        filter=lambda record: record["level"].name == "INFO",
+        rotation="1 day",
+    )
+
+
 @pytest.fixture(scope="module")
 def evaluator() -> QueryEvaluator:
     settings = Settings(

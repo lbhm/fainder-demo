@@ -49,3 +49,4 @@ data/
 # Lucene
 target/
 /lucene_index
+/logs
