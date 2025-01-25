@@ -1,6 +1,7 @@
 package de.tuberlin.dima.fainder;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
@@ -16,12 +17,101 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
 public class LuceneIndexer {
     private static final Logger logger = LoggerFactory.getLogger(LuceneIndexer.class);
+
+    // Field configuration map defines how each field should be indexed
+    private static final Map<String, FieldConfig> FIELD_CONFIGS = Map.of(
+        "id", new FieldConfig(FieldType.NUMERIC, true),
+        "dateModified", new FieldConfig(FieldType.DATE, true),
+        "alternateName", new FieldConfig(FieldType.TEXT, true),
+        "name", new FieldConfig(FieldType.TEXT, true),
+        "description", new FieldConfig(FieldType.TEXT, true),
+        "keywords", new FieldConfig(FieldType.TEXT, true, true), // isArray=true
+        "creator.name", new FieldConfig(FieldType.TEXT, true),   // nested field
+        "publisher.name", new FieldConfig(FieldType.TEXT, true)  // nested field
+    );
+
+    private enum FieldType {
+        NUMERIC, STRING, TEXT, DATE
+    }
+
+    private static class FieldConfig {
+        final FieldType type;
+        final boolean stored;
+        final boolean isArray;
+
+        FieldConfig(FieldType type, boolean stored) {
+            this(type, stored, false);
+        }
+
+        FieldConfig(FieldType type, boolean stored, boolean isArray) {
+            this.type = type;
+            this.stored = stored;
+            this.isArray = isArray;
+        }
+    }
+
+    private static JsonElement getNestedValue(JsonObject jsonObject, String fieldPath) {
+        String[] parts = fieldPath.split("\\.");
+        JsonElement current = jsonObject;
+        
+        for (String part : parts) {
+            if (current == null || !current.isJsonObject()) {
+                return null;
+            }
+            current = current.getAsJsonObject().get(part);
+        }
+        
+        return current;
+    }
+
+    private static void addFieldToDocument(Document document, String fieldName, JsonElement value, FieldConfig config) {
+        if (value == null || value.isJsonNull()) return;
+
+        Field field = switch (config.type) {
+            case NUMERIC -> {
+                int numValue = value.getAsInt();
+                document.add(new StoredField(fieldName, numValue));
+                yield new NumericDocValuesField(fieldName, numValue);
+            }
+            case DATE -> {
+                try {
+                    // Parse ISO-8601 date string to timestamp
+                    long timestamp = Instant.parse(value.getAsString()).toEpochMilli();
+                    document.add(new StoredField(fieldName, value.getAsString()));
+                    yield new NumericDocValuesField(fieldName, timestamp);
+                } catch (DateTimeParseException e) {
+                    logger.error("Failed to parse date: " + value.getAsString());
+                    yield null;
+                }
+            }
+            case STRING -> new StringField(fieldName, value.getAsString(), 
+                config.stored ? Field.Store.YES : Field.Store.NO);
+            case TEXT -> {
+                String textValue;
+                if (config.isArray) {
+                    JsonArray array = value.getAsJsonArray();
+                    StringBuilder sb = new StringBuilder();
+                    for (JsonElement element : array) {
+                        sb.append(element.getAsString()).append(" ");
+                    }
+                    textValue = sb.toString().trim();
+                } else {
+                    textValue = value.getAsString();
+                }
+                yield new TextField(fieldName, textValue, 
+                    config.stored ? Field.Store.YES : Field.Store.NO);
+            }
+        };
+        document.add(field);
+    }
 
     public static void createIndex(Path indexPath, Path dataPath) {
         try {
@@ -60,41 +150,23 @@ public class LuceneIndexer {
                 // Create a new Lucene Document
                 Document document = new Document();
 
-
-                // Iterate through all key-value pairs in the JSON object
-                for (Map.Entry<String, JsonElement> entry : jsonObject.entrySet()) {
-                    String key = entry.getKey();
-                    JsonElement value = entry.getValue();
-                    // Convert the value to a string
-                    String valueStr = value.isJsonNull() ? "" : value.toString();
-                    if (valueStr.equals(("NaN"))) valueStr = "";
-                    if(key.equals("id")){
-                        document.add(new NumericDocValuesField("id", value.getAsInt()));
-                        document.add(new StoredField("id", valueStr));
-                    } else if (key.equals("dateModified")) {
-                        // Assuming dateModified is best represented as a StringField
-                        document.add(new StringField(key, valueStr, Field.Store.YES));
-                    } else if (key.equals("isAccessibleForFree")) {
-                        // Assuming dateModified is best represented as a StringField
-                        document.add(new StringField(key, valueStr, Field.Store.YES));
-                    } else if (value.isJsonPrimitive()) {
-                        JsonPrimitive primitive = value.getAsJsonPrimitive();
-                        if (primitive.isString()) {
-                            document.add(new TextField(key, primitive.getAsString(), Field.Store.YES));
-                        } else {
-                            document.add(new StringField(key, valueStr, Field.Store.YES));
-                        }
-                    } else {
-                        document.add(new TextField(key, valueStr, Field.Store.YES));
+                // Add configured fields
+                for (Map.Entry<String, FieldConfig> entry : FIELD_CONFIGS.entrySet()) {
+                    String fieldName = entry.getKey();
+                    JsonElement value = fieldName.contains(".") ? 
+                        getNestedValue(jsonObject, fieldName) : 
+                        jsonObject.get(fieldName);
+                        
+                    if (value != null) {
+                        addFieldToDocument(document, fieldName.replace(".", "_"), 
+                            value, entry.getValue());
                     }
                 }
-                // add the file path as a field named "path"
+
+                // Add file path
                 document.add(new StringField("path", filePath.toString(), Field.Store.YES));
 
-                // add the full file as a field named "all" to make it searchable
-                document.add(new TextField("all", jsonContent, Field.Store.YES));
-
-                // Add the document to the index
+                // Add document to index
                 writer.addDocument(document);
             }
             writer.commit();
