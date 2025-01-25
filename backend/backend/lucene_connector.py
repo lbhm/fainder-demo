@@ -33,7 +33,7 @@ class LuceneConnector:
 
     def evaluate_query(
         self, query: str, doc_ids: set[int] | None = None
-    ) -> tuple[Sequence[int], Sequence[float]]:
+    ) -> tuple[Sequence[int], Sequence[float], Sequence[dict[str, str]]]:
         """
         Evaluates a keyword query using the Lucene server.
 
@@ -44,6 +44,7 @@ class LuceneConnector:
         Returns:
             list[int]: A list of document IDs that match the query.
             list[float]: A list of scores for each document ID.
+            list[dict[str, str]]: A list of dictionaries mapping field names to highlighted snippets.
         """
         start = time.perf_counter()
         if not self.channel:
@@ -52,15 +53,31 @@ class LuceneConnector:
         try:
             logger.debug(f"Executing query: '{query}' with filter: {doc_ids}")
             response = self.stub.Evaluate(QueryRequest(query=query, doc_ids=doc_ids or []))
-            result = response.results
+
+            # Group highlights by document
+            highlights = []
+            current_highlights: dict[str, str] = {}
+            doc_count = len(response.results)
+            entries_per_doc = len(response.highlights) // doc_count if doc_count > 0 else 0
+
+            for i, entry in enumerate(response.highlights):
+                if i > 0 and i % entries_per_doc == 0:
+                    highlights.append(current_highlights)
+                    current_highlights = {}
+                current_highlights[entry.field] = entry.text
+
+            # Don't forget the last document's highlights
+            if current_highlights:
+                highlights.append(current_highlights)
 
             logger.debug(f"Lucene query execution took {time.perf_counter() - start:.3f} seconds")
-            logger.debug(f"Keyword query result: {result}")
+            logger.debug(f"Keyword query result: {response.results}")
+            logger.debug(f"Found highlights: {highlights}")
 
-            return response.results, response.scores
+            return response.results, response.scores, highlights
         except grpc.RpcError as e:
             logger.error(f"Calling Lucene raised an error: {e}")
-            return [], []
+            return [], [], []
 
     async def recreate_index(self) -> None:
         """Triggers the recreation of the Lucene index on the server side."""

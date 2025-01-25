@@ -8,6 +8,8 @@ import io.grpc.stub.StreamObserver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import de.tuberlin.dima.fainder.LuceneSearch.SearchResult;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -15,6 +17,9 @@ import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public class LuceneServer {
     private static final Logger logger = LoggerFactory.getLogger(LuceneServer.class);
@@ -103,12 +108,25 @@ public class LuceneServer {
             String query = queryRequest.getQuery();
             Set<Integer> docIds = new HashSet<>(queryRequest.getDocIdsList());
 
-            Pair<List<Integer>, List<Float>> searchResults = luceneSearch.search(query, docIds, minScore, maxResults);
-            QueryResponse response = QueryResponse.newBuilder()
-                    .addAllResults(searchResults.getFirst()).addAllScores(searchResults.getSecond())
-                    .build();
+            SearchResult searchResults = luceneSearch.search(query, docIds, minScore, maxResults);
 
-            responseObserver.onNext(response);
+            // Create the response builder
+            QueryResponse.Builder responseBuilder = QueryResponse.newBuilder()
+                .addAllResults(searchResults.docIds)
+                .addAllScores(searchResults.scores);
+
+            // Add highlights for each document
+            for (Map<String, String> docHighlights : searchResults.highlights) {
+                for (Map.Entry<String, String> entry : docHighlights.entrySet()) {
+                    HighlightEntry highlight = HighlightEntry.newBuilder()
+                        .setField(entry.getKey())
+                        .setText(entry.getValue())
+                        .build();
+                    responseBuilder.addHighlights(highlight);
+                }
+            }
+
+            responseObserver.onNext(responseBuilder.build());
             responseObserver.onCompleted();
         }
 

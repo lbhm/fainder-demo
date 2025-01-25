@@ -10,25 +10,25 @@ service LuceneConnector {
 }
 
 message QueryRequest {
-  // Query expression
   string query = 1;
-  // List of document IDs to consider (if empty, all documents will be searched)
   repeated int32 doc_ids = 2;
 }
 
-message QueryResponse {
-  // Document IDs that match the query sorted in order of relevance
-  repeated int32 results = 1;
-  // Relevance scores of documents
-  repeated float scores = 2;
+// Add a new message type for highlight entries
+message HighlightEntry {
+  string field = 1;
+  string text = 2;
 }
 
-message RecreateIndexRequest {
-  // Empty request as no parameters needed
+message QueryResponse {
+  repeated int32 results = 1;
+  repeated float scores = 2;
+  repeated HighlightEntry highlights = 3;  // Changed from string to HighlightEntry
 }
+
+message RecreateIndexRequest {}
 
 message RecreateIndexResponse {
-  // Status of the recreation
   bool success = 1;
   string message = 2;
 }

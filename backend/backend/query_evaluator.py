@@ -59,10 +59,11 @@ class QueryEvaluator:
         self.executor_conversion = QueryExecutor(
             self.lucene_connector, conversion_index, hnsw_index, metadata
         )
-        
+
         # Use lru_cache only if caching is enabled
-        self.execute = (self._execute if disable_caching 
-                       else lru_cache(maxsize=cache_size)(self._execute))
+        self.execute = (
+            self._execute if disable_caching else lru_cache(maxsize=cache_size)(self._execute)
+        )
 
     def update_indices(
         self,
@@ -206,7 +207,8 @@ class QueryExecutor(Transformer):
         return self.last_result
 
     def reset(self) -> None:
-        self.scores = defaultdict(int)
+        self.scores = defaultdict(float)
+        self.highlights = {}  # Add highlights dictionary
         self.last_result = None
         self.current_side = None
 
@@ -247,9 +249,17 @@ class QueryExecutor(Transformer):
         # TODO: add filter
         doc_filter = None
 
-        result_docs, scores = self.lucene_connector.evaluate_query(keyword, doc_filter)
+        # Get results and highlights
+        result_docs, scores, highlights = self.lucene_connector.evaluate_query(keyword, doc_filter)
         self.updates_scores(result_docs, scores)
-        # TODO: update results
+
+        # Store highlights for later use
+        for doc_id, doc_highlights in zip(result_docs, highlights, strict=False):
+            if doc_id not in self.highlights:
+                self.highlights[doc_id] = doc_highlights
+            else:
+                # Merge highlights if we already have some for this document
+                self.highlights[doc_id].update(doc_highlights)
 
         return set(result_docs)
 

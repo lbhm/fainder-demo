@@ -25,6 +25,7 @@ class Settings(BaseSettings):
 
     # QueryEvaluator settings
     query_cache_size: int = 128
+    highlights_cache_size: int = 128  # Add highlight cache size setting
 
     # Lucene settings
     lucene_host: str = "127.0.0.1"
@@ -98,12 +99,14 @@ class QueryRequest(BaseModel):
 
 
 class QueryResponse(BaseModel):
+    """Response for a query request."""
+
     query: str
     results: list[dict[str, Any]]
     search_time: float
     result_count: int
     page: int
-    total_pages: int
+    total_pages: int  # Add highlights field
 
 
 class MessageResponse(BaseModel):

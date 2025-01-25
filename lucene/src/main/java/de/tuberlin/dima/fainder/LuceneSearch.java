@@ -14,6 +14,7 @@ import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.lucene.search.highlight.*;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -21,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.HashMap;
 
 public class LuceneSearch {
     private static final Logger logger = LoggerFactory.getLogger(LuceneSearch.class);
@@ -34,16 +36,21 @@ public class LuceneSearch {
         "alternateName", 0.5f   // Lowest weight for alternate names
     );
     private final QueryParser[] fieldParsers;
+    private final StandardAnalyzer analyzer;
 
     // Constant flag for testing different implementations
     private final Boolean BOOL_FILTER;
+
+    private static final float MIN_BOOST = 0.1f;
+    private static final float EXACT_MATCH_MULTIPLIER = 2.0f;
+    private static final float PREFIX_MATCH_MULTIPLIER = 0.5f;
 
     public LuceneSearch(Path indexPath) throws IOException {
         Directory indexDir = FSDirectory.open(indexPath);
         IndexReader reader = DirectoryReader.open(indexDir);
         searcher = new IndexSearcher(reader);
         // Configure analyzer to keep stop words
-        StandardAnalyzer analyzer = new StandardAnalyzer(CharArraySet.EMPTY_SET);
+        analyzer = new StandardAnalyzer(CharArraySet.EMPTY_SET);
 
         // Create a parser for each field
         fieldParsers = searchFields.entrySet().stream()
@@ -61,27 +68,43 @@ public class LuceneSearch {
         BooleanQuery.Builder queryBuilder = new BooleanQuery.Builder();
         String escapedQuery = QueryParser.escape(queryText);
 
-        // Add a subquery for each field with its boost
         int i = 0;
         for (Map.Entry<String, Float> field : searchFields.entrySet()) {
-            // Create boosted queries for each type of match
-            Float boost = field.getValue();
+            // Base boost - ensure it's positive
+            Float baseBoost = Math.max(MIN_BOOST, field.getValue());
             QueryParser parser = fieldParsers[i++];
 
+            // Calculate derived boosts, ensuring they remain positive
+            float exactBoost = baseBoost * EXACT_MATCH_MULTIPLIER;
+            float fuzzyBoost = baseBoost;
+            float prefixBoost = Math.max(MIN_BOOST, baseBoost * PREFIX_MATCH_MULTIPLIER);
+
             // Exact match (highest boost)
-            Query exactQuery = parser.parse("(" + escapedQuery + ")^" + (boost * 2.0f));
+            Query exactQuery = parser.parse("(" + escapedQuery + ")^" + exactBoost);
             queryBuilder.add(exactQuery, BooleanClause.Occur.SHOULD);
 
             // Fuzzy match for typos
-            Query fuzzyQuery = parser.parse("(" + escapedQuery + "~)^" + boost);
+            Query fuzzyQuery = parser.parse("(" + escapedQuery + "~)^" + fuzzyBoost);
             queryBuilder.add(fuzzyQuery, BooleanClause.Occur.SHOULD);
 
             // Prefix match for partial words
-            Query prefixQuery = parser.parse("(" + escapedQuery + "*)^" + (boost * 0.5f));
+            Query prefixQuery = parser.parse("(" + escapedQuery + "*)^" + prefixBoost);
             queryBuilder.add(prefixQuery, BooleanClause.Occur.SHOULD);
         }
 
         return queryBuilder.build();
+    }
+
+    public static class SearchResult {
+        public List<Integer> docIds;
+        public List<Float> scores;
+        public List<Map<String, String>> highlights;  // Changed to Map for field-specific highlights
+
+        public SearchResult(List<Integer> docIds, List<Float> scores, List<Map<String, String>> highlights) {
+            this.docIds = docIds;
+            this.scores = scores;
+            this.highlights = highlights;
+        }
     }
 
     /**
@@ -91,13 +114,28 @@ public class LuceneSearch {
      * @param maxResults The maximum number of documents to return
      * @return A pair of lists: document IDs and their scores
      */
-    public Pair<List<Integer>, List<Float>> search(String query, Set<Integer> docIds, Float minScore, int maxResults) {
+    public SearchResult search(String query, Set<Integer> docIds, Float minScore, int maxResults) {
         if (query == null || query.isEmpty()) {
-            return new Pair<>(List.of(), List.of());
+            return new SearchResult(List.of(), List.of(), List.of());
         }
 
         try {
             Query multiFieldQuery = createMultiFieldQuery(query);
+
+            // Create a simplified version of the query for highlighting (without boosts)
+            BooleanQuery.Builder highlightQueryBuilder = new BooleanQuery.Builder();
+            for (String fieldName : searchFields.keySet()) {
+                QueryParser parser = new QueryParser(fieldName, analyzer);
+                parser.setDefaultOperator(QueryParser.Operator.OR);
+                Query fieldQuery = parser.parse(QueryParser.escape(query));
+                highlightQueryBuilder.add(fieldQuery, BooleanClause.Occur.SHOULD);
+            }
+
+            // Create highlighter with the simplified query
+            QueryScorer scorer = new QueryScorer(highlightQueryBuilder.build());
+            SimpleHTMLFormatter htmlFormatter = new SimpleHTMLFormatter("<mark>", "</mark>");
+            Highlighter highlighter = new Highlighter(htmlFormatter, scorer);
+            //highlighter.setTextFragmenter(new SimpleSpanFragmenter(scorer, 150));
 
             logger.info("Executing query {}. With filter: {} ", multiFieldQuery, docIds);
 
@@ -117,33 +155,49 @@ public class LuceneSearch {
                     hits = searcher.search(multiFieldQuery, collectorManager).scoreDocs;
                 }
             } else {
+                logger.info("No filter applied");
                 hits = searcher.search(multiFieldQuery, maxResults).scoreDocs;
             }
 
             StoredFields storedFields = searcher.storedFields();
             List<Integer> results = new ArrayList<>();
             List<Float> scores = new ArrayList<>();
-            for (ScoreDoc scoreDoc : hits) {
-                int docId = scoreDoc.doc;
-                Document doc = storedFields.document(docId);
-                logger.info("Hit {}: {} (Score: {})", docId, doc.get("name"), scoreDoc.score);
-                int result = Integer.parseInt(doc.get("id"));
+            List<Map<String, String>> highlights = new ArrayList<>();
 
-                if (minScore == null || scoreDoc.score >= minScore) {
-                    results.add(result);
-                    scores.add(scoreDoc.score);
+            for (ScoreDoc scoreDoc : hits) {
+                if (minScore != null && scoreDoc.score < minScore) continue;
+
+                Document doc = storedFields.document(scoreDoc.doc);
+                int resultId = Integer.parseInt(doc.get("id"));
+
+                Map<String, String> docHighlights = new HashMap<>();
+
+                // Try to get highlights for each searchable field
+                for (String fieldName : searchFields.keySet()) {
+                    String fieldContent = doc.get(fieldName);
+                    if (fieldContent != null && !fieldContent.isEmpty()) {
+                        try {
+                            String highlight = highlighter.getBestFragment(analyzer, fieldName, fieldContent);
+                            if (highlight != null) {
+                                docHighlights.put(fieldName, highlight);
+                            }
+                        } catch (InvalidTokenOffsetsException e) {
+                            logger.warn("Failed to highlight field {}: {}", fieldName, e.getMessage());
+                        }
+                    }
                 }
+
+                results.add(resultId);
+                scores.add(scoreDoc.score);
+                highlights.add(docHighlights);
             }
 
-            return new Pair<List<Integer>, List<Float>>(results, scores);
-        } catch (ParseException e) {
-            logger.error("Query parsing error: {}", e.getMessage());
-            return new Pair<>(List.of(), List.of());
-        } catch (IOException e) {
-            logger.error("Query IO error: {}", e.getMessage());
-            return new Pair<>(List.of(), List.of());
+            return new SearchResult(results, scores, highlights);
+        } catch (Exception e) {
+            logger.error("Search error: {}", e.getMessage(), e);
+            e.printStackTrace();
+            return new SearchResult(List.of(), List.of(), List.of());
         }
-
     }
 
     private Query createDocFilter(Set<Integer> docIds) {

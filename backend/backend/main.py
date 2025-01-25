@@ -100,29 +100,45 @@ async def query(request: QueryRequest) -> QueryResponse:
 
     try:
         start_time = time.perf_counter()
-        # Pass index type to execute
+        query_evaluator.executor_rebinning.reset()  # Reset executor state
         doc_ids = query_evaluator.execute(request.query, fainder_mode=request.fainder_mode)
 
         # Calculate pagination
         start_idx = (request.page - 1) * request.per_page
-        end_idx = start_idx + request.per_page  # end_idx is exclusive in Python slicing
+        end_idx = start_idx + request.per_page
         paginated_doc_ids = doc_ids[start_idx:end_idx]
         total_pages = (len(doc_ids) + request.per_page - 1) // request.per_page
 
+        # Get documents and merge highlights
         docs = croissant_store.get_documents(paginated_doc_ids)
+        executor = query_evaluator.executor_rebinning
+
+        # Merge highlights with documents
+        for doc, doc_id in zip(docs, paginated_doc_ids, strict=False):
+            doc_highlights = executor.highlights.get(doc_id, {})
+            # Replace text with highlighted version where available
+            if "name" in doc_highlights:
+                doc["name"] = doc_highlights["name"]
+            if "description" in doc_highlights:
+                doc["description"] = doc_highlights["description"]
+            if "alternateName" in doc_highlights:
+                doc["alternateName"] = doc_highlights["alternateName"]
+            if "keywords" in doc_highlights:
+                doc["keywords"] = doc_highlights["keywords"]
+            # Store all highlights for reference
+            doc["highlights"] = doc_highlights
+
         end_time = time.perf_counter()
         search_time = end_time - start_time
-        logger.info(
-            f"Query '{request.query}' returned {len(docs)} documents in {search_time:.4f} seconds."
-        )
 
         return QueryResponse(
             query=request.query,
-            results=docs,
+            results=docs,  # Documents now contain highlighted text
             search_time=search_time,
             result_count=len(doc_ids),
             page=request.page,
             total_pages=total_pages,
+            highlights=[],  # No need for separate highlights anymore
         )
     except UnexpectedInput as e:
         logger.info(f"Bad user query: {e.get_context(request.query)}")

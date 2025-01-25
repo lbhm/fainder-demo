@@ -19,11 +19,8 @@ class QueryRequest(google.protobuf.message.Message):
     QUERY_FIELD_NUMBER: builtins.int
     DOC_IDS_FIELD_NUMBER: builtins.int
     query: builtins.str
-    """Query expression"""
     @property
-    def doc_ids(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]:
-        """List of document IDs to consider (if empty, all documents will be searched)"""
-
+    def doc_ids(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]: ...
     def __init__(
         self,
         *,
@@ -35,33 +32,53 @@ class QueryRequest(google.protobuf.message.Message):
 global___QueryRequest = QueryRequest
 
 @typing.final
+class HighlightEntry(google.protobuf.message.Message):
+    """Add a new message type for highlight entries"""
+
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    FIELD_FIELD_NUMBER: builtins.int
+    TEXT_FIELD_NUMBER: builtins.int
+    field: builtins.str
+    text: builtins.str
+    def __init__(
+        self,
+        *,
+        field: builtins.str = ...,
+        text: builtins.str = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing.Literal["field", b"field", "text", b"text"]) -> None: ...
+
+global___HighlightEntry = HighlightEntry
+
+@typing.final
 class QueryResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
     RESULTS_FIELD_NUMBER: builtins.int
     SCORES_FIELD_NUMBER: builtins.int
+    HIGHLIGHTS_FIELD_NUMBER: builtins.int
     @property
-    def results(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]:
-        """Document IDs that match the query sorted in order of relevance"""
-
+    def results(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]: ...
     @property
-    def scores(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.float]:
-        """Relevance scores of documents"""
+    def scores(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.float]: ...
+    @property
+    def highlights(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___HighlightEntry]:
+        """Changed from string to HighlightEntry"""
 
     def __init__(
         self,
         *,
         results: collections.abc.Iterable[builtins.int] | None = ...,
         scores: collections.abc.Iterable[builtins.float] | None = ...,
+        highlights: collections.abc.Iterable[global___HighlightEntry] | None = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["results", b"results", "scores", b"scores"]) -> None: ...
+    def ClearField(self, field_name: typing.Literal["highlights", b"highlights", "results", b"results", "scores", b"scores"]) -> None: ...
 
 global___QueryResponse = QueryResponse
 
 @typing.final
 class RecreateIndexRequest(google.protobuf.message.Message):
-    """Empty request as no parameters needed"""
-
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
     def __init__(
@@ -77,7 +94,6 @@ class RecreateIndexResponse(google.protobuf.message.Message):
     SUCCESS_FIELD_NUMBER: builtins.int
     MESSAGE_FIELD_NUMBER: builtins.int
     success: builtins.bool
-    """Status of the recreation"""
     message: builtins.str
     def __init__(
         self,
