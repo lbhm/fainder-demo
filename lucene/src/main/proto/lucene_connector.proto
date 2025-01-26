@@ -15,16 +15,15 @@ message QueryRequest {
   bool enable_highlighting = 3;  // Add highlighting flag
 }
 
-// Add a new message type for highlight entries
-message HighlightEntry {
-  string field = 1;
-  string text = 2;
+// Change HighlightEntry to FieldHighlights with a map of field highlights
+message FieldHighlights {
+    map<string, string> fields = 1;
 }
 
 message QueryResponse {
   repeated int32 results = 1;
   repeated float scores = 2;
-  map<int32, HighlightEntry> highlights = 3;  // Changed to map from int32 to HighlightEntry
+  map<int32, FieldHighlights> highlights = 3;  // Changed to map from doc_id to field highlights
 }
 
 message RecreateIndexRequest {}

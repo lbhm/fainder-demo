@@ -60,14 +60,14 @@ class LuceneConnector:
                 )
             )
 
-            # Convert map<int32, HighlightEntry> to list of dicts aligned with results
+            # Convert map<int32, FieldHighlights> to list of dicts aligned with results
             highlights = []
             for doc_id in response.results:
-                highlight_dict = {}
                 if doc_id in response.highlights:
-                    entry = response.highlights[doc_id]
-                    highlight_dict[entry.field] = entry.text
-                highlights.append(highlight_dict)
+                    # Get all field highlights for this document
+                    highlights.append(dict(response.highlights[doc_id].fields))
+                else:
+                    highlights.append({})
 
             logger.debug(f"Processed highlights: {highlights}")
             return response.results, response.scores, highlights

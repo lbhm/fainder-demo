@@ -36,24 +36,38 @@ class QueryRequest(google.protobuf.message.Message):
 global___QueryRequest = QueryRequest
 
 @typing.final
-class HighlightEntry(google.protobuf.message.Message):
-    """Add a new message type for highlight entries"""
+class FieldHighlights(google.protobuf.message.Message):
+    """Change HighlightEntry to FieldHighlights with a map of field highlights"""
 
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
-    FIELD_FIELD_NUMBER: builtins.int
-    TEXT_FIELD_NUMBER: builtins.int
-    field: builtins.str
-    text: builtins.str
+    @typing.final
+    class FieldsEntry(google.protobuf.message.Message):
+        DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+        KEY_FIELD_NUMBER: builtins.int
+        VALUE_FIELD_NUMBER: builtins.int
+        key: builtins.str
+        value: builtins.str
+        def __init__(
+            self,
+            *,
+            key: builtins.str = ...,
+            value: builtins.str = ...,
+        ) -> None: ...
+        def ClearField(self, field_name: typing.Literal["key", b"key", "value", b"value"]) -> None: ...
+
+    FIELDS_FIELD_NUMBER: builtins.int
+    @property
+    def fields(self) -> google.protobuf.internal.containers.ScalarMap[builtins.str, builtins.str]: ...
     def __init__(
         self,
         *,
-        field: builtins.str = ...,
-        text: builtins.str = ...,
+        fields: collections.abc.Mapping[builtins.str, builtins.str] | None = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["field", b"field", "text", b"text"]) -> None: ...
+    def ClearField(self, field_name: typing.Literal["fields", b"fields"]) -> None: ...
 
-global___HighlightEntry = HighlightEntry
+global___FieldHighlights = FieldHighlights
 
 @typing.final
 class QueryResponse(google.protobuf.message.Message):
@@ -67,12 +81,12 @@ class QueryResponse(google.protobuf.message.Message):
         VALUE_FIELD_NUMBER: builtins.int
         key: builtins.int
         @property
-        def value(self) -> global___HighlightEntry: ...
+        def value(self) -> global___FieldHighlights: ...
         def __init__(
             self,
             *,
             key: builtins.int = ...,
-            value: global___HighlightEntry | None = ...,
+            value: global___FieldHighlights | None = ...,
         ) -> None: ...
         def HasField(self, field_name: typing.Literal["value", b"value"]) -> builtins.bool: ...
         def ClearField(self, field_name: typing.Literal["key", b"key", "value", b"value"]) -> None: ...
@@ -85,15 +99,15 @@ class QueryResponse(google.protobuf.message.Message):
     @property
     def scores(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.float]: ...
     @property
-    def highlights(self) -> google.protobuf.internal.containers.MessageMap[builtins.int, global___HighlightEntry]:
-        """Changed to map from int32 to HighlightEntry"""
+    def highlights(self) -> google.protobuf.internal.containers.MessageMap[builtins.int, global___FieldHighlights]:
+        """Changed to map from doc_id to field highlights"""
 
     def __init__(
         self,
         *,
         results: collections.abc.Iterable[builtins.int] | None = ...,
         scores: collections.abc.Iterable[builtins.float] | None = ...,
-        highlights: collections.abc.Mapping[builtins.int, global___HighlightEntry] | None = ...,
+        highlights: collections.abc.Mapping[builtins.int, global___FieldHighlights] | None = ...,
     ) -> None: ...
     def ClearField(self, field_name: typing.Literal["highlights", b"highlights", "results", b"results", "scores", b"scores"]) -> None: ...
 

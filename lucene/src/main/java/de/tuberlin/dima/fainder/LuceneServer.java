@@ -110,24 +110,23 @@ public class LuceneServer {
 
             SearchResult searchResults = luceneSearch.search(query, docIds, minScore, maxResults, queryRequest.getEnableHighlighting());
 
-            // Create the response builder
             QueryResponse.Builder responseBuilder = QueryResponse.newBuilder()
                 .addAllResults(searchResults.docIds)
                 .addAllScores(searchResults.scores);
 
-            // Add highlights as a map for each document
-            for (int i = 0; i < searchResults.docIds.size(); i++) {
-                int docId = searchResults.docIds.get(i);
-                Map<String, String> docHighlights = searchResults.highlights.get(i);
-                if (docHighlights != null && !docHighlights.isEmpty()) {
-                    for (Map.Entry<String, String> entry : docHighlights.entrySet()) {
-                        HighlightEntry highlight = HighlightEntry.newBuilder()
-                            .setField(entry.getKey())
-                            .setText(entry.getValue())
-                            .build();
-                        responseBuilder.putHighlights(docId, highlight);
-                    }
-                }
+            // Add highlights for each document
+            for (Map.Entry<Integer, Map<String, String>> docEntry : searchResults.highlights.entrySet()) {
+                int docId = docEntry.getKey();
+                Map<String, String> fieldHighlights = docEntry.getValue();
+                
+                // Create field highlights for this document
+                FieldHighlights.Builder fieldsBuilder = FieldHighlights.newBuilder();
+                
+                // Add all field highlights
+                fieldsBuilder.putAllFields(fieldHighlights);
+                
+                // Add the complete highlights for this document
+                responseBuilder.putHighlights(docId, fieldsBuilder.build());
             }
 
             responseObserver.onNext(responseBuilder.build());
