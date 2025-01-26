@@ -131,7 +131,8 @@ page
                           v-for="(field, fieldIndex) in file.field"
                           :key="field.id"
                         >
-                          <td>{{ field.name }}</td>
+                          <td v-if="field.marked_name" v-html="field.marked_name"></td>
+                          <td v-else>{{ field.name }}</td>
                           <td>{{ field.dataType[0] }}</td>
                           <td v-if="field.histogram">
                             <Bar

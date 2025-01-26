@@ -1,4 +1,3 @@
-import time
 from collections.abc import Sequence
 
 import grpc
@@ -33,7 +32,7 @@ class LuceneConnector:
 
     def evaluate_query(
         self, query: str, doc_ids: set[int] | None = None, enable_highlighting: bool = True
-    ) -> tuple[Sequence[int], Sequence[float], list[dict[str, str]]]:
+    ) -> tuple[Sequence[int], Sequence[float], dict[int, dict[str, str]]]:
         """
         Evaluates a keyword query using the Lucene server.
 
@@ -54,15 +53,13 @@ class LuceneConnector:
             logger.debug(f"Executing query: '{query}' with filter: {doc_ids}")
             # Clear any previous state by creating a fresh request
             request = QueryRequest(
-                query=query, 
-                doc_ids=doc_ids or [], 
-                enable_highlighting=enable_highlighting
+                query=query, doc_ids=doc_ids or [], enable_highlighting=enable_highlighting
             )
             response = self.stub.Evaluate(request)
 
             # Create a fresh highlights list for each query result
-            highlights = [{} for _ in response.results]  # Initialize empty dicts
-            
+            highlights: dict[int, dict[str, str]] = {}  # Initialize empty dicts
+
             # Only process highlights if enabled
             if enable_highlighting:
                 for i, doc_id in enumerate(response.results):
@@ -74,7 +71,7 @@ class LuceneConnector:
 
         except grpc.RpcError as e:
             logger.error(f"Calling Lucene raised an error: {e}")
-            return [], [], []
+            return [], [], {}
 
     async def recreate_index(self) -> None:
         """Triggers the recreation of the Lucene index on the server side."""

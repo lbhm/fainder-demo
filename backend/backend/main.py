@@ -1,9 +1,10 @@
+import copy
 import json
 import sys
 import time
+import traceback
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-import traceback
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, UploadFile
@@ -102,7 +103,9 @@ async def query(request: QueryRequest) -> QueryResponse:
     try:
         start_time = time.perf_counter()
         query_evaluator.executor_rebinning.reset()  # This now also clears highlights
-        doc_ids, highlights = query_evaluator.execute(request.query, fainder_mode=request.fainder_mode)
+        doc_ids, (doc_highlights, col_highlights) = query_evaluator.execute(
+            request.query, fainder_mode=request.fainder_mode
+        )
 
         # Calculate pagination
         start_idx = (request.page - 1) * request.per_page
@@ -113,14 +116,34 @@ async def query(request: QueryRequest) -> QueryResponse:
         docs = croissant_store.get_documents(paginated_doc_ids)
         if request.enable_highlighting:
             # make a deep copy of the documents to avoid modifying the original
-            docs = [doc.copy() for doc in docs]
+            docs = copy.deepcopy(docs)
             # Only add highlights if enabled and they exist for the document
+
             for doc, doc_id in zip(docs, paginated_doc_ids, strict=False):
-                if doc_id in highlights: 
-                    doc_highlights = highlights[doc_id]
-                    for field in ["name", "description", "alternateName", "keywords"]: #TODO: replace this with generic
-                        if field in doc_highlights:
-                            doc[field] = doc_highlights[field]
+                if doc_id in doc_highlights:
+                    for field, highlighted in doc_highlights[doc_id].items():
+                        # Deal with nested fields spilt by '_'
+                        field_spilt = field.split("_")
+                        helper = doc
+                        for i in range(len(field_spilt)):
+                            if i == len(field_spilt) - 1:
+                                helper[field_spilt[i]] = highlighted
+                            else:
+                                helper = helper[field_spilt[i]]
+
+                # Add column highlights to the documents
+
+                record_set: list[dict[str, Any]] = doc.get("recordSet", None)
+                if record_set is not None:
+                    for record in record_set:
+                        fields: list[dict[str, Any]] | None = record.get("field", None)
+                        if fields is not None:
+                            for field_dict in fields:
+                                field_id: int | None = field_dict.get("id", None)
+                                if field_id is not None and field_id in col_highlights:
+                                    field_dict["marked_name"] = (
+                                        "<mark>" + field_dict["name"] + "</mark>"
+                                    )
 
         end_time = time.perf_counter()
         search_time = end_time - start_time
@@ -131,7 +154,7 @@ async def query(request: QueryRequest) -> QueryResponse:
             search_time=search_time,
             result_count=len(doc_ids),
             page=request.page,
-            total_pages=total_pages
+            total_pages=total_pages,
         )
     except UnexpectedInput as e:
         logger.info(f"Bad user query: {e.get_context(request.query)}")
