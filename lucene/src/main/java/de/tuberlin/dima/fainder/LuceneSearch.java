@@ -95,6 +95,29 @@ public class LuceneSearch {
         return queryBuilder.build();
     }
 
+    private Query createHighlightQuery(String queryText) throws ParseException {
+        BooleanQuery.Builder queryBuilder = new BooleanQuery.Builder();
+        String escapedQuery = QueryParser.escape(queryText);
+
+        for (Map.Entry<String, Float> field : searchFields.entrySet()) {
+            QueryParser parser = new QueryParser(field.getKey(), analyzer);
+            parser.setDefaultOperator(QueryParser.Operator.OR);
+
+            // Add exact match
+            Query exactQuery = parser.parse(escapedQuery);
+            queryBuilder.add(exactQuery, BooleanClause.Occur.SHOULD);
+
+            // Add fuzzy match
+            Query fuzzyQuery = parser.parse(escapedQuery + "~");
+            queryBuilder.add(fuzzyQuery, BooleanClause.Occur.SHOULD);
+
+            // Add prefix match
+            Query prefixQuery = parser.parse(escapedQuery + "*");
+            queryBuilder.add(prefixQuery, BooleanClause.Occur.SHOULD);
+        }
+        return queryBuilder.build();
+    }
+
     public static class SearchResult {
         public List<Integer> docIds;
         public List<Float> scores;
@@ -123,21 +146,13 @@ public class LuceneSearch {
         try {
             Query multiFieldQuery = createMultiFieldQuery(query);
             Highlighter highlighter = null;
-            
+
             if (enableHighlighting) {
-                // Create simplified query for highlighting only if needed
-                BooleanQuery.Builder highlightQueryBuilder = new BooleanQuery.Builder();
-                for (String fieldName : searchFields.keySet()) {
-                    QueryParser parser = new QueryParser(fieldName, analyzer);
-                    parser.setDefaultOperator(QueryParser.Operator.OR);
-                    Query fieldQuery = parser.parse(QueryParser.escape(query));
-                    highlightQueryBuilder.add(fieldQuery, BooleanClause.Occur.SHOULD);
-                }
-                
-                QueryScorer scorer = new QueryScorer(highlightQueryBuilder.build());
+                Query highlightQuery = createHighlightQuery(query);
+                QueryScorer scorer = new QueryScorer(highlightQuery);
                 SimpleHTMLFormatter htmlFormatter = new SimpleHTMLFormatter("<mark>", "</mark>");
                 highlighter = new Highlighter(htmlFormatter, scorer);
-                highlighter.setTextFragmenter(new SimpleSpanFragmenter(scorer, 100000));
+                highlighter.setMaxDocCharsToAnalyze(Integer.MAX_VALUE);
             }
 
             logger.info("Executing query {}. With filter: {} ", multiFieldQuery, docIds);
@@ -180,17 +195,19 @@ public class LuceneSearch {
                         String fieldContent = doc.get(fieldName);
                         if (fieldContent != null && !fieldContent.isEmpty()) {
                             try {
-                                String highlight = highlighter.getBestFragment(analyzer, fieldName, fieldContent);
-                                if (highlight != null) {
-                                    docHighlights.put(fieldName, highlight);
+                                String[] fragments = highlighter.getBestFragments(analyzer, fieldName, fieldContent, 1000);
+                                String highlighted = String.join(" ... ", fragments);
+                                if (highlighted != null && !highlighted.isEmpty()) {
+                                    docHighlights.put(fieldName, highlighted);
                                 }
+                                logger.info("Highlighted field {}: {}", fieldName, highlighted);
                             } catch (InvalidTokenOffsetsException e) {
                                 logger.warn("Failed to highlight field {}: {}", fieldName, e.getMessage());
                             }
                         }
                     }
                 }
-
+                logger.info("Hit {}: {} (Score: {})", resultId, doc.get("name"), scoreDoc.score);
                 results.add(resultId);
                 scores.add(scoreDoc.score);
                 highlights.add(docHighlights);
