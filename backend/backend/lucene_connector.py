@@ -52,22 +52,22 @@ class LuceneConnector:
 
         try:
             logger.debug(f"Executing query: '{query}' with filter: {doc_ids}")
-            response = self.stub.Evaluate(
-                QueryRequest(
-                    query=query, 
-                    doc_ids=doc_ids or [], 
-                    enable_highlighting=enable_highlighting
-                )
+            # Clear any previous state by creating a fresh request
+            request = QueryRequest(
+                query=query, 
+                doc_ids=doc_ids or [], 
+                enable_highlighting=enable_highlighting
             )
+            response = self.stub.Evaluate(request)
 
-            # Convert map<int32, FieldHighlights> to list of dicts aligned with results
-            highlights = []
-            for doc_id in response.results:
-                if doc_id in response.highlights:
-                    # Get all field highlights for this document
-                    highlights.append(dict(response.highlights[doc_id].fields))
-                else:
-                    highlights.append({})
+            # Create a fresh highlights list for each query result
+            highlights = [{} for _ in response.results]  # Initialize empty dicts
+            
+            # Only process highlights if enabled
+            if enable_highlighting:
+                for i, doc_id in enumerate(response.results):
+                    if doc_id in response.highlights:
+                        highlights[i] = dict(response.highlights[doc_id].fields)
 
             logger.debug(f"Processed highlights: {highlights}")
             return response.results, response.scores, highlights

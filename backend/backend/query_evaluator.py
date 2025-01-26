@@ -96,10 +96,10 @@ class QueryEvaluator:
         fainder_mode: str = "low_memory",
         enable_highlighting: bool = True,
     ) -> tuple[list[int], Highlights]:
+        # Reset state for new query
         self.annotator.reset()
-        executor: QueryExecutor
         executor = self.executor_rebinning
-        executor.reset(enable_highlighting)
+        executor.reset(enable_highlighting) 
         executor.enable_filtering = enable_filtering
 
         parse_tree = self.parse(query)
@@ -189,7 +189,6 @@ class QueryExecutor(Transformer):
     scores: dict[int, float]
     last_result: set[uint32] | None  # ids of the columns
     current_side: str | None
-    highlights: Highlights
 
     def __init__(
         self,
@@ -204,7 +203,6 @@ class QueryExecutor(Transformer):
         self.lucene_connector = lucene_connector
         self.enable_filtering = enable_filtering
         self.hnsw_index = hnsw_index
-        self.highlights: Highlights = {}
         self.metadata = metadata
         self.enable_highlighting = enable_highlighting
         self.reset()
@@ -225,7 +223,6 @@ class QueryExecutor(Transformer):
 
     def reset(self, enable_highlighting: bool = True) -> None:
         self.scores = defaultdict(float)
-        self.highlights = {}
         self.last_result = None
         self.current_side = None
         self.enable_highlighting = enable_highlighting
