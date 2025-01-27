@@ -14,6 +14,7 @@ import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.lucene.search.highlight.*;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -21,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.HashMap;
 
 public class LuceneSearch {
     private static final Logger logger = LoggerFactory.getLogger(LuceneSearch.class);
@@ -34,6 +36,7 @@ public class LuceneSearch {
         "alternateName", 0.5f   // Lowest weight for alternate names
     );
     private final QueryParser[] fieldParsers;
+    private final StandardAnalyzer analyzer;
 
     // Constant flag for testing different implementations
     private final Boolean BOOL_FILTER;
@@ -43,7 +46,7 @@ public class LuceneSearch {
         IndexReader reader = DirectoryReader.open(indexDir);
         searcher = new IndexSearcher(reader);
         // Configure analyzer to keep stop words
-        StandardAnalyzer analyzer = new StandardAnalyzer(CharArraySet.EMPTY_SET);
+        analyzer = new StandardAnalyzer(CharArraySet.EMPTY_SET);
 
         // Create a parser for each field
         fieldParsers = searchFields.entrySet().stream()
@@ -55,6 +58,34 @@ public class LuceneSearch {
             .toArray(QueryParser[]::new);
 
         BOOL_FILTER = false;
+    }
+
+    private Query createHighlightQuery(String queryText) throws ParseException {
+        BooleanQuery.Builder queryBuilder = new BooleanQuery.Builder();
+        String escapedQuery = QueryParser.escape(queryText);
+
+        for (Map.Entry<String, Float> field : searchFields.entrySet()) {
+            QueryParser parser = new QueryParser(field.getKey(), analyzer);
+            parser.setDefaultOperator(QueryParser.Operator.OR);
+
+            // Add exact match
+            Query exactQuery = parser.parse(escapedQuery);
+            queryBuilder.add(exactQuery, BooleanClause.Occur.SHOULD);
+
+        }
+        return queryBuilder.build();
+    }
+
+    public static class SearchResult {
+        public List<Integer> docIds;
+        public List<Float> scores;
+        public Map<Integer, Map<String, String>> highlights;  // Changed to Map<Integer, Map<String, String>>
+
+        public SearchResult(List<Integer> docIds, List<Float> scores, Map<Integer, Map<String, String>> highlights) {
+            this.docIds = docIds;
+            this.scores = scores;
+            this.highlights = highlights;
+        }
     }
 
     private Query createMultiFieldQuery(String queryText) throws ParseException {
@@ -90,15 +121,25 @@ public class LuceneSearch {
      * @param docIds     Set of document IDs to filter (optional)
      * @param minScore   The minimum score for a document to be included in the results
      * @param maxResults The maximum number of documents to return
+     * @param enableHighlighting Flag to enable or disable highlighting
      * @return A pair of lists: document IDs and their scores
      */
-    public Pair<List<Integer>, List<Float>> search(String query, Set<Integer> docIds, Float minScore, int maxResults) {
+    public SearchResult search(String query, Set<Integer> docIds, Float minScore, int maxResults, boolean enableHighlighting) {
         if (query == null || query.isEmpty()) {
-            return new Pair<>(List.of(), List.of());
+            return new SearchResult(List.of(), List.of(), Map.of());
         }
 
         try {
             Query multiFieldQuery = createMultiFieldQuery(query);
+            Highlighter highlighter = null;
+
+            if (enableHighlighting) {
+                Query highlightQuery = createHighlightQuery(query);
+                QueryScorer scorer = new QueryScorer(highlightQuery);
+                SimpleHTMLFormatter htmlFormatter = new SimpleHTMLFormatter("<mark>", "</mark>");
+                highlighter = new Highlighter(htmlFormatter, scorer);
+                highlighter.setMaxDocCharsToAnalyze(Integer.MAX_VALUE);
+            }
 
             logger.info("Executing query {}. With filter: {} ", multiFieldQuery, docIds);
 
@@ -116,6 +157,7 @@ public class LuceneSearch {
                 } else {
                     CustomCollectorManager collectorManager = new CustomCollectorManager(maxResults, docIds);
                     hits = searcher.search(multiFieldQuery, collectorManager).scoreDocs;
+                    hits = searcher.search(multiFieldQuery, collectorManager).scoreDocs;
                 }
             } else {
                 hits = searcher.search(multiFieldQuery, maxResults).scoreDocs;
@@ -124,27 +166,51 @@ public class LuceneSearch {
             StoredFields storedFields = searcher.storedFields();
             List<Integer> results = new ArrayList<>();
             List<Float> scores = new ArrayList<>();
-            for (ScoreDoc scoreDoc : hits) {
-                int docId = scoreDoc.doc;
-                Document doc = storedFields.document(docId);
-                logger.info("Hit {}: {} (Score: {})", docId, doc.get("name"), scoreDoc.score);
-                int result = Integer.parseInt(doc.get("id"));
+            Map<Integer, Map<String, String>> highlights = new HashMap<>();
 
-                if (minScore == null || scoreDoc.score >= minScore) {
-                    results.add(result);
-                    scores.add(scoreDoc.score);
+            for (ScoreDoc scoreDoc : hits) {
+                if (minScore != null && scoreDoc.score < minScore) continue;
+
+                Document doc = storedFields.document(scoreDoc.doc);
+                int resultId = Integer.parseInt(doc.get("id"));
+                Map<String, String> docHighlights = new HashMap<>();
+
+                if (enableHighlighting && highlighter != null) {
+                    // Only process highlights if enabled
+                    for (String fieldName : searchFields.keySet()) {
+                        String fieldContent = doc.get(fieldName);
+                        if (fieldContent != null && !fieldContent.isEmpty()) {
+                            try {
+                                String[] fragments = highlighter.getBestFragments(analyzer, fieldName, fieldContent, 1000);
+                                String highlighted = String.join(" ... ", fragments);
+                                if (highlighted != null && !highlighted.isEmpty()) {
+                                    docHighlights.put(fieldName, highlighted);
+                                }
+                            } catch (InvalidTokenOffsetsException e) {
+                                logger.warn("Failed to highlight field {}: {}", fieldName, e.getMessage());
+                            }
+                        }
+                    }
+                }
+                // logger.info("Hit {}: {} (Score: {})", resultId, doc.get("name"), scoreDoc.score);
+                results.add(resultId);
+                scores.add(scoreDoc.score);
+                if (!docHighlights.isEmpty()) {
+                    highlights.put(resultId, docHighlights);
                 }
             }
 
-            return new Pair<List<Integer>, List<Float>>(results, scores);
+            return new SearchResult(results, scores, highlights);
         } catch (ParseException e) {
             logger.error("Query parsing error: {}", e.getMessage());
-            return new Pair<>(List.of(), List.of());
+            e.printStackTrace();
+            return new SearchResult(List.of(), List.of(), Map.of());
+
         } catch (IOException e) {
             logger.error("Query IO error: {}", e.getMessage());
-            return new Pair<>(List.of(), List.of());
+            e.printStackTrace();
+            return new SearchResult(List.of(), List.of(), Map.of());
         }
-
     }
 
     private Query createDocFilter(Set<Integer> docIds) {

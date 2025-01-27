@@ -10,25 +10,25 @@ service LuceneConnector {
 }
 
 message QueryRequest {
-  // Query expression
   string query = 1;
-  // List of document IDs to consider (if empty, all documents will be searched)
   repeated int32 doc_ids = 2;
+  bool enable_highlighting = 3;  // Add highlighting flag
+}
+
+// Change HighlightEntry to FieldHighlights with a map of field highlights
+message FieldHighlights {
+    map<string, string> fields = 1;
 }
 
 message QueryResponse {
-  // Document IDs that match the query sorted in order of relevance
   repeated int32 results = 1;
-  // Relevance scores of documents
   repeated float scores = 2;
+  map<int32, FieldHighlights> highlights = 3;  // Changed to map from doc_id to field highlights
 }
 
-message RecreateIndexRequest {
-  // Empty request as no parameters needed
-}
+message RecreateIndexRequest {}
 
 message RecreateIndexResponse {
-  // Status of the recreation
   bool success = 1;
   string message = 2;
 }

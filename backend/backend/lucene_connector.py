@@ -1,4 +1,3 @@
-import time
 from collections.abc import Sequence
 
 import grpc
@@ -32,35 +31,47 @@ class LuceneConnector:
             logger.debug("gRPC channel closed")
 
     def evaluate_query(
-        self, query: str, doc_ids: set[int] | None = None
-    ) -> tuple[Sequence[int], Sequence[float]]:
+        self, query: str, doc_ids: set[int] | None = None, enable_highlighting: bool = True
+    ) -> tuple[Sequence[int], Sequence[float], dict[int, dict[str, str]]]:
         """
         Evaluates a keyword query using the Lucene server.
 
         Args:
             query: The query string to be evaluated by Lucene.
             doc_ids: A set of document IDs to consider as a filter (none by default).
+            enable_highlighting: Whether to enable highlighting (default True).
 
         Returns:
             list[int]: A list of document IDs that match the query.
             list[float]: A list of scores for each document ID.
+            list[dict[str, str]]: A list of dictionaries mapping field names
+            to highlighted snippets.
         """
-        start = time.perf_counter()
         if not self.channel:
             self.connect()
 
         try:
             logger.debug(f"Executing query: '{query}' with filter: {doc_ids}")
-            response = self.stub.Evaluate(QueryRequest(query=query, doc_ids=doc_ids or []))
-            result = response.results
+            # Clear any previous state by creating a fresh request
+            request = QueryRequest(
+                query=query, doc_ids=doc_ids or [], enable_highlighting=enable_highlighting
+            )
+            response = self.stub.Evaluate(request)
 
-            logger.debug(f"Lucene query execution took {time.perf_counter() - start:.3f} seconds")
-            logger.debug(f"Keyword query result: {result}")
+            # Create a fresh highlights list for each query result
+            highlights: dict[int, dict[str, str]] = {}  # Initialize empty dicts
 
-            return response.results, response.scores
+            # Only process highlights if enabled
+            if enable_highlighting:
+                for doc_id in response.results:
+                    if doc_id in response.highlights:
+                        highlights[doc_id] = dict(response.highlights[doc_id].fields)
+
+            return response.results, response.scores, highlights
+
         except grpc.RpcError as e:
             logger.error(f"Calling Lucene raised an error: {e}")
-            return [], []
+            return [], [], {}
 
     async def recreate_index(self) -> None:
         """Triggers the recreation of the Lucene index on the server side."""

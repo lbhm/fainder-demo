@@ -64,5 +64,5 @@ def evaluator() -> QueryEvaluator:
     conversion_index = FainderIndex(settings.conversion_index_path, metadata)
     column_index = ColumnIndex(settings.hnsw_index_path, metadata, use_embeddings=False)
     return QueryEvaluator(
-        lucene_connector, rebinning_index, conversion_index, column_index, metadata, cache_size=0
+        lucene_connector, rebinning_index, conversion_index, column_index, metadata, cache_size=100
     )

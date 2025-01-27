@@ -25,6 +25,7 @@ class Settings(BaseSettings):
 
     # QueryEvaluator settings
     query_cache_size: int = 128
+    highlights_cache_size: int = 128  # Add highlight cache size setting
 
     # Lucene settings
     lucene_host: str = "127.0.0.1"
@@ -95,9 +96,12 @@ class QueryRequest(BaseModel):
     page: int = 1
     per_page: int = 10
     fainder_mode: Literal["low_memory", "full_precision", "full_recall", "exact"] = "low_memory"
+    enable_highlighting: bool = True
 
 
 class QueryResponse(BaseModel):
+    """Response for a query request."""
+
     query: str
     results: list[dict[str, Any]]
     search_time: float

@@ -8,6 +8,8 @@ import io.grpc.stub.StreamObserver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import de.tuberlin.dima.fainder.LuceneSearch.SearchResult;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -15,6 +17,9 @@ import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public class LuceneServer {
     private static final Logger logger = LoggerFactory.getLogger(LuceneServer.class);
@@ -103,12 +108,29 @@ public class LuceneServer {
             String query = queryRequest.getQuery();
             Set<Integer> docIds = new HashSet<>(queryRequest.getDocIdsList());
 
-            Pair<List<Integer>, List<Float>> searchResults = luceneSearch.search(query, docIds, minScore, maxResults);
-            QueryResponse response = QueryResponse.newBuilder()
-                    .addAllResults(searchResults.getFirst()).addAllScores(searchResults.getSecond())
-                    .build();
+            QueryResponse.Builder responseBuilder = QueryResponse.newBuilder();
 
-            responseObserver.onNext(response);
+            SearchResult searchResults = luceneSearch.search(query, docIds, minScore, maxResults, queryRequest.getEnableHighlighting());
+
+            responseBuilder.addAllResults(searchResults.docIds)
+                          .addAllScores(searchResults.scores);
+
+            // Add highlights for each document
+            for (Map.Entry<Integer, Map<String, String>> docEntry : searchResults.highlights.entrySet()) {
+                int docId = docEntry.getKey();
+                Map<String, String> fieldHighlights = docEntry.getValue();
+
+                // Create field highlights for this document
+                FieldHighlights.Builder fieldsBuilder = FieldHighlights.newBuilder();
+
+                // Add all field highlights
+                fieldsBuilder.putAllFields(fieldHighlights);
+
+                // Add the complete highlights for this document
+                responseBuilder.putHighlights(docId, fieldsBuilder.build());
+            }
+
+            responseObserver.onNext(responseBuilder.build());
             responseObserver.onCompleted();
         }
 

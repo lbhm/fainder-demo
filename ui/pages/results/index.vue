@@ -83,8 +83,8 @@ page
                     </template>
                   </v-img>
                   <div class="flex-grow-1 min-w-0">
-                    <v-card-title class="text-truncate"><strong>{{ item.name }}</strong></v-card-title>
-                    <v-card-subtitle class="text-truncate">{{ item.alternateName }}</v-card-subtitle>
+                    <v-card-title class="text-truncate highlight-text" v-html="'<strong>' + item.name + '</strong>'"></v-card-title>
+                    <v-card-subtitle class="text-truncate highlight-text" v-html="item.alternateName"></v-card-subtitle>
                   </div>
                 </div>
               </v-card>
@@ -113,8 +113,8 @@ page
               <div class="flex-grow-1">
                 <!-- Wrap title and subtitle in a container -->
                 <div class="content-container">
-                  <v-card-title><strong>{{ selectedResult.name }}</strong></v-card-title>
-                  <v-card-subtitle>{{ selectedResult.alternateName }}</v-card-subtitle>
+                  <v-card-title class="highlight-text" v-html="'<strong>' + selectedResult.name + '</strong>'"></v-card-title>
+                  <v-card-subtitle class="highlight-text" v-html="selectedResult.alternateName"></v-card-subtitle>
                 </div>
               </div>
 
@@ -177,7 +177,7 @@ page
                       <div class="metadata-section">
                         <div class="metadata-item">
                           <span class="metadata-label">Creator</span>
-                          <span class="metadata-value">{{ selectedResult?.creator?.name || '-' }}</span>
+                          <span class="metadata-value highlight-text" v-html="selectedResult?.creator?.name || '-'"></span>
                         </div>
                         <div class="metadata-item">
                           <span class="metadata-label">License</span>
@@ -185,7 +185,7 @@ page
                         </div>
                         <div class="metadata-item">
                           <span class="metadata-label">Keywords</span>
-                          <span class="metadata-value keywords-value">{{ processedKeywords.join(', ') || '-' }}</span>
+                          <span class="metadata-value keywords-value " v-html="selectedResult?.creator?.name || '-'"></span>
                         </div>
                       </div>
                     </div>
@@ -213,7 +213,7 @@ page
                     <div class="field-list">
                     <div v-for="(field, fieldIndex) in selectedFile.field" :key="field.id" class="field-item mb-6">
                         <div class="field-header mb-2">
-                          <span class="text-h6">{{ field.name }}:</span>
+                          <span class="text-h6 highlight-text" v-html="field.name + ': '"></span>
                           <v-chip class="ml-2" density="compact">{{ field.dataType[0] }}</v-chip>
                         </div>
                         <!-- Numerical Data with Histogram -->
@@ -308,27 +308,27 @@ page
                       <tbody>
                         <tr>
                           <td><strong>Creator</strong></td>
-                          <td>{{ selectedResult?.creator?.name || '-' }}</td>
+                          <td class="highlight-text"v-html="selectedResult?.creator?.name || '-'"></td>
                         </tr>
                         <tr>
                           <td><strong>Publisher</strong></td>
-                          <td>{{ selectedResult?.publisher?.name || '-' }}</td>
+                          <td class="highlight-text" v-html="selectedResult?.publisher?.name || '-'"></td>
                         </tr>
                         <tr>
                           <td><strong>License</strong></td>
-                          <td>{{ selectedResult?.license?.name || '-' }}</td>
+                          <td class="highlight-text" v-html="selectedResult?.license?.name || '-'"></td>
                         </tr>
                         <tr>
                           <td><strong>Date Published</strong></td>
-                          <td>{{ selectedResult?.datePublished.substring(0, 10) || '-' }}</td>
+                          <td class="highlight-text" v-html="selectedResult?.datePublished.substring(0, 10) || '-'"></td>
                         </tr>
                         <tr>
                           <td><strong>Date Modified</strong></td>
-                          <td>{{ selectedResult?.dateModified.substring(0, 10) || '-' }}</td>
+                          <td class="highlight-text" v-html="selectedResult?.dateModified.substring(0, 10) || '-'"></td>
                         </tr>
                         <tr>
                           <td><strong>Keywords</strong></td>
-                          <td style="white-space: pre-line">{{ selectedResult?.keywords?.join('\n') || '-' }}</td>
+                          <td style="white-space: pre-line" class="highlight-text" v-html="selectedResult?.keywords || '-'"></td>
                         </tr>
                       </tbody>
                     </v-table>
@@ -363,7 +363,8 @@ const {
   totalPages,
   query,
   fainder_mode,
-  perPage
+  perPage,
+  enable_highlighting
 } = useSearchState();
 
 console.log(selectedResultIndex.value);
@@ -460,11 +461,7 @@ function updateTotalVisible() {
 }
 
 watch(currentPage, async (newPage) => {
-  await searchOperations.loadResults(
-    query.value,
-    newPage,
-    fainder_mode.value
-  );
+  await searchOperations.loadResults(query.value, newPage, fainder_mode.value, enable_highlighting.value);
 
   // Update URL with new page
   navigateTo({
@@ -474,6 +471,7 @@ watch(currentPage, async (newPage) => {
       page: newPage,
       index: selectedResultIndex.value,
       fainder_mode: fainder_mode.value,
+      enable_highlighting: enable_highlighting.value,
       theme: theme.global.name.value,
     },
   });
@@ -482,7 +480,7 @@ watch(currentPage, async (newPage) => {
 watch(updatePerPage, (newPerPage) => {
   if (currentPage.value > 0) {
     perPage.value = newPerPage;
-    searchOperations.loadResults(query.value, currentPage.value);
+    searchOperations.loadResults(query.value, currentPage.value, fainder_mode.value, enable_highlighting.value);
   }
 });
 
@@ -522,7 +520,8 @@ const retrySearch = async () => {
   await searchOperations.loadResults(
     query.value,
     currentPage.value,
-    route.query.fainder_mode
+    fainder_mode.value,
+    enable_highlighting.value,
   );
 };
 
@@ -530,7 +529,8 @@ const retrySearch = async () => {
 await searchOperations.loadResults(
   query.value,
   currentPage.value,
-  fainder_mode.value
+  fainder_mode.value,
+  enable_highlighting.value
 );
 
 const chartOptions = ref({
@@ -767,6 +767,49 @@ const formatNumber = (value) => {
   font-family: monospace;
   font-size: 0.9em;
   color: rgba(var(--v-theme-on-error), 0.7);
+}
+
+/* Update highlight styles for details container */
+.highlight-text :deep(mark) {
+  background-color: rgba(var(--v-theme-warning), 0.2);
+  color: inherit;
+  padding: 0 2px;
+  border-radius: 2px;
+  font-weight: 500;
+}
+
+.highlight-text {
+  line-height: 1.6;
+  font-size: 1rem;
+}
+
+.description-preview {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+/* Update highlight text styles to handle all text variants */
+.highlight-text,
+:deep(.v-card-title),
+:deep(.v-card-subtitle),
+:deep(.v-card-text) {
+  line-height: 1.6;
+}
+
+:deep(.v-card-title mark),
+:deep(.v-card-subtitle mark),
+:deep(.v-card-text mark),
+.highlight-text :deep(mark) {
+  background-color: rgba(var(--v-theme-warning), 0.2);
+  color: inherit;
+  padding: 0 2px;
+  border-radius: 2px;
+  font-weight: 500;
 }
 
 .description-truncated {
