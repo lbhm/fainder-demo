@@ -96,6 +96,8 @@ app.add_middleware(
 @app.post("/query")
 async def query(request: QueryRequest) -> QueryResponse:
     """Execute a query and return the results."""
+    # clean up the query string \n and \t
+    request.query = request.query.replace("\n", " ").replace("\t", " ")
     logger.info(f"Received query: {request}")
 
     try:
@@ -115,7 +117,6 @@ async def query(request: QueryRequest) -> QueryResponse:
         logger.info(
             f"Query '{request.query}' returned {len(docs)} documents in {search_time:.4f} seconds."
         )
-
         return QueryResponse(
             query=request.query,
             results=docs,

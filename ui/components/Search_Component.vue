@@ -15,6 +15,7 @@ words # The search page will contain multiple search bars
               :error="!isValid"
               :rules="[validateSyntax]"
               @update:model-value="highlightSyntax"
+              @keydown="handleKeyDown"
               hide-details="true"
               rows="1"
               class="search-input"
@@ -236,6 +237,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  lines: {
+    type: Number,
+    default: 1,
+  },
 });
 
 const emit = defineEmits(["searchData"]);
@@ -296,8 +301,11 @@ watch(highlightEnabled, (value) => {
 });
 
 const handleKeyDown = (event) => {
-  if (event.key === "Enter" && !event.shiftKey) {
-    searchData();
+  if (event.key === "Enter") {
+    if (!event.shiftKey) {
+      event.preventDefault();
+      searchData();
+    }
   }
 };
 
@@ -312,6 +320,8 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener("keydown", handleKeyDown);
 });
+
+const textareaMaxHeight = computed(() => `${props.lines * 24 + 26}px`);
 
 async function searchData() {
   if ((!searchQuery.value || searchQuery.value.trim() === "" )
@@ -693,6 +703,13 @@ function saveSettings() {
   padding-top: 15px;
   min-height: 50px;
   resize: none;
+  overflow-y: auto;
+}
+
+/* Adjust max-height based on lines prop when in inline mode */
+.inline-layout .search-input :deep(textarea) {
+  max-height: v-bind(textareaMaxHeight);
+  overflow: auto;
 }
 
 .syntax-highlight {

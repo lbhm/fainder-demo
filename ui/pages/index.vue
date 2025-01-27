@@ -7,6 +7,7 @@
       <Search_Component
         :searchQuery="query"
         :inline="true"
+        :lines="5"
         :queryBuilder="false"
         :simpleBuilder="true"
         @searchData="searchData"
