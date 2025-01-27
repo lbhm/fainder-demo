@@ -65,15 +65,15 @@ page
             :items="results"
           >
             <template v-slot:default="{ item }">
-              <v-card @click="selectResult(item)" :height="100">
+              <v-card @click="selectResult(item)" :height="80">
                 <div class="d-flex align-center">
                   <v-img
-                    :src="item.thumbnailUrl || '/FAINDER_LOGO_SVG_01.svg'"
+                    :src="item.thumbnailUrl"
                     :alt="item.name"
-                    height="100"
-                    width="100"
-                    max-height="100"
-                    max-width="100"
+                    height="80"
+                    width="80"
+                    max-height="80"
+                    max-width="80"
                     cover
                     class="flex-shrink-0"
                   >
@@ -108,85 +108,52 @@ page
 
         <div class="details-container">
           <div class="pa-20">
-            <v-card v-if="selectedResult">
-              <div class="d-flex align-center pa-4">
-                <div class="flex-grow-1">
-                  <!-- Wrap title, subtitle, and download in a container with consistent padding -->
-                  <div class="content-container">
-                    <v-card-title><strong>{{ selectedResult.name }}</strong></v-card-title>
-                    <v-card-subtitle>{{ selectedResult.alternateName }}</v-card-subtitle>
-
-                    <!-- Download section -->
-                    <div v-if="selectedResult.distribution?.length" class="mt-2">
-                      <!-- Single file case -->
-                      <v-btn
-                        v-if="selectedResult.distribution.length === 1"
-                        :href="selectedResult.distribution[0].contentUrl"
-                        target="_blank"
-                        color="primary"
-                        prepend-icon="mdi-download"
-                        variant="tonal"
-                        class="download-btn"
-                      >
-                        Download {{ selectedResult.distribution[0].name }}
-                        <template v-if="selectedResult.distribution[0].contentSize" #append>
-                          ({{ selectedResult.distribution[0].contentSize }})
-                        </template>
-                      </v-btn>
-
-                      <!-- Multiple files case -->
-                      <v-menu
-                        v-else
-                        location="bottom"
-                      >
-                        <template v-slot:activator="{ props }">
-                          <v-btn
-                            color="primary"
-                            v-bind="props"
-                            prepend-icon="mdi-download"
-                            variant="tonal"
-                            class="download-btn"
-                          >
-                            Download
-                          </v-btn>
-                        </template>
-
-                        <v-list>
-                          <v-list-item
-                            v-for="file in selectedResult.distribution"
-                            :key="file['@id']"
-                            :href="file.contentUrl"
-                            target="_blank"
-                            :title="file.description"
-                          >
-                            <v-list-item-title>
-                              {{ file.name }}
-                            </v-list-item-title>
-                            <v-list-item-subtitle>
-                              {{ file.encodingFormat }}
-                              <template v-if="file.contentSize">
-                                ({{ file.contentSize }})
-                              </template>
-                            </v-list-item-subtitle>
-                          </v-list-item>
-                        </v-list>
-                      </v-menu>
-                    </div>
-                  </div>
+          <v-card v-if="selectedResult">
+            <div class="d-flex align-center pa-4">
+              <div class="flex-grow-1">
+                <!-- Wrap title and subtitle in a container -->
+                <div class="content-container">
+                  <v-card-title><strong>{{ selectedResult.name }}</strong></v-card-title>
+                  <v-card-subtitle>{{ selectedResult.alternateName }}</v-card-subtitle>
                 </div>
-                <v-img
-                  :src="selectedResult.thumbnailUrl || '/FAINDER_LOGO_SVG_01.svg'"
-                  :alt="selectedResult.name"
-                  height="150"
-                  width="150"
-                  cover
-                  class="flex-shrink-0 ml-4"
-                >
-                  <template v-slot:placeholder>
-                    <v-icon size="48" color="grey-lighten-2">mdi-image</v-icon>
-                  </template>
-                </v-img>
               </div>
+
+              <div v-if="selectedResult.distribution?.length" class="flex-shrink-0">
+                <v-menu
+                  location="bottom"
+                >
+                  <template v-slot:activator="{ props }">
+                    <v-btn
+                      color="primary"
+                      v-bind="props"
+                      prepend-icon="mdi-download"
+                      variant="tonal"
+                      class="download-btn"
+                    >
+                      Download
+                    </v-btn>
+                  </template>
+
+                  <v-list>
+                    <v-list-item
+                      v-for="file in selectedResult.distribution.filter(file => file.contentSize)"
+                      :key="file['@id']"
+                      :href="file.contentUrl"
+                      target="_blank"
+                      :title="file.description"
+                    >
+                      <v-list-item-title>
+                        {{ file.name }}
+                      </v-list-item-title>
+                      <v-list-item-subtitle>
+                        {{ file.encodingFormat }}
+                        {{ file.contentSize }}
+                      </v-list-item-subtitle>
+                    </v-list-item>
+                  </v-list>
+                </v-menu>
+              </div>
+            </div>
 
               <v-expansion-panels v-model="descriptionPanel">
                 <v-expansion-panel>
@@ -247,7 +214,7 @@ page
                     <div v-for="(field, fieldIndex) in selectedFile.field" :key="field.id" class="field-item mb-6">
                         <div class="field-header mb-2">
                           <span class="text-h6">{{ field.name }}:</span>
-                          <span class="text-subtitle-1 ml-2">{{ field.dataType[0] }}</span>
+                          <v-chip class="ml-2" density="compact">{{ field.dataType[0] }}</v-chip>
                         </div>
                         <!-- Numerical Data with Histogram -->
                         <div v-if="field.histogram" class="field-content">
@@ -299,29 +266,32 @@ page
                         <!-- Categorical Data -->
                         <div v-else class="field-content categorical">
                           <div class="categorical-summary">
-                            <table class="statistics-table">
-                              <tbody>
-                                <tr>
-                                  <td class="stat-label">Unique Values:</td>
-                                  <td class="stat-value">{{ formatNumber(field.n_unique) }}</td>
-                                </tr>
-                              </tbody>
-                            </table>
-                            <table class="statistics-table">
-                              <thead>
-                                <tr>
-                                  <th class="text-left">Value</th>
-                                  <th class="text-right">Count</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                <template v-for="([value, count], index) in Object.entries(field.most_common).slice(0, 3)" :key="value">                                  <tr>
-                                    <td class="value-label">{{ value }}</td>
-                                    <td class="stat-value">{{ formatNumber(count) }}</td>
-                                  </tr>
-                                </template>
-                              </tbody>
-                            </table>
+                            <div class="categorical-layout">
+                              <div class="unique-values-section">
+                                <div class="large-stat">
+                                  <div class="stat-title">Unique Values</div>
+                                  <div class="stat-number">{{ formatNumber(field.n_unique) }}</div>
+                                </div>
+                              </div>
+                              <div class="value-distribution">
+                                <table class="statistics-table">
+                                  <thead>
+                                    <tr>
+                                      <th class="text-left">Value</th>
+                                      <th class="text-right">Count</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    <template v-for="([value, count], index) in Object.entries(field.most_common).slice(0, 3)" :key="value">
+                                      <tr>
+                                        <td class="value-label">{{ value }}</td>
+                                        <td class="stat-value">{{ formatNumber(count) }}</td>
+                                      </tr>
+                                    </template>
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -415,14 +385,14 @@ const selectedFileIndex = ref(0);
 
 
 const showFullDescription = ref(false);
-const maxLength = 1000;
+const maxLength = 750;
 
 const isLongDescription = computed(() => {
   return selectedResult.value?.description?.length > maxLength;
 });
 
 const displayedContent = computed(() => {
-  if (!selectedResult.value?.description) return '';
+  if (!selectedResult.value?.description) return 'Description missing';
   if (!isLongDescription.value || showFullDescription.value) {
     return selectedResult.value.description;
   }
@@ -597,7 +567,7 @@ const chartOptions = ref({
       display: false
     }
   },
-  responsive: false,
+  responsive: true,
   maintainAspectRatio: false,
   layout: {
     padding: {
@@ -699,7 +669,7 @@ const formatNumber = (value) => {
 </script>
 
 <style scoped>
-.app-container {
+.app-container { /*unused?*/
   display: flex;
   flex-direction: column;
   max-width: 100%;
@@ -741,7 +711,7 @@ const formatNumber = (value) => {
   background-color: #f5f5f5;
 }
 
-.markdown-wrapper {
+.markdown-wrapper { /*unused?*/
   padding: 24px;
 }
 
@@ -823,8 +793,7 @@ const formatNumber = (value) => {
 .field-item {
   background-color: rgb(var(--v-theme-surface));
   border-radius: 8px;
-  padding: 16px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  padding: 4px;
 }
 
 .field-header {
@@ -846,7 +815,7 @@ const formatNumber = (value) => {
 .statistics-container {
   background-color: rgba(var(--v-theme-surface), 0.8);
   border-radius: 8px;
-  padding: 16px;
+  padding: 0px;
   height: fit-content;
 }
 
@@ -880,7 +849,7 @@ const formatNumber = (value) => {
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: 32px;
-  padding: 16px 0;
+  padding: 0px 0;
 }
 
 .description-section {
@@ -940,16 +909,61 @@ const formatNumber = (value) => {
   white-space: nowrap;
 }
 
-.statistics-table thead th {
-  padding: 8px 0;
+.categorical-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 32px;
+}
+
+.unique-values-section {
+  flex: 0 0 auto;
+  padding-right: 32px;
+  border-right: 1px solid rgba(var(--v-border-opacity), 0.12);
+}
+
+.large-stat {
+  text-align: center;
+}
+
+.stat-title {
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: rgba(var(--v-theme-on-surface));
+  margin-bottom: 8px;
+}
+
+.stat-number {
+  font-size: 2.5rem;
+  font-weight: 600;
+  color: rgb(var(--v-theme-on-surface));
+}
+
+.value-distribution {
+  flex: 1;
+  min-width: 0;
+}
+
+.statistics-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.statistics-table th {
   font-weight: 600;
   color: rgba(var(--v-theme-on-surface), 0.87);
+  padding: 8px 16px;
   border-bottom: 2px solid rgba(var(--v-border-opacity), 0.12);
 }
 
-/* Add tooltip for truncated values */
-.value-label {
-  position: relative;
+.statistics-table td {
+  padding: 0px 16px;
+  border-bottom: 1px solid rgba(var(--v-border-opacity), 0.12);
+}
+
+.stat-value {
+  text-align: right;
+  font-family: monospace;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 /* Make the layout responsive */
@@ -964,6 +978,23 @@ const formatNumber = (value) => {
     border-left: none;
     border-top: 1px solid rgba(var(--v-border-opacity), 0.12);
     padding-top: 24px;
+  }
+
+  .categorical-layout {
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .unique-values-section {
+    padding-right: 0;
+    padding-bottom: 24px;
+    border-right: none;
+    border-bottom: 1px solid rgba(var(--v-border-opacity), 0.12);
+    width: 100%;
+  }
+
+  .value-distribution {
+    width: 100%;
   }
 }
 
@@ -1015,10 +1046,14 @@ const formatNumber = (value) => {
 
 .content-container .v-card-title {
   padding-left: 0;
+  font-size: 1.75rem !important;
+  line-height: 2rem;
+  margin-bottom: 0.5rem;
 }
 
 .content-container .v-card-subtitle {
   padding-left: 0;
+  font-size: 1.1rem;
 }
 
 .flex-grow-1.min-w-0 {
