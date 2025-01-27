@@ -70,12 +70,12 @@ page
                   <v-img
                     :src="item.thumbnailUrl"
                     :alt="item.name"
-                    height="80"
-                    width="80"
-                    max-height="80"
-                    max-width="80"
+                    height="70"
+                    width="70"
+                    max-height="70"
+                    max-width="70"
                     cover
-                    class="flex-shrink-0"
+                    class="flex-shrink-0 rounded-image"
                   >
                     <!-- Fallback for failed image load -->
                     <template v-slot:placeholder>
@@ -1111,5 +1111,10 @@ const formatNumber = (value) => {
   text-overflow: ellipsis;
   max-width: 100%;
   display: block;
+}
+
+.rounded-image {
+  border-radius: 5px;
+  overflow: hidden;
 }
 </style>
