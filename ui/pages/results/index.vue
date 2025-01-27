@@ -224,7 +224,7 @@ page
                               :chart-options="chartOptions"
                             />
                           </div>
-                          <div class="statistics-container">
+                          <div class="statistics-container" v-if="field.statistics">
                             <table class="statistics-table">
                               <tbody>
                                 <tr>
@@ -268,13 +268,13 @@ page
                           <div class="categorical-summary">
                             <div class="categorical-layout">
                               <div class="unique-values-section">
-                                <div class="large-stat">
+                                <div class="large-stat" v-if="field.n_unique">
                                   <div class="stat-title">Unique Values</div>
                                   <div class="stat-number">{{ formatNumber(field.n_unique) }}</div>
                                 </div>
                               </div>
                               <div class="value-distribution">
-                                <table class="statistics-table">
+                                <table class="statistics-table" v-if="field.most_common">
                                   <thead>
                                     <tr>
                                       <th class="text-left">Value</th>
@@ -492,7 +492,8 @@ const selectResult = (result) => {
 
   if (result.recordSet) {
     descriptionPanel.value = [0];
-    recordSetPanels.value = result.recordSet.map(() => [0]);
+    recordSetPanel.value = result.recordSet.map(() => [0]);
+    showFullDescription.value = false;
     selectedFileIndex.value = 0; // Reset to first file when selecting new result
   }
 
