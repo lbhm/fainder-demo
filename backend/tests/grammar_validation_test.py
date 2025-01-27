@@ -58,6 +58,11 @@ VALID_TEST_CASES = {
             "col(NOT (name(test; 0) AND pp(0.5;ge;20.0)))",
         ]
     },
+    "optinal_newline": {
+        "queries": [
+            "kw(test)\nAND col(pp(0.5;ge;20.0))",
+        ]
+    },
 }
 
 INVALID_TEST_CASES = {

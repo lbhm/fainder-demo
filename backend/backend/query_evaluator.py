@@ -35,7 +35,7 @@ GRAMMAR = """
     FLOAT: /[0-9]+(\\.[0-9]+)?/
     IDENTIFIER: /[a-zA-Z0-9_]+/
     KEYWORD: /[^;)]+/
-    %ignore " "
+    %ignore /\\s+/
 """
 
 
