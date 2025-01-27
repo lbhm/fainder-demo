@@ -4,7 +4,6 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonPrimitive;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.*;
 import org.apache.lucene.index.IndexWriter;
@@ -22,7 +21,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.time.temporal.ChronoField;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -32,32 +30,30 @@ public class LuceneIndexer {
 
     // Field configuration map defines how each field should be indexed
     private static final Map<String, FieldConfig> FIELD_CONFIGS = Map.of(
-        "id", new FieldConfig(FieldType.NUMERIC, true),
-        "dateModified", new FieldConfig(FieldType.DATE, true),
-        "alternateName", new FieldConfig(FieldType.TEXT, true),
-        "name", new FieldConfig(FieldType.TEXT, true),
-        "description", new FieldConfig(FieldType.TEXT, true),
-        "keywords", new FieldConfig(FieldType.TEXT, true, true), // isArray=true
-        "creator.name", new FieldConfig(FieldType.TEXT, true),   // nested field
-        "publisher.name", new FieldConfig(FieldType.TEXT, true)  // nested field
+        "id", new FieldConfig(FieldType.NUMERIC),
+        "dateModified", new FieldConfig(FieldType.DATE),
+        "alternateName", new FieldConfig(FieldType.TEXT),
+        "name", new FieldConfig(FieldType.TEXT),
+        "description", new FieldConfig(FieldType.TEXT),
+        "keywords", new FieldConfig(FieldType.TEXT, true), // isArray=true
+        "creator.name", new FieldConfig(FieldType.TEXT),   // nested field
+        "publisher.name", new FieldConfig(FieldType.TEXT)  // nested field
     );
 
     private enum FieldType {
-        NUMERIC, STRING, TEXT, DATE
+        NUMERIC, TEXT, DATE
     }
 
     private static class FieldConfig {
         final FieldType type;
-        final boolean stored;
         final boolean isArray;
 
-        FieldConfig(FieldType type, boolean stored) {
-            this(type, stored, false);
+        FieldConfig(FieldType type) {
+            this(type, false);
         }
 
-        FieldConfig(FieldType type, boolean stored, boolean isArray) {
+        FieldConfig(FieldType type, boolean isArray) {
             this.type = type;
-            this.stored = stored;
             this.isArray = isArray;
         }
     }
@@ -109,18 +105,16 @@ public class LuceneIndexer {
                 yield new NumericDocValuesField(fieldName, numValue);
             }
             case DATE -> {
+                String dateStr = value.getAsString();
+                document.add(new StoredField(fieldName, dateStr));
                 try {
-                    String dateStr = value.getAsString();
                     long timestamp = parseDate(dateStr);
-                    document.add(new StoredField(fieldName, dateStr));
                     yield new NumericDocValuesField(fieldName, timestamp);
                 } catch (DateTimeParseException e) {
                     logger.error("Date parsing failed for '{}': {}", value.getAsString(), e.getMessage());
                     yield null;
                 }
             }
-            case STRING -> new StringField(fieldName, value.getAsString(),
-                config.stored ? Field.Store.YES : Field.Store.NO);
             case TEXT -> {
                 String textValue;
                 if (config.isArray) {
@@ -133,8 +127,8 @@ public class LuceneIndexer {
                 } else {
                     textValue = value.getAsString();
                 }
-                yield new TextField(fieldName, textValue,
-                    config.stored ? Field.Store.YES : Field.Store.NO);
+                document.add(new StoredField(fieldName, textValue));  // For retrieval
+                yield new TextField(fieldName, textValue, Field.Store.NO);  // For searching
             }
         };
         if (field != null) {
