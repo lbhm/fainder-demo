@@ -24,6 +24,10 @@ export const useSearchState = () => {
   // Add perPage state
   const perPage = useState('per-page', () => 10)
 
+  const enable_highlighting = useState('enable-highlighting', () =>
+    route.query.enable_highlighting !== 'false'  // Default to true if not explicitly set to false
+  )
+
   return {
     results,
     selectedResultIndex,
@@ -35,6 +39,7 @@ export const useSearchState = () => {
     totalPages,
     query,
     fainder_mode,
-    perPage
+    perPage,
+    enable_highlighting
   }
 }

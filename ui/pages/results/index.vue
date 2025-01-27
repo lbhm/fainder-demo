@@ -174,7 +174,8 @@ const {
   totalPages,
   query,
   fainder_mode,
-  perPage
+  perPage,
+  enable_highlighting
 } = useSearchState();
 
 console.log(selectedResultIndex.value);
@@ -234,11 +235,7 @@ function updateTotalVisible() {
 }
 
 watch(currentPage, async (newPage) => {
-  await searchOperations.loadResults(
-    query.value,
-    newPage,
-    fainder_mode.value
-  );
+  await searchOperations.loadResults(query.value, newPage, fainder_mode.value, enable_highlighting.value);
 
   // Update URL with new page
   navigateTo({
@@ -248,6 +245,7 @@ watch(currentPage, async (newPage) => {
       page: newPage,
       index: selectedResultIndex.value,
       fainder_mode: fainder_mode.value,
+      enable_highlighting: enable_highlighting.value,
       theme: theme.global.name.value,
     },
   });
@@ -256,7 +254,7 @@ watch(currentPage, async (newPage) => {
 watch(updatePerPage, (newPerPage) => {
   if (currentPage.value > 0) {
     perPage.value = newPerPage;
-    searchOperations.loadResults(query.value, currentPage.value);
+    searchOperations.loadResults(query.value, currentPage.value, fainder_mode.value, enable_highlighting.value);
   }
 });
 
@@ -294,15 +292,17 @@ const retrySearch = async () => {
   await searchOperations.loadResults(
     query.value,
     currentPage.value,
-    route.query.fainder_mode
+    fainder_mode.value,
+    enable_highlighting.value,
   );
 };
 
-// Initial load
+// Initial load 
 await searchOperations.loadResults(
   query.value,
   currentPage.value,
-  fainder_mode.value
+  fainder_mode.value,
+  enable_highlighting.value
 );
 
 const chartOptions = ref({

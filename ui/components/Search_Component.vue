@@ -200,6 +200,11 @@ words # The search page will contain multiple search bars
             label="Fainder Mode"
             variant="outlined"
           />
+          <v-switch
+            v-model="temp_enable_highlighting"
+            label="Enable Highlighting"
+            color="primary"
+          ></v-switch>
         </v-card-text>
 
         <v-card-actions>
@@ -240,11 +245,16 @@ const props = defineProps({
 const emit = defineEmits(["searchData"]);
 const route = useRoute();
 const temp_fainder_mode = ref(route.query.fainder_mode || "low_memory");
+const temp_enable_highlighting = ref(route.query.enable_highlighting !== 'false');  // Default to true
 
-const { fainder_mode } = useSearchState();
+const { fainder_mode, enable_highlighting } = useSearchState();
+
 // Initialize fainder_mode if not already set
 if (!fainder_mode.value) {
   fainder_mode.value = route.query.fainder_mode || "low_memory";
+}
+if (!enable_highlighting.value) {
+  enable_highlighting.value = route.query.enable_highlighting !== 'false';  // Default to true
 }
 
 const searchQuery = ref(props.searchQuery);
@@ -368,12 +378,14 @@ async function searchData() {
     query = query ? `${query} AND ${filterQuery}` : filterQuery;
   }
 
-
-  console.log("Search query:", query);
-  console.log("Index type:", fainder_mode);
+  let s_query = query;
+  console.log("Search query:", s_query);
+  console.log("Index type:", fainder_mode.value);
+  console.log("Highlighting enabled:", enable_highlighting.value);
   emit("searchData", {
-    query: query,
+    query: s_query,
     fainder_mode: fainder_mode.value,
+    enable_highlighting: enable_highlighting.value,  // Add this line
   });
 }
 
@@ -636,6 +648,9 @@ function cancelSettings() {
 function saveSettings() {
   showSettings.value = false;
   fainder_mode.value = temp_fainder_mode.value;
+  enable_highlighting.value = temp_enable_highlighting.value;
+  console.log("New fainder_mode:", fainder_mode.value);
+  console.log("New highlighting enabled:", enable_highlighting.value);
 }
 </script>
 

@@ -149,28 +149,28 @@
 
   const showSearchDialog = ref(false);
 
-  async function searchData({ query: searchQuery, fainder_mode: newfainder_mode }) {
-    console.log(searchQuery)
+  async function searchData({ query: searchQuery, fainder_mode: newfainder_mode, enable_highlighting }) {
     query.value = searchQuery;
     fainder_mode.value = newfainder_mode;
 
     currentPage.value = 1;
     selectedResultIndex.value = 0;
 
-    await loadResults(searchQuery, 1, newfainder_mode);
+    await loadResults(searchQuery, 1, newfainder_mode,enable_highlighting);
 
     await navigateTo({
-      path: '/results',
-      query: {
-        query: searchQuery,
-        page: 1,
-        index: 0,
-        fainder_mode: newfainder_mode,
-        theme: theme.global.name.value,
-      },
+        path: '/results',
+        query: {
+            query: searchQuery,
+            page: 1,
+            index: 0,
+            fainder_mode: newfainder_mode,
+            enable_highlighting,
+            theme: theme.global.name.value,
+        },
     });
 
-    searchComponentKey.value++; // Increment key to force component reload
+    searchComponentKey.value++;
   }
 </script>
 
