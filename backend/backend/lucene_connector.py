@@ -44,7 +44,7 @@ class LuceneConnector:
         Returns:
             list[int]: A list of document IDs that match the query.
             list[float]: A list of scores for each document ID.
-            list[dict[str, str]]: A list of dictionaries mapping field names 
+            list[dict[str, str]]: A list of dictionaries mapping field names
             to highlighted snippets.
         """
         if not self.channel:

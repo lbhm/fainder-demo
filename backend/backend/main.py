@@ -24,7 +24,7 @@ from backend.config import (
     QueryResponse,
     Settings,
 )
-from backend.croissant_store import CroissantStore
+from backend.croissant_store import CroissantStore, Document
 from backend.fainder_index import FainderIndex
 from backend.indexing import (
     generate_embedding_index,
@@ -32,7 +32,7 @@ from backend.indexing import (
     generate_metadata,
 )
 from backend.lucene_connector import LuceneConnector
-from backend.query_evaluator import QueryEvaluator
+from backend.query_evaluator import ColumnHighlights, DocumentHighlights, QueryEvaluator
 
 try:
     settings = Settings()  # type: ignore
@@ -95,6 +95,50 @@ app.add_middleware(
 )
 
 
+def _apply_field_highlighting(doc: Document, field: str, highlighted: str) -> None:
+    """Apply highlighting to a specific field in the document."""
+    field_split = field.split("_")
+    helper = doc
+    for i in range(len(field_split)):
+        if i == len(field_split) - 1:
+            helper[field_split[i]] = highlighted
+        else:
+            helper = helper[field_split[i]]
+
+
+def _apply_column_highlighting(
+    record_set: list[dict[str, Any]], col_highlights: ColumnHighlights
+) -> None:
+    """Apply highlighting to column names in the record set."""
+    for record in record_set:
+        fields: list[dict[str, Any]] | None = record.get("field", None)
+        if fields is None:
+            continue
+        for field_dict in fields:
+            field_id: int | None = field_dict.get("id", None)
+            if field_id is not None and field_id in col_highlights:
+                field_dict["marked_name"] = "<mark>" + field_dict["name"] + "</mark>"
+
+
+def _apply_highlighting(
+    docs: list[Document],
+    doc_highlights: DocumentHighlights,
+    col_highlights: ColumnHighlights,
+    paginated_doc_ids: list[int],
+) -> list[Document]:
+    """Apply highlighting to the documents."""
+    for doc, doc_id in zip(docs, paginated_doc_ids, strict=True):
+        if doc_id in doc_highlights:
+            for field, highlighted in doc_highlights[doc_id].items():
+                _apply_field_highlighting(doc, field, highlighted)
+
+        record_set: list[dict[str, Any]] = doc.get("recordSet", None)
+        if record_set is not None:
+            _apply_column_highlighting(record_set, col_highlights)
+
+    return docs
+
+
 @app.post("/query")
 async def query(request: QueryRequest) -> QueryResponse:
     """Execute a query and return the results."""
@@ -117,32 +161,7 @@ async def query(request: QueryRequest) -> QueryResponse:
             # make a deep copy of the documents to avoid modifying the original
             docs = copy.deepcopy(docs)
             # Only add highlights if enabled and they exist for the document
-
-            for doc, doc_id in zip(docs, paginated_doc_ids, strict=True):
-                if doc_id in doc_highlights:
-                    for field, highlighted in doc_highlights[doc_id].items():
-                        # Deal with nested fields spilt by '_'
-                        field_split = field.split("_")
-                        helper = doc
-                        for i in range(len(field_split)):
-                            if i == len(field_split) - 1:
-                                helper[field_split[i]] = highlighted
-                            else:
-                                helper = helper[field_split[i]]
-
-                # Add column highlights to the documents
-
-                record_set: list[dict[str, Any]] = doc.get("recordSet", None)
-                if record_set is not None:
-                    for record in record_set:
-                        fields: list[dict[str, Any]] | None = record.get("field", None)
-                        if fields is not None:
-                            for field_dict in fields:
-                                field_id: int | None = field_dict.get("id", None)
-                                if field_id is not None and field_id in col_highlights:
-                                    field_dict["marked_name"] = (
-                                        "<mark>" + field_dict["name"] + "</mark>"
-                                    )
+            docs = _apply_highlighting(docs, doc_highlights, col_highlights, paginated_doc_ids)
 
         end_time = time.perf_counter()
         search_time = end_time - start_time
