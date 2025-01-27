@@ -58,6 +58,7 @@ public class LuceneSearch {
     }
 
     private Query createMultiFieldQuery(String queryText) throws ParseException {
+        // TODO: Investigate performance and if this breaks the query
         BooleanQuery.Builder queryBuilder = new BooleanQuery.Builder();
         String escapedQuery = QueryParser.escape(queryText);
 
