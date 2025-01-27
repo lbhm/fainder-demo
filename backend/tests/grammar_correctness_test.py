@@ -101,7 +101,8 @@ TEST_CASES: dict[str, dict[str, dict[str, dict[str, Any]]]] = {
             },
             "not_complex_column": {
                 "query": "NOT col((name(Latitude; 0) AND pp(0.5;ge;50)))",
-                "expected": [1, 2]},
+                "expected": [1, 2],
+            },
             "multiple_columns": {
                 "query": "col(name(Latitude; 0)) AND col(name(Longitude; 0))",
                 "expected": [0],
@@ -119,7 +120,7 @@ TEST_CASES: dict[str, dict[str, dict[str, dict[str, Any]]]] = {
         for name, case in data["queries"].items()
     ],
 )
-def test_new_grammar_correctness(
+def test_grammar_correctness(
     category: str, test_name: str, test_case: dict[str, Any], evaluator: QueryEvaluator
 ) -> None:
     query = test_case["query"]
@@ -127,15 +128,15 @@ def test_new_grammar_correctness(
 
     # First run with caching enabled (default)
     parse_start = time.perf_counter()
-    parsed_query = evaluator.parse(query)
+    _ = evaluator.parse(query)
     parse_end = time.perf_counter()
     parse_time = parse_end - parse_start
-    
+
     # Execute twice with caching to measure cache hit
     exec_start = time.perf_counter()
     result1, _ = evaluator.execute(query)
     first_exec_time = time.perf_counter() - exec_start
-    
+
     exec_start = time.perf_counter()
     result1_cached, _ = evaluator.execute(query)
     cached_exec_time = time.perf_counter() - exec_start
@@ -147,9 +148,9 @@ def test_new_grammar_correctness(
         evaluator.executor_conversion.fainder_index,
         evaluator.executor_rebinning.hnsw_index,
         evaluator.executor_rebinning.metadata,
-        disable_caching=True
+        disable_caching=True,
     )
-    
+
     exec_start = time.perf_counter()
     result2, _ = no_cache_evaluator.execute(query)
     no_cache_exec_time = time.perf_counter() - exec_start
@@ -166,14 +167,14 @@ def test_new_grammar_correctness(
             "first_exec_time": first_exec_time,
             "cached_exec_time": cached_exec_time,
             "non_cached_exec_time": no_cache_exec_time,
-            "cache_speedup": no_cache_exec_time/cached_exec_time
+            "cache_speedup": no_cache_exec_time / cached_exec_time,
         },
         "cache_stats": {
             "hits": cache_info.hits,
             "misses": cache_info.misses,
             "max_size": cache_info.max_size,
-            "curr_size": cache_info.curr_size
-        }
+            "curr_size": cache_info.curr_size,
+        },
     }
 
     # Log as JSON for easier parsing
@@ -183,6 +184,3 @@ def test_new_grammar_correctness(
     assert set(result1) == set(result2)
     assert set(result1) == set(result1_cached)
     assert set(expected_result) == set(result1)
-
-
-

@@ -67,6 +67,7 @@ class QueryEvaluator:
             self.lucene_connector, conversion_index, hnsw_index, metadata
         )
 
+        # NOTE: Don't use lru_cache on methods
         # Use lru_cache only if caching is enabled
         self.execute = (
             self._execute if disable_caching else lru_cache(maxsize=cache_size)(self._execute)
