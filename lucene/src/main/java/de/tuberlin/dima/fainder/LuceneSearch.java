@@ -41,10 +41,6 @@ public class LuceneSearch {
     // Constant flag for testing different implementations
     private final Boolean BOOL_FILTER;
 
-    private static final float MIN_BOOST = 0.1f;
-    private static final float EXACT_MATCH_MULTIPLIER = 2.0f;
-    private static final float PREFIX_MATCH_MULTIPLIER = 0.5f;
-
     public LuceneSearch(Path indexPath) throws IOException {
         Directory indexDir = FSDirectory.open(indexPath);
         IndexReader reader = DirectoryReader.open(indexDir);
@@ -62,37 +58,6 @@ public class LuceneSearch {
             .toArray(QueryParser[]::new);
 
         BOOL_FILTER = false;
-    }
-
-    private Query createMultiFieldQuery(String queryText) throws ParseException {
-        BooleanQuery.Builder queryBuilder = new BooleanQuery.Builder();
-        String escapedQuery = QueryParser.escape(queryText);
-
-        int i = 0;
-        for (Map.Entry<String, Float> field : searchFields.entrySet()) {
-            // Base boost - ensure it's positive
-            Float baseBoost = Math.max(MIN_BOOST, field.getValue());
-            QueryParser parser = fieldParsers[i++];
-
-            // Calculate derived boosts, ensuring they remain positive
-            float exactBoost = baseBoost * EXACT_MATCH_MULTIPLIER;
-            float fuzzyBoost = baseBoost;
-            float prefixBoost = Math.max(MIN_BOOST, baseBoost * PREFIX_MATCH_MULTIPLIER);
-
-            // Exact match (highest boost)
-            Query exactQuery = parser.parse("(" + escapedQuery + ")^" + exactBoost);
-            queryBuilder.add(exactQuery, BooleanClause.Occur.SHOULD);
-
-            // Fuzzy match for typos
-            Query fuzzyQuery = parser.parse("(" + escapedQuery + "~)^" + fuzzyBoost);
-            queryBuilder.add(fuzzyQuery, BooleanClause.Occur.SHOULD);
-
-            // Prefix match for partial words
-            Query prefixQuery = parser.parse("(" + escapedQuery + "*)^" + prefixBoost);
-            queryBuilder.add(prefixQuery, BooleanClause.Occur.SHOULD);
-        }
-
-        return queryBuilder.build();
     }
 
     private Query createHighlightQuery(String queryText) throws ParseException {
@@ -121,6 +86,34 @@ public class LuceneSearch {
             this.scores = scores;
             this.highlights = highlights;
         }
+    }
+
+    private Query createMultiFieldQuery(String queryText) throws ParseException {
+        // TODO: Investigate performance and if this breaks the query
+        BooleanQuery.Builder queryBuilder = new BooleanQuery.Builder();
+        String escapedQuery = QueryParser.escape(queryText);
+
+        // Add a subquery for each field with its boost
+        int i = 0;
+        for (Map.Entry<String, Float> field : searchFields.entrySet()) {
+            // Create boosted queries for each type of match
+            Float boost = field.getValue();
+            QueryParser parser = fieldParsers[i++];
+
+            // Exact match (highest boost)
+            Query exactQuery = parser.parse("(" + escapedQuery + ")^" + (boost * 2.0f));
+            queryBuilder.add(exactQuery, BooleanClause.Occur.SHOULD);
+
+            // Fuzzy match for typos
+            Query fuzzyQuery = parser.parse("(" + escapedQuery + "~)^" + boost);
+            queryBuilder.add(fuzzyQuery, BooleanClause.Occur.SHOULD);
+
+            // Prefix match for partial words
+            Query prefixQuery = parser.parse("(" + escapedQuery + "*)^" + (boost * 0.5f));
+            queryBuilder.add(prefixQuery, BooleanClause.Occur.SHOULD);
+        }
+
+        return queryBuilder.build();
     }
 
     /**
@@ -164,9 +157,9 @@ public class LuceneSearch {
                 } else {
                     CustomCollectorManager collectorManager = new CustomCollectorManager(maxResults, docIds);
                     hits = searcher.search(multiFieldQuery, collectorManager).scoreDocs;
+                    hits = searcher.search(multiFieldQuery, collectorManager).scoreDocs;
                 }
             } else {
-                logger.info("No filter applied");
                 hits = searcher.search(multiFieldQuery, maxResults).scoreDocs;
             }
 

@@ -96,16 +96,18 @@ class QueryRequest(BaseModel):
     page: int = 1
     per_page: int = 10
     fainder_mode: Literal["low_memory", "full_precision", "full_recall", "exact"] = "low_memory"
-    enable_highlighting: bool = True  # Add highlighting flag with default True
+    enable_highlighting: bool = True
+
 
 class QueryResponse(BaseModel):
     """Response for a query request."""
+
     query: str
     results: list[dict[str, Any]]
     search_time: float
     result_count: int
     page: int
-    total_pages: int  # Add highlights field
+    total_pages: int
 
 
 class MessageResponse(BaseModel):

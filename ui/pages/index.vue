@@ -2,7 +2,7 @@
   <v-main class="d-flex align-center justify-center">
     <div class="search-wrapper">
       <div class="d-flex justify-center">
-        <Logo size="large" class="mb-8"/>
+        <Wordmark size="large" />
       </div>
       <Search_Component
         :searchQuery="query"
@@ -16,7 +16,6 @@
 </template>
 
 <script setup>
-import Logo from '~/components/Logo.vue'
 
 const route = useRoute();
 const q = route.query;

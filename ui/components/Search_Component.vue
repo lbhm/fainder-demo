@@ -176,7 +176,7 @@ words # The search page will contain multiple search bars
                     prepend-icon="mdi-plus"
                     class="mr-2"
                   >
-                    Add 
+                    Add
                   </v-btn>
                 </div>
               </v-col>
@@ -353,7 +353,7 @@ async function searchData() {
   if (percentileQueryTerms.length) {
     terms.push(percentileQueryTerms.join(' AND '));
   }
-  
+
   if (combinedQueryTerms.length) {
     terms.push(combinedQueryTerms.join(' AND '));
   }
