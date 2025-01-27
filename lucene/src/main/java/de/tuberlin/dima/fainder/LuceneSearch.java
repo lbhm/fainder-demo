@@ -102,11 +102,11 @@ public class LuceneSearch {
         for (Map.Entry<String, Float> field : searchFields.entrySet()) {
             QueryParser parser = new QueryParser(field.getKey(), analyzer);
             parser.setDefaultOperator(QueryParser.Operator.OR);
-            
+
             // Add exact match
             Query exactQuery = parser.parse(escapedQuery);
             queryBuilder.add(exactQuery, BooleanClause.Occur.SHOULD);
-        
+
         }
         return queryBuilder.build();
     }
@@ -139,7 +139,7 @@ public class LuceneSearch {
         try {
             Query multiFieldQuery = createMultiFieldQuery(query);
             Highlighter highlighter = null;
-            
+
             if (enableHighlighting) {
                 Query highlightQuery = createHighlightQuery(query);
                 QueryScorer scorer = new QueryScorer(highlightQuery);
@@ -193,14 +193,13 @@ public class LuceneSearch {
                                 if (highlighted != null && !highlighted.isEmpty()) {
                                     docHighlights.put(fieldName, highlighted);
                                 }
-                                logger.info("Highlighted field {}: {}", fieldName, highlighted);
                             } catch (InvalidTokenOffsetsException e) {
                                 logger.warn("Failed to highlight field {}: {}", fieldName, e.getMessage());
                             }
                         }
                     }
                 }
-                logger.info("Hit {}: {} (Score: {})", resultId, doc.get("name"), scoreDoc.score);
+                // logger.info("Hit {}: {} (Score: {})", resultId, doc.get("name"), scoreDoc.score);
                 results.add(resultId);
                 scores.add(scoreDoc.score);
                 if (!docHighlights.isEmpty()) {
@@ -209,8 +208,13 @@ public class LuceneSearch {
             }
 
             return new SearchResult(results, scores, highlights);
-        } catch (Exception e) {
-            logger.error("Search error: {}", e.getMessage(), e);
+        } catch (ParseException e) {
+            logger.error("Query parsing error: {}", e.getMessage());
+            e.printStackTrace();
+            return new SearchResult(List.of(), List.of(), Map.of());
+
+        } catch (IOException e) {
+            logger.error("Query IO error: {}", e.getMessage());
             e.printStackTrace();
             return new SearchResult(List.of(), List.of(), Map.of());
         }

@@ -102,7 +102,6 @@ async def query(request: QueryRequest) -> QueryResponse:
 
     try:
         start_time = time.perf_counter()
-        query_evaluator.executor_rebinning.reset()  # This now also clears highlights
         doc_ids, (doc_highlights, col_highlights) = query_evaluator.execute(
             request.query, fainder_mode=request.fainder_mode
         )
@@ -119,17 +118,17 @@ async def query(request: QueryRequest) -> QueryResponse:
             docs = copy.deepcopy(docs)
             # Only add highlights if enabled and they exist for the document
 
-            for doc, doc_id in zip(docs, paginated_doc_ids, strict=False):
+            for doc, doc_id in zip(docs, paginated_doc_ids, strict=True):
                 if doc_id in doc_highlights:
                     for field, highlighted in doc_highlights[doc_id].items():
                         # Deal with nested fields spilt by '_'
-                        field_spilt = field.split("_")
+                        field_split = field.split("_")
                         helper = doc
-                        for i in range(len(field_spilt)):
-                            if i == len(field_spilt) - 1:
-                                helper[field_spilt[i]] = highlighted
+                        for i in range(len(field_split)):
+                            if i == len(field_split) - 1:
+                                helper[field_split[i]] = highlighted
                             else:
-                                helper = helper[field_spilt[i]]
+                                helper = helper[field_split[i]]
 
                 # Add column highlights to the documents
 
@@ -147,6 +146,10 @@ async def query(request: QueryRequest) -> QueryResponse:
 
         end_time = time.perf_counter()
         search_time = end_time - start_time
+
+        logger.info(
+            f"Query '{request.query}' returned {len(docs)} documents in {search_time:.4f} seconds."
+        )
 
         return QueryResponse(
             query=request.query,

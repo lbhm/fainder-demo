@@ -148,7 +148,7 @@ def test_grammar_correctness(
         evaluator.executor_conversion.fainder_index,
         evaluator.executor_rebinning.hnsw_index,
         evaluator.executor_rebinning.metadata,
-        disable_caching=True,
+        cache_size=-1,
     )
 
     exec_start = time.perf_counter()

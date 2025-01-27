@@ -2,7 +2,6 @@ import re
 from collections import defaultdict
 from collections.abc import Sequence
 from functools import lru_cache
-from typing import TypeAlias
 
 from lark import Lark, Token, Transformer, Tree, Visitor
 from loguru import logger
@@ -41,9 +40,9 @@ GRAMMAR = """
 """
 
 # Type alias for highlights
-DocumentHighlights: TypeAlias = dict[int, dict[str, str]]
-ColumnHighlights: TypeAlias = set[uint32]  # set of column ids that should be highlighted
-Highlights: TypeAlias = tuple[DocumentHighlights, ColumnHighlights]
+DocumentHighlights = dict[int, dict[str, str]]
+ColumnHighlights = set[uint32]  # set of column ids that should be highlighted
+Highlights = tuple[DocumentHighlights, ColumnHighlights]
 
 
 class QueryEvaluator:
@@ -54,8 +53,7 @@ class QueryEvaluator:
         conversion_index: FainderIndex,  # currently not used
         hnsw_index: ColumnIndex,
         metadata: Metadata,
-        cache_size: int = 128,
-        disable_caching: bool = False,
+        cache_size: int = 128,  # if negative, caching is disabled
     ):
         self.lucene_connector = lucene_connector
         self.grammar = Lark(GRAMMAR, start="start")
@@ -69,8 +67,9 @@ class QueryEvaluator:
 
         # NOTE: Don't use lru_cache on methods
         # Use lru_cache only if caching is enabled
+        disable_cache = cache_size < 0  # if negative, caching is disabled
         self.execute = (
-            self._execute if disable_caching else lru_cache(maxsize=cache_size)(self._execute)
+            self._execute if disable_cache else lru_cache(maxsize=cache_size)(self._execute)
         )
 
     def update_indices(
@@ -112,8 +111,6 @@ class QueryEvaluator:
         result: set[int]
         highlights: Highlights
         result, highlights = executor.transform(parse_tree)
-
-        logger.debug(f"Query result: {result}")
 
         # Sort by score
         list_result = list(result)
@@ -348,11 +345,9 @@ class QueryExecutor(Transformer):
     def query(
         self, items: list[tuple[set[int], Highlights] | Token]
     ) -> tuple[set[int], Highlights]:
-        logger.debug(f"Evaluating query with {len(items)} items")
+        logger.trace(f"Evaluating query with {len(items)} items")
         if len(items) == 1 and isinstance(items[0], tuple):
             return items[0]
-
-        logger.debug(f"Query items: {items}")
 
         left_set: set[int]
         left_highlights: Highlights
@@ -365,32 +360,23 @@ class QueryExecutor(Transformer):
         match operator:
             case "AND":
                 result_set = left_set & right_set
-                result_highlights = self._merge_highlights(
-                    left_highlights, right_highlights, result_set
-                )
-                return result_set, result_highlights
             case "OR":
                 result_set = left_set | right_set
-                result_highlights = self._merge_highlights(
-                    left_highlights, right_highlights, result_set
-                )
-                return result_set, result_highlights
             case "XOR":
                 result_set = left_set ^ right_set
-                result_highlights = self._merge_highlights(
-                    left_highlights, right_highlights, result_set
-                )
-                return result_set, result_highlights
+
             case _:
                 raise ValueError(f"Unknown operator: {operator}")
 
+        result_highlights = self._merge_highlights(left_highlights, right_highlights, result_set)
+        return result_set, result_highlights
+
     def start(self, items: list[tuple[set[int], Highlights]]) -> tuple[set[int], Highlights]:
-        logger.debug(f"returning items: {items}")
         doc_set, (doc_highlights, col_highlights) = items[0]
 
         if self.enable_highlighting:
             # only return the column highlights that are in the document set
-            filtered_col_highlights = col_ids_in_doc(
+            filtered_col_highlights = col_ids_in_docs(
                 col_highlights, doc_set, self.metadata.doc_to_cols
             )
             return doc_set, (doc_highlights, filtered_col_highlights)
@@ -456,13 +442,10 @@ class QueryExecutor(Transformer):
         return result_document_highlights, result_columns
 
 
-def col_ids_in_doc(
+def col_ids_in_docs(
     col_ids: set[uint32], doc_ids: set[int], doc_to_columns: dict[int, set[int]]
 ) -> set[uint32]:
     col_ids_in_doc = doc_to_col_ids(doc_ids, doc_to_columns)
-    logger.debug(
-        f"col_ids_in_doc: {col_ids_in_doc} col_ids: {col_ids} result: {col_ids_in_doc & col_ids}"
-    )
     return col_ids_in_doc & col_ids
 
 

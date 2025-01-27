@@ -108,11 +108,7 @@ public class LuceneServer {
             String query = queryRequest.getQuery();
             Set<Integer> docIds = new HashSet<>(queryRequest.getDocIdsList());
 
-            // Clear any previous state
-            QueryResponse.Builder responseBuilder = QueryResponse.newBuilder()
-                .clearResults()
-                .clearScores()
-                .clearHighlights();
+            QueryResponse.Builder responseBuilder = QueryResponse.newBuilder();
 
             SearchResult searchResults = luceneSearch.search(query, docIds, minScore, maxResults, queryRequest.getEnableHighlighting());
 
@@ -123,13 +119,13 @@ public class LuceneServer {
             for (Map.Entry<Integer, Map<String, String>> docEntry : searchResults.highlights.entrySet()) {
                 int docId = docEntry.getKey();
                 Map<String, String> fieldHighlights = docEntry.getValue();
-                
+
                 // Create field highlights for this document
                 FieldHighlights.Builder fieldsBuilder = FieldHighlights.newBuilder();
-                
+
                 // Add all field highlights
                 fieldsBuilder.putAllFields(fieldHighlights);
-                
+
                 // Add the complete highlights for this document
                 responseBuilder.putHighlights(docId, fieldsBuilder.build());
             }

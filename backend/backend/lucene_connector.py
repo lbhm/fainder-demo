@@ -44,7 +44,8 @@ class LuceneConnector:
         Returns:
             list[int]: A list of document IDs that match the query.
             list[float]: A list of scores for each document ID.
-            list[dict[str, str]]: A list of dictionaries mapping field names to highlighted snippets.
+            list[dict[str, str]]: A list of dictionaries mapping field names 
+            to highlighted snippets.
         """
         if not self.channel:
             self.connect()
@@ -62,11 +63,10 @@ class LuceneConnector:
 
             # Only process highlights if enabled
             if enable_highlighting:
-                for i, doc_id in enumerate(response.results):
+                for doc_id in response.results:
                     if doc_id in response.highlights:
-                        highlights[i] = dict(response.highlights[doc_id].fields)
+                        highlights[doc_id] = dict(response.highlights[doc_id].fields)
 
-            logger.debug(f"Processed highlights: {highlights}")
             return response.results, response.scores, highlights
 
         except grpc.RpcError as e:
