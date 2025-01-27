@@ -19,6 +19,7 @@ words # The search page will contain multiple search bars
               rows="1"
               class="search-input"
               append-inner-icon="mdi-magnify"
+              @click:append-inner="searchData"
               :auto-grow="true"
             />
             <div class="syntax-highlight" v-html="highlightedQuery"></div>
@@ -295,7 +296,7 @@ watch(highlightEnabled, (value) => {
 });
 
 const handleKeyDown = (event) => {
-  if (event.key === "Enter") {
+  if (event.key === "Enter" && !event.shiftKey) {
     searchData();
   }
 };
