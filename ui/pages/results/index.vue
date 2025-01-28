@@ -107,7 +107,6 @@ page
         </div>
 
         <div class="details-container">
-          <div class="pa-20">
           <v-card v-if="selectedResult">
             <div class="d-flex align-center pa-4">
               <div class="flex-grow-1">
@@ -339,7 +338,6 @@ page
           </div>
         </div>
       </div>
-    </div>
   </v-main>
 </template>
 
@@ -700,7 +698,7 @@ const formatNumber = (value) => {
 .details-container {
   flex: 1;
   min-width: 0; /* Prevents flex child from overflowing */
-  max-width: 1200px; /* Add maximum width */
+  max-width: 1500px; /* Add maximum width */
   margin: 0 auto; /* Center the container */
 }
 
@@ -899,6 +897,9 @@ const formatNumber = (value) => {
 .description-section {
   font-size: 1rem;
   line-height: 1.6;
+  max-width: 800px; /* Add maximum width */
+  min-width: 0; /* Allow shrinking */
+  overflow-wrap: break-word; /* Ensure long words don't overflow */
 }
 
 .metadata-section {
@@ -1011,10 +1012,14 @@ const formatNumber = (value) => {
 }
 
 /* Make the layout responsive */
-@media (max-width: 768px) {
+@media (max-width: 1200px) { /* Changed from 768px to 1200px */
   .content-wrapper {
     grid-template-columns: 1fr;
     gap: 24px;
+  }
+
+  .description-section {
+    max-width: 100%; /* Allow full width on smaller screens */
   }
 
   .metadata-section {

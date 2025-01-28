@@ -99,7 +99,6 @@ def _apply_field_highlighting(doc: Document, field: str, highlighted: str) -> No
     """Apply highlighting to a specific field in the document."""
     field_split = field.split("_")
     helper = doc
-    logger.debug(f"field: {field} and highlighted: {highlighted}")
     for i in range(len(field_split)):
         if i == len(field_split) - 1:
             helper[field_split[i]] = highlighted
