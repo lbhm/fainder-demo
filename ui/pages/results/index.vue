@@ -210,7 +210,7 @@ page
                     <div class="field-list">
                     <div v-for="(field, fieldIndex) in selectedFile.field" :key="field.id" class="field-item mb-6">
                         <div class="field-header mb-2">
-                          <span class="text-h6 highlight-text" v-html="field.name + ': '"></span>
+                          <span class="text-h6 highlight-text" v-html="field.name"></span>
                           <v-chip class="ml-2" density="compact">{{ field.dataType[0] }}</v-chip>
                         </div>
                         <!-- Numerical Data with Histogram -->
@@ -274,7 +274,7 @@ page
                                 <table class="statistics-table" v-if="field.most_common">
                                   <thead>
                                     <tr>
-                                      <th class="text-left">Value</th>
+                                      <th class="text-left">Most Common Values</th>
                                       <th class="text-right">Count</th>
                                     </tr>
                                   </thead>
@@ -537,9 +537,29 @@ const chartOptions = ref({
       grid: {
         offset: false,
       },
+      title: {
+        display: true,
+        text: 'Bins',
+        font: {
+          size: 11
+        },
+        padding: {
+          top: 10
+        }
+      }
     },
     y: {
       beginAtZero: true,
+      title: {
+        display: true,
+        text: 'Density',
+        font: {
+          size: 11
+        },
+        padding: {
+          right: 10
+        }
+      }
     }
   },
   plugins: {
@@ -849,7 +869,8 @@ const formatNumber = (value) => {
 
 .field-header {
   display: flex;
-  align-items: baseline;
+  align-items: stretch;
+  gap: 8px;
 }
 
 .field-content {
@@ -981,15 +1002,15 @@ const formatNumber = (value) => {
 
 .stat-title {
   font-size: 1.25rem;
-  font-weight: 500;
-  color: rgba(var(--v-theme-on-surface));
+  font-weight: 700;
+  color: rgb(var(--v-theme-on-surface));
   margin-bottom: 8px;
 }
 
 .stat-number {
-  font-size: 2.5rem;
-  font-weight: 600;
-  color: rgb(var(--v-theme-on-surface));
+  font-size: 2rem;
+  font-weight: 500;
+  color: rgba(var(--v-theme-on-surface));
 }
 
 .value-distribution {
