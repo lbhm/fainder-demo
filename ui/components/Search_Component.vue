@@ -17,7 +17,7 @@ words # The search page will contain multiple search bars
               @update:model-value="highlightSyntax"
               @keydown="handleKeyDown"
               hide-details="true"
-              rows="1"
+              :rows="current_rows"
               class="search-input"
               append-inner-icon="mdi-magnify"
               @click:append-inner="searchData"
@@ -252,6 +252,7 @@ const emit = defineEmits(["searchData"]);
 const route = useRoute();
 const temp_fainder_mode = ref(route.query.fainder_mode || "low_memory");
 const temp_enable_highlighting = ref(route.query.enable_highlighting !== 'false');  // Default to true
+const current_rows = ref(1);
 
 const { fainder_mode, enable_highlighting } = useSearchState();
 
@@ -315,6 +316,10 @@ const handleKeyDown = (event) => {
     if (!event.shiftKey) {
       event.preventDefault();
       searchData();
+    }
+  } else if (event.key === "Shift") {
+    if (current_rows.value < props.lines) {
+      current_rows.value += 1; // on shift+enter, increase the number of rows
     }
   }
 };
