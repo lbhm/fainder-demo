@@ -16,6 +16,8 @@ words # The search page will contain multiple search bars
               :rules="[validateSyntax]"
               @update:model-value="highlightSyntax"
               @keydown="handleKeyDown"
+              @focus="isSearchFocused = true"
+              @blur="isSearchFocused = false"
               hide-details="true"
               :rows="current_rows"
               class="search-input"
@@ -285,6 +287,7 @@ const syntaxError = ref("");
 const highlightedQuery = ref("");
 const highlightEnabled = useCookie("highlight-enabled", { default: () => true });
 const isValid = ref(true);
+const isSearchFocused = ref(false);
 
 console.log("Initial fainder_mode:", fainder_mode?.value);
 
@@ -325,6 +328,8 @@ watch(highlightEnabled, (value) => {
 });
 
 const handleKeyDown = (event) => {
+  if (!isSearchFocused.value) return;
+
   if (event.key === "Enter") {
     if (!event.shiftKey) {
       event.preventDefault();
@@ -338,15 +343,14 @@ const handleKeyDown = (event) => {
 };
 
 onMounted(() => {
-  window.addEventListener("keydown", handleKeyDown);
-  // Initialize syntax highlighting if there's an initial search query
+  // Remove window event listener
   if (props.searchQuery) {
     highlightSyntax(props.searchQuery);
   }
 });
 
 onUnmounted(() => {
-  window.removeEventListener("keydown", handleKeyDown);
+  // Remove window event listener cleanup
 });
 
 const textareaMaxHeight = computed(() => `${props.lines * 24 + 26}px`);
