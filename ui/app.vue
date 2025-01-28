@@ -124,7 +124,7 @@
   const theme = useTheme();
   const { query, fainder_mode, currentPage, selectedResultIndex } = useSearchState();
   const colorMode = useColorMode();
-  const highlightEnabled = useCookie('highlight-enabled', { default: () => true })
+  const highlightEnabled = useCookie('fainder_highlight_enabled', { default: () => true })
 
   const internalSearchQuery = computed(() => route.query.query);
   const searchComponentKey = ref(0);

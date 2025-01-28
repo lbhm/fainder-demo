@@ -294,7 +294,7 @@ if (!enable_highlighting.value) {
 const searchQuery = ref(props.searchQuery);
 const syntaxError = ref("");
 const highlightedQuery = ref("");
-const highlightEnabled = useCookie("highlight-enabled", { default: () => true });
+const highlightEnabled = useCookie("fainder_highlight_enabled", { default: () => true });
 const isValid = ref(true);
 const isSearchFocused = ref(false);
 
