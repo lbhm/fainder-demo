@@ -188,7 +188,7 @@ words # The search page will contain multiple search bars
 
             <v-row>
               <v-col cols="12">
-                <div class="d-flex justify-end">
+                <div class="d-flex justify-end gap-2">
                   <v-btn
                     color="success"
                     @click="addFilters"
@@ -197,6 +197,14 @@ words # The search page will contain multiple search bars
                     class="mr-2"
                   >
                     Add
+                  </v-btn>
+                  <v-btn
+                    color="primary"
+                    @click="searchData"
+                    prepend-icon="mdi-magnify"
+                    :disabled="!hasActiveFilters"
+                  >
+                    Run Query
                   </v-btn>
                 </div>
               </v-col>
@@ -694,6 +702,13 @@ const transferCombinedTerm = (term, index) => {
   };
   combinedTerms.value.splice(index, 1);
 };
+
+const hasActiveFilters = computed(() => {
+  return columnTerms.value.length > 0 ||
+         percentileTerms.value.length > 0 ||
+         combinedTerms.value.length > 0 ||
+         (searchQuery.value && searchQuery.value.trim() !== '');
+});
 
 function cancelSettings() {
   showSettings.value = false;
