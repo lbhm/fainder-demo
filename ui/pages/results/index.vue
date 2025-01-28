@@ -936,6 +936,21 @@ const formatNumber = (value) => {
   word-wrap: break-word;
 }
 
+.description-section :deep(ul),
+.description-section :deep(ol) {
+  max-width: 100%;
+  padding-left: 24px;
+  margin: 16px 0;
+  list-style-position: outside;
+}
+
+.description-section :deep(li) {
+  margin-bottom: 8px;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+}
+
 .metadata-section {
   display: flex;
   flex-direction: column;
