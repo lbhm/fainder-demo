@@ -955,7 +955,7 @@ const formatNumber = (value) => {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding-left: 32px;
+  padding-left: 68px; /* Increased from 32px */
   border-left: 1px solid rgba(var(--v-border-opacity), 0.12);
 }
 
@@ -1177,7 +1177,7 @@ const formatNumber = (value) => {
 }
 
 .content-container {
-  padding: 0 16px;
+  padding: 0 8px; /* Reduced from 16px */
 }
 
 .content-container .v-card-title {
