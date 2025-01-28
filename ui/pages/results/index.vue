@@ -63,7 +63,7 @@ page
             :items="results"
           >
             <template v-slot:default="{ item }">
-              <v-card @click="selectResult(item)" :height="80">
+              <v-card @click="selectResult(item)" :height="80" elevation="0">
                 <div class="d-flex align-center">
                   <v-img
                     :src="item.thumbnailUrl"
@@ -105,7 +105,7 @@ page
         </div>
 
         <div class="details-container">
-          <v-card v-if="selectedResult">
+          <v-card v-if="selectedResult" elevation="0">
             <div class="d-flex align-center pa-4">
               <div class="flex-grow-1">
                 <!-- Wrap title and subtitle in a container -->
@@ -152,7 +152,7 @@ page
               </div>
             </div>
 
-              <v-expansion-panels v-model="descriptionPanel">
+              <v-expansion-panels v-model="descriptionPanel" elevation="0">
                 <v-expansion-panel>
                   <v-expansion-panel-title class="panel-title">Details</v-expansion-panel-title>
                   <v-expansion-panel-text>
@@ -190,7 +190,7 @@ page
                 </v-expansion-panel>
               </v-expansion-panels>
 
-              <v-expansion-panels v-if="selectedResult?.recordSet?.length > 0" v-model="recordSetPanel">
+              <v-expansion-panels v-if="selectedResult?.recordSet?.length > 0" v-model="recordSetPanel" elevation="0">
                 <v-expansion-panel>
                   <v-expansion-panel-title class="panel-title">
                     Data Explorer
@@ -297,7 +297,7 @@ page
                   </v-expansion-panel-text>
                 </v-expansion-panel>
               </v-expansion-panels>
-              <v-expansion-panels v-model="metadataPanel">
+              <v-expansion-panels v-model="metadataPanel" elevation="0">
                 <v-expansion-panel>
                   <v-expansion-panel-title class="panel-title">Metadata</v-expansion-panel-title>
                   <v-expansion-panel-text>
@@ -909,6 +909,31 @@ const formatNumber = (value) => {
   max-width: 800px; /* Add maximum width */
   min-width: 0; /* Allow shrinking */
   overflow-wrap: break-word; /* Ensure long words don't overflow */
+}
+
+/* Add new styles for markdown content */
+.description-section :deep(.markdown-body) {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.description-section :deep(img) {
+  max-width: 100%;
+  height: auto;
+}
+
+.description-section :deep(table) {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+}
+
+.description-section :deep(pre) {
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
 }
 
 .metadata-section {

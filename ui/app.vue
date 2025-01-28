@@ -79,7 +79,7 @@
       transition="dialog-top-transition"
       maxWidth="56rem"
     >
-      <v-card>
+      <v-card elevation="0">
         <v-toolbar dark color="primary">
           <v-btn icon dark @click="showSearchDialog = false">
             <v-icon>mdi-close</v-icon>

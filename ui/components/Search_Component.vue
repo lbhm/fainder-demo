@@ -206,7 +206,7 @@ words # The search page will contain multiple search bars
 
     <!-- Settings Dialog -->
     <v-dialog v-model="showSettings" width="500">
-      <v-card>
+      <v-card elevation="0">
         <v-card-title class="text-h5 mt-2"> Search Settings </v-card-title>
 
         <v-card-text>
@@ -283,7 +283,7 @@ if (!enable_highlighting.value) {
 const searchQuery = ref(props.searchQuery);
 const syntaxError = ref("");
 const highlightedQuery = ref("");
-const highlightEnabled = useCookie("highlight-enabled");
+const highlightEnabled = useCookie("highlight-enabled", { default: () => true });
 const isValid = ref(true);
 
 console.log("Initial fainder_mode:", fainder_mode?.value);
