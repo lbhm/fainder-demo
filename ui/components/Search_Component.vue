@@ -38,6 +38,7 @@ words # The search page will contain multiple search bars
             variant="text"
             elevation="0"
             density="compact"
+            class="ml-2"
           >
           </v-btn>
         </v-col>

@@ -13,12 +13,13 @@
           :lines="1"
           :queryBuilder="false"
           @searchData="searchData"
-          class="app-bar-search mx-2"
+          class="app-bar-search"
         />
         <v-btn
           icon
           @click="showSearchDialog = true"
           density="compact"
+          class="ml-2"
         >
           <v-icon>mdi-arrow-expand</v-icon>
         </v-btn>
@@ -178,7 +179,7 @@
 
 <style scoped>
 .app-bar-search {
-  max-width: 800px;  /* Increased from 600px */
+  max-width: 1200px;  /* Increased from 800px */
   flex-grow: 1;
 }
 
