@@ -7,15 +7,6 @@ page
     <v-main>
       <v-divider></v-divider>
       <div class="pa-5">
-      <!-- Remove search container -->
-
-      <!-- Add search stats -->
-      <div
-        v-if="!isLoading && !error && results && results.length > 0"
-        class="search-stats mb-4"
-      >
-        Found {{ resultCount }} results in {{ searchTime.toFixed(4) }}s
-      </div>
 
       <!-- Error message -->
       <v-alert v-if="error" type="error" class="mt-4" prominent>
@@ -48,6 +39,13 @@ page
       <!-- Main Content -->
       <div class="results-wrapper">
         <div class="list-container">
+                <!-- Add search stats -->
+          <div
+            v-if="!isLoading && !error && results && results.length > 0"
+            class="search-stats mb-4"
+          >
+            Found {{ resultCount }} results in {{ searchTime.toFixed(4) }}s
+          </div>
           <!-- Remove the Modify Search button since we have inline search now -->
 
           <!-- Loading state -->
@@ -419,7 +417,7 @@ const selectedFile = computed(() => {
 
 // Add ref for window height
 const windowHeight = ref(window.innerHeight);
-const itemHeight = 100; // Height of each result card in pixels
+const itemHeight = 80; // Height of each result card in pixels
 const headerHeight = 200; // Approximate height of header elements (search + stats)
 const paginationHeight = 56; // Height of pagination controls
 
@@ -683,23 +681,33 @@ const formatNumber = (value) => {
   display: flex;
   gap: 24px;
   flex: 1;
+  position: relative;
+  padding-left: 400px; /* Add space for fixed list-container */
+  position: relative;
+  z-index: 1;
+  margin-top: 16px; /* Add space for potential error messages */
 }
 
 .list-container {
-  flex: 0 0 30%;
-  min-width: 300px;
-  max-width: 400px;
-  position: sticky;
-  top: 24px; /* Adjust based on your layout's top spacing */
-  height: calc(100vh - 48px); /* Adjust based on your layout's spacing */
-  overflow-y: auto; /* Allow scrolling within the container */
+  flex: 0 0 auto;
+  width: 376px; /* 400px - 24px gap */
+  position: fixed;
+  left: 24px; /* Match padding from parent container */
+  top: 100px; /* Match header height */
+  bottom: 0;
+  overflow-y: auto;
+  background: rgb(var(--v-theme-background));
+  z-index: 1; /* Lower than error message */
+  padding-right: 16px;
 }
 
 .details-container {
   flex: 1;
   min-width: 0; /* Prevents flex child from overflowing */
-  max-width: 1500px; /* Add maximum width */
+  max-width: 1500px;
   margin: 0 auto; /* Center the container */
+  padding-bottom: 24px;
+  width: 100%;
 }
 
 .mb-6 {
@@ -1048,6 +1056,29 @@ const formatNumber = (value) => {
 }
 
 @media (max-width: 1024px) {
+  .results-wrapper {
+    padding-left: 0;
+    flex-direction: column;
+    height: auto;
+  }
+
+  .list-container {
+    position: relative;
+    width: 100%;
+    left: 0;
+    top: 0;
+    height: auto;
+    max-height: 400px; /* Limit height on mobile */
+    margin-bottom: 24px;
+  }
+
+  .details-container {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
   .field-content {
     grid-template-columns: 1fr;
   }
@@ -1070,6 +1101,21 @@ const formatNumber = (value) => {
 
   .value-label {
     max-width: none;
+  }
+}
+
+/* Add specific mobile styles */
+@media (max-width: 600px) {
+  .pa-5 {
+    padding: 12px !important;
+  }
+
+  .list-container {
+    max-height: 300px; /* Even smaller on mobile */
+  }
+
+  .content-wrapper {
+    padding: 12px;
   }
 }
 
@@ -1121,5 +1167,17 @@ const formatNumber = (value) => {
 .rounded-image {
   border-radius: 5px;
   overflow: hidden;
+}
+
+.pa-5 {
+  position: relative;
+  z-index: 2; /* Higher than list-container */
+}
+
+/* Update alert styles */
+:deep(.v-alert) {
+  position: relative;
+  z-index: 2;
+  margin-bottom: 16px;
 }
 </style>
