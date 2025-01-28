@@ -1,7 +1,7 @@
 <template>
   <v-app>
     <v-app-bar :elevation="0" height="85">
-      <Logo size="medium" class="mr-4 ml-4" @click="gotoHome"/>
+      <Logo size="medium" class="mr-4 ml-4 clickable" @click="gotoHome"/>
       <v-spacer></v-spacer>
 
       <!-- Add search component in app bar only on results page -->
@@ -184,5 +184,9 @@
 
 .app-bar-search :deep(.v-field) {
   border-radius: 20px;
+}
+
+.clickable {
+  cursor: pointer;
 }
 </style>
