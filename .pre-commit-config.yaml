@@ -30,6 +30,17 @@ repos:
         language: system
         types:
           - python
+      - id: prettier
+        name: prettier
+        entry: ui/node_modules/.bin/prettier
+        require_serial: true
+        language: system
+        types_or:
+          - css
+          - html
+          - javascript
+          - ts
+          - vue
   - repo: 'https://github.com/shellcheck-py/shellcheck-py'
     rev: v0.10.0.1
     hooks:

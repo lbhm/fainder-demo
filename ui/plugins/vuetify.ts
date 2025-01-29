@@ -1,12 +1,12 @@
-import '@mdi/font/css/materialdesignicons.css'
-import 'vuetify/styles'
-import { createVuetify } from 'vuetify'
-import { aliases, mdi } from 'vuetify/iconsets/mdi'
+import "@mdi/font/css/materialdesignicons.css";
+import "vuetify/styles";
+import { createVuetify } from "vuetify";
+import { aliases, mdi } from "vuetify/iconsets/mdi";
 
 export default defineNuxtPlugin((app) => {
   const vuetify = createVuetify({
     icons: {
-      defaultSet: 'mdi',
+      defaultSet: "mdi",
       aliases,
       sets: {
         mdi,
@@ -16,12 +16,12 @@ export default defineNuxtPlugin((app) => {
       themes: {
         light: {
           colors: {
-            primary: '#1867C0',
-            secondary: '#5CBBF6',
+            primary: "#1867C0",
+            secondary: "#5CBBF6",
           },
         },
       },
     },
-  })
-  app.vueApp.use(vuetify)
-})
+  });
+  app.vueApp.use(vuetify);
+});

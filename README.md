@@ -135,6 +135,9 @@ backend component. You just have to run:
 cd backend/
 uv sync --extra dev
 uv run pre-commit install
+
+cd ../ui/
+npm install
 ```
 
 ## Generating gRPC Code

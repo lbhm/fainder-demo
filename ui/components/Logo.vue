@@ -8,12 +8,12 @@
 defineProps({
   size: {
     type: String,
-    default: 'small', // 'small', 'medium', 'large'
+    default: "small", // 'small', 'medium', 'large'
   },
   alt: {
     type: String,
-    default: 'Fainder Logo'
-  }
+    default: "Fainder Logo",
+  },
 });
 </script>
 

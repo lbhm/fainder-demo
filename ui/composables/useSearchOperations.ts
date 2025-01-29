@@ -1,7 +1,7 @@
-import { useSearchState } from './useSearchState'
+import { useSearchState } from "./useSearchState";
 
 export const useSearchOperations = () => {
-  const runtimeConfig = useRuntimeConfig()
+  const runtimeConfig = useRuntimeConfig();
   const {
     results,
     selectedResultIndex,
@@ -12,13 +12,20 @@ export const useSearchOperations = () => {
     totalPages,
     currentPage,
     perPage,
-  } = useSearchState()
+  } = useSearchState();
 
-  const loadResults = async (queryStr: string, page = 1, fainder_mode?: string, enable_highlighting?: boolean) => {
-    isLoading.value = true
-    error.value = null
+  const loadResults = async (
+    queryStr: string,
+    page = 1,
+    fainder_mode?: string,
+    enable_highlighting?: boolean
+  ) => {
+    isLoading.value = true;
+    error.value = null;
 
-    console.log(`Loading results for query: ${queryStr}, page: ${page}, fainder_mode: ${fainder_mode}, enable_highlighting: ${enable_highlighting}` );
+    console.log(
+      `Loading results for query: ${queryStr}, page: ${page}, fainder_mode: ${fainder_mode}, enable_highlighting: ${enable_highlighting}`
+    );
 
     try {
       const response = await fetch(`${runtimeConfig.public.apiBase}/query`, {
@@ -34,7 +41,7 @@ export const useSearchOperations = () => {
           query: queryStr,
           page: page,
           per_page: perPage.value,
-          fainder_mode: fainder_mode || 'low_memory',
+          fainder_mode: fainder_mode || "low_memory",
           enable_highlighting: enable_highlighting,
         }),
       });
@@ -46,14 +53,17 @@ export const useSearchOperations = () => {
           const errorJson = JSON.parse(errorBody);
           details = errorJson.detail || errorJson.message || errorBody;
         } catch {
-          details = errorBody || `Server returned ${response.status} ${response.statusText}`;
+          details =
+            errorBody ||
+            `Server returned ${response.status} ${response.statusText}`;
         }
 
         error.value = {
-          message: response.status === 500
-            ? 'Internal Server Error'
-            : `Search request failed (${response.status} ${response.statusText})`,
-          details: details
+          message:
+            response.status === 500
+              ? "Internal Server Error"
+              : `Search request failed (${response.status} ${response.statusText})`,
+          details: details,
         };
         results.value = null;
         selectedResultIndex.value = 0;
@@ -70,7 +80,12 @@ export const useSearchOperations = () => {
       // Only set selectedResultIndex to 0 if it's a new search (page 1)
       // and there's no existing index in the route
       const route = useRoute();
-      if (page === 1 && !route.query.index && r.results && r.results.length > 0) {
+      if (
+        page === 1 &&
+        !route.query.index &&
+        r.results &&
+        r.results.length > 0
+      ) {
         selectedResultIndex.value = 0;
       }
 
@@ -79,16 +94,16 @@ export const useSearchOperations = () => {
       const err = e as Error;
       error.value = {
         message: "Failed to perform search",
-        details: err.message || String(e)
+        details: err.message || String(e),
       };
       results.value = null;
-      selectedResultIndex.value = 0;  // Reset index on error
+      selectedResultIndex.value = 0; // Reset index on error
     } finally {
       isLoading.value = false;
     }
-  }
+  };
 
   return {
-    loadResults
-  }
-}
+    loadResults,
+  };
+};

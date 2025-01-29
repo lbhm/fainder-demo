@@ -17,31 +17,32 @@
 </template>
 
 <script setup>
-
 const route = useRoute();
 const q = route.query;
-
 const query = ref(q.query);
 
-async function searchData({ query: searchQuery, fainder_mode: newfainder_mode, enable_highlighting }) {
+async function searchData({
+  query: searchQuery,
+  fainder_mode: newfainder_mode,
+  enable_highlighting,
+}) {
   // If query is empty or undefined, reset the URL without query parameters
-  if (!searchQuery || searchQuery.trim() === '') {
+  if (!searchQuery || searchQuery.trim() === "") {
     return await navigateTo({
-      path: '/',
-      replace: true
+      path: "/",
+      replace: true,
     });
   }
 
   return await navigateTo({
-    path: '/results',
+    path: "/results",
     query: {
       query: searchQuery,
       fainder_mode: newfainder_mode,
-      enable_highlighting: enable_highlighting
-    }
+      enable_highlighting: enable_highlighting,
+    },
   });
 }
-
 </script>
 
 <style scoped>

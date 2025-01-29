@@ -295,7 +295,9 @@ if (!enable_highlighting.value) {
 const searchQuery = ref(props.searchQuery);
 const syntaxError = ref("");
 const highlightedQuery = ref("");
-const highlightEnabled = useCookie("fainder_highlight_enabled", { default: () => true });
+const highlightEnabled = useCookie("fainder_highlight_enabled", {
+  default: () => true,
+});
 const isValid = ref(true);
 const isSearchFocused = ref(false);
 
@@ -358,7 +360,7 @@ onMounted(() => {
   }
 
   // Focus the textarea
-  const textarea = document.querySelector('.search-input textarea');
+  const textarea = document.querySelector(".search-input textarea");
   if (textarea) {
     textarea.focus();
   }
@@ -711,10 +713,12 @@ const transferCombinedTerm = (term, index) => {
 };
 
 const hasActiveFilters = computed(() => {
-  return columnTerms.value.length > 0 ||
-         percentileTerms.value.length > 0 ||
-         combinedTerms.value.length > 0 ||
-         (searchQuery.value && searchQuery.value.trim() !== '');
+  return (
+    columnTerms.value.length > 0 ||
+    percentileTerms.value.length > 0 ||
+    combinedTerms.value.length > 0 ||
+    (searchQuery.value && searchQuery.value.trim() !== "")
+  );
 });
 
 function cancelSettings() {
@@ -729,15 +733,14 @@ function saveSettings() {
   console.log("New highlighting enabled:", enable_highlighting.value);
   // update route
   const route = useRoute();
-  navigateTo(
-    {path: route.path,
-      query: {
-        ...route.query,
-        fainder_mode: temp_fainder_mode.value,
-        enable_highlighting: temp_enable_highlighting.value,
-      }}
-  );
-
+  navigateTo({
+    path: route.path,
+    query: {
+      ...route.query,
+      fainder_mode: temp_fainder_mode.value,
+      enable_highlighting: temp_enable_highlighting.value,
+    },
+  });
 }
 </script>
 
