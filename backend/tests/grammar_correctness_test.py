@@ -10,17 +10,19 @@ TEST_CASES: dict[str, dict[str, dict[str, dict[str, Any]]]] = {
     "basic_keyword": {
         "queries": {
             "simple_keyword": {"query": "kw(germany)", "expected": [0]},
-            "simple_keyword_a": {"query": "kw(*a*)", "expected": [2, 1, 0]},
-            "not_keyword": {"query": "NOT kw(*a*)", "expected": []},
+            "not_keyword": {"query": "NOT kw(germany)", "expected": [2, 1]},
         }
     },
-    "field_specific_keyword": {
+    "queryparser": {
         "queries": {
             "field_specific_keyword": {"query": 'kw(alternateName:"Weather")', "expected": [0]},
             "field_specific_keyword_or": {
                 "query": 'kw(alternateName:"Weather" OR *a*)',
                 "expected": [0, 2, 1],
             },
+            "wildcard_searches": {"query": 'kw(alternateName:"Wea*")', "expected": [0]},
+            "wildcard_searches_2": {"query": "kw(Germa?y)", "expected": [0, 2, 1]},
+            "double_wildcard_searches": {"query": "kw(*a*)", "expected": [2, 1, 0]},
         }
     },
     "basic_percentile": {
@@ -44,7 +46,7 @@ TEST_CASES: dict[str, dict[str, dict[str, dict[str, Any]]]] = {
                 "expected": [0, 1, 2],
             },
             "high_percentile_xor_simple_keyword_a": {
-                "query": "col(pp(0.9;ge;1000000)) XOR kw(*a*)",
+                "query": "col(pp(0.5;ge;2000)) XOR kw(germany)",
                 "expected": [0],
             },
         }
