@@ -35,8 +35,8 @@ public class LuceneSearch {
         "publisher_name", 0.8f, // Lower weight for publisher
         "alternateName", 0.5f   // Lowest weight for alternate names
     );
-    private final QueryParser[] fieldParsers;
     private final StandardAnalyzer analyzer;
+    private final QueryParser[] fieldParsers;
 
     // Constant flag for testing different implementations
     private final Boolean BOOL_FILTER;
@@ -47,34 +47,18 @@ public class LuceneSearch {
         searcher = new IndexSearcher(reader);
         // Configure analyzer to keep stop words
         analyzer = new StandardAnalyzer(CharArraySet.EMPTY_SET);
-
-        // Create a parser for each field
         fieldParsers = searchFields.entrySet().stream()
-            .map(entry -> {
-                QueryParser parser = new QueryParser(entry.getKey(), analyzer);
-                parser.setDefaultOperator(QueryParser.Operator.OR);
-                return parser;
-            })
-            .toArray(QueryParser[]::new);
+                .map(entry -> {
+                    QueryParser parser = new QueryParser(entry.getKey(), analyzer);
+                    parser.setDefaultOperator(QueryParser.Operator.OR);
+                    parser.setAllowLeadingWildcard(true); // TODO: Investigate performance impact
+                    return parser;
+                })
+                .toArray(QueryParser[]::new);
 
         BOOL_FILTER = false;
     }
 
-    private Query createHighlightQuery(String queryText) throws ParseException {
-        BooleanQuery.Builder queryBuilder = new BooleanQuery.Builder();
-        String escapedQuery = QueryParser.escape(queryText);
-
-        for (Map.Entry<String, Float> field : searchFields.entrySet()) {
-            QueryParser parser = new QueryParser(field.getKey(), analyzer);
-            parser.setDefaultOperator(QueryParser.Operator.OR);
-
-            // Add exact match
-            Query exactQuery = parser.parse(escapedQuery);
-            queryBuilder.add(exactQuery, BooleanClause.Occur.SHOULD);
-
-        }
-        return queryBuilder.build();
-    }
 
     public static class SearchResult {
         public List<Integer> docIds;
@@ -91,26 +75,27 @@ public class LuceneSearch {
     private Query createMultiFieldQuery(String queryText) throws ParseException {
         // TODO: Investigate performance and if this breaks the query
         BooleanQuery.Builder queryBuilder = new BooleanQuery.Builder();
-        String escapedQuery = QueryParser.escape(queryText);
 
         // Add a subquery for each field with its boost
         int i = 0;
         for (Map.Entry<String, Float> field : searchFields.entrySet()) {
             // Create boosted queries for each type of match
             Float boost = field.getValue();
-            QueryParser parser = fieldParsers[i++];
+            QueryParser parser =  fieldParsers[i];
+            i++;
+            parser.setAllowLeadingWildcard(true);
 
             // Exact match (highest boost)
-            Query exactQuery = parser.parse("(" + escapedQuery + ")^" + (boost * 2.0f));
+            Query exactQuery = parser.parse("(" + queryText + ")^" + boost);
             queryBuilder.add(exactQuery, BooleanClause.Occur.SHOULD);
 
             // Fuzzy match for typos
-            Query fuzzyQuery = parser.parse("(" + escapedQuery + "~)^" + boost);
-            queryBuilder.add(fuzzyQuery, BooleanClause.Occur.SHOULD);
+            // Query fuzzyQuery = parser.parse("(" + queryText + "~)^" + boost);
+            //queryBuilder.add(fuzzyQuery, BooleanClause.Occur.SHOULD);
 
             // Prefix match for partial words
-            Query prefixQuery = parser.parse("(" + escapedQuery + "*)^" + (boost * 0.5f));
-            queryBuilder.add(prefixQuery, BooleanClause.Occur.SHOULD);
+            // Query prefixQuery = parser.parse("(" + queryText + "*)^" + (boost * 0.5f));
+            // queryBuilder.add(prefixQuery, BooleanClause.Occur.SHOULD);
         }
 
         return queryBuilder.build();
@@ -134,8 +119,7 @@ public class LuceneSearch {
             Highlighter highlighter = null;
 
             if (enableHighlighting) {
-                Query highlightQuery = createHighlightQuery(query);
-                QueryScorer scorer = new QueryScorer(highlightQuery);
+                QueryScorer scorer = new QueryScorer(multiFieldQuery);
                 SimpleHTMLFormatter htmlFormatter = new SimpleHTMLFormatter("<mark>", "</mark>");
                 highlighter = new Highlighter(htmlFormatter, scorer);
                 highlighter.setMaxDocCharsToAnalyze(Integer.MAX_VALUE);
@@ -157,7 +141,6 @@ public class LuceneSearch {
                 } else {
                     CustomCollectorManager collectorManager = new CustomCollectorManager(maxResults, docIds);
                     hits = searcher.search(multiFieldQuery, collectorManager).scoreDocs;
-                    hits = searcher.search(multiFieldQuery, collectorManager).scoreDocs;
                 }
             } else {
                 hits = searcher.search(multiFieldQuery, maxResults).scoreDocs;
@@ -175,7 +158,7 @@ public class LuceneSearch {
                 int resultId = Integer.parseInt(doc.get("id"));
                 Map<String, String> docHighlights = new HashMap<>();
 
-                if (enableHighlighting && highlighter != null) {
+                if (enableHighlighting) {
                     // Only process highlights if enabled
                     for (String fieldName : searchFields.keySet()) {
                         String fieldContent = doc.get(fieldName);
@@ -183,7 +166,7 @@ public class LuceneSearch {
                             try {
                                 String[] fragments = highlighter.getBestFragments(analyzer, fieldName, fieldContent, 1000);
                                 String highlighted = String.join(" ... ", fragments);
-                                if (highlighted != null && !highlighted.isEmpty()) {
+                                if (!highlighted.isEmpty()) {
                                     docHighlights.put(fieldName, highlighted);
                                 }
                             } catch (InvalidTokenOffsetsException e) {
