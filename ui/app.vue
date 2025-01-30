@@ -116,7 +116,7 @@
 
   function gotoHome() {
     console.log('go to home')
-    return navigateTo({path:'/'})
+    return navigateTo({path:'/', query: {...route.query, theme: theme.global.name.value}})
   }
 
   const { loadResults } = useSearchOperations();
