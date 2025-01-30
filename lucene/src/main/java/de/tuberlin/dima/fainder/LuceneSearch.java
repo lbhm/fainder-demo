@@ -81,9 +81,7 @@ public class LuceneSearch {
         for (Map.Entry<String, Float> field : searchFields.entrySet()) {
             // Create boosted queries for each type of match
             Float boost = field.getValue();
-            QueryParser parser =  fieldParsers[i];
-            i++;
-            parser.setAllowLeadingWildcard(true);
+            QueryParser parser =  fieldParsers[i++];
 
             // Exact match (highest boost)
             Query exactQuery = parser.parse("(" + queryText + ")^" + boost);
