@@ -257,7 +257,6 @@ words # The search page will contain multiple search bars
 
 <script setup>
 import { onMounted, ref, watch, computed } from "vue";
-import { fi } from "vuetify/locale";
 
 const props = defineProps({
   searchQuery: String,
