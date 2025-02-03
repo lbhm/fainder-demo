@@ -116,7 +116,8 @@
 
   function gotoHome() {
     console.log('go to home')
-    return navigateTo({path:'/', query: {...route.query, theme: theme.global.name.value}})
+    // keep everything in the query except the query string
+    return navigateTo({path:'/', query: { ...route.query, query: undefined, theme: theme.global.name.value }})
   }
 
   const { loadResults } = useSearchOperations();
