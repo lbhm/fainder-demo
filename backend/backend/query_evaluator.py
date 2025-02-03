@@ -118,48 +118,73 @@ class QueryAnnotator(Visitor):
     # TODO: We need to investigate this class because nodes are annotated too often
 
     def __init__(self) -> None:
-        self.current_operator: str | None = None
-        self.current_side: str | None = None
+        self.current_operator_docs: str | None = None
+        self.current_side_docs: str | None = None
+        self.current_operator_cols: str | None = None
+        self.current_side_cols: str | None = None
 
     def reset(self) -> None:
-        self.current_operator = None
-        self.current_side = None
+        self.current_operator_docs = None
+        self.current_side_docs = None
+        self.current_operator_cols = None
+        self.current_side_cols = None
 
-    def query(self, tree: Tree):
+    def column_query(self, tree: Tree):
         if len(tree.children) == 3:  # Has operator
-            old_operator = self.current_operator
-            old_side = self.current_side
+            old_operator = self.current_operator_cols
+            old_side = self.current_side_cols
 
             assert isinstance(tree.children[1], Token)
-            self.current_operator = tree.children[1].value
+            self.current_operator_cols = tree.children[1].value
 
             # Visit left side
-            self.current_side = "left"
+            self.current_side_cols = "left"
             self.visit(tree.children[0])
 
             # Visit right side
-            self.current_side = "right"
+            self.current_side_cols = "right"
             self.visit(tree.children[2])
 
-            self.current_operator = old_operator
-            self.current_side = old_side
+            self.current_operator_cols = old_operator
+            self.current_side_cols = old_side
+        else:
+            self.visit(tree.children[0])
+
+    def query(self, tree: Tree):
+        if len(tree.children) == 3:  # Has operator
+            old_operator = self.current_operator_docs
+            old_side = self.current_side_docs
+
+            assert isinstance(tree.children[1], Token)
+            self.current_operator_docs = tree.children[1].value
+
+            # Visit left side
+            self.current_side_docs = "left"
+            self.visit(tree.children[0])
+
+            # Visit right side
+            self.current_side_docs = "right"
+            self.visit(tree.children[2])
+
+            self.current_operator_docs = old_operator
+            self.current_side_docs = old_side
         else:
             self.visit(tree.children[0])
 
     def percentileterm(self, tree: Tree) -> None:
-        if self.current_operator:
-            tree.children.append(self.current_operator)
-            tree.children.append(self.current_side)
+        if self.current_operator_docs:
+            tree.children.append(self.current_operator_docs)
+            tree.children.append(self.current_side_docs)
 
     def keywordterm(self, tree: Tree) -> None:
-        if self.current_operator:
-            tree.children.append(self.current_operator)
-            tree.children.append(self.current_side)
+        if self.current_operator_docs:
+            tree.children.append(self.current_operator_docs)
+            tree.children.append(self.current_side_docs)
 
     def columnterm(self, tree: Tree) -> None:
-        if self.current_operator:
-            tree.children.append(self.current_operator)
-            tree.children.append(self.current_side)
+        if self.current_operator_docs:
+            tree.children.append(self.current_operator_cols)
+            tree.children.append(self.current_side_cols)
 
 
 class QueryExecutor(Transformer):
@@ -167,7 +192,8 @@ class QueryExecutor(Transformer):
 
     fainder_mode: FainderMode
     scores: dict[int, float]
-    last_result: set[int] | set[uint32] | None
+    last_result_docs: set[int] | None
+    last_result_cols: set[uint32] | None
     current_side: str | None
 
     def __init__(
@@ -187,21 +213,33 @@ class QueryExecutor(Transformer):
 
         self.reset(fainder_mode, enable_highlighting, enable_filtering)
 
-    def _get_column_filter(
-        self, operator: str | None, side: str | None
-    ) -> set[int] | set[uint32] | None:
+    def _get_doc_filter(self, operator: str | None, side: str | None) -> set[int] | None:
         """Create a document filter for AND operators based on previous results."""
         if (
             not self.enable_filtering
-            or not self.last_result
+            or not self.last_result_docs
             or operator != "AND"
             or side != "right"
         ):
             return None
 
         # Only apply filters to the right side of AND operations
-        logger.trace(f"Applying filter from previous result: {self.last_result}")
-        return self.last_result
+        logger.trace(f"Applying filter from previous result: {self.last_result_docs}")
+        return self.last_result_docs
+
+    def _get_col_filter(self, operator: str | None, side: str | None) -> set[uint32] | None:
+        """Create a column filter for AND operators based on previous results."""
+        if (
+            not self.enable_filtering
+            or not self.last_result_cols
+            or operator != "AND"
+            or side != "right"
+        ):
+            return None
+
+        # Only apply filters to the right side of AND operations
+        logger.trace(f"Applying filter from previous result: {self.last_result_cols}")
+        return self.last_result_cols
 
     def reset(
         self,
@@ -210,12 +248,13 @@ class QueryExecutor(Transformer):
         enable_filtering: bool = False,
     ) -> None:
         self.scores = defaultdict(float)
-        self.last_result = None
+        self.last_result_docs = None
         self.current_side = None
 
         self.fainder_mode = fainder_mode
         self.enable_highlighting = enable_highlighting
         self.enable_filtering = enable_filtering
+        self.last_result_cols = None
 
     def updates_scores(self, doc_ids: Sequence[int], scores: Sequence[float]) -> None:
         logger.trace(f"Updating scores for {len(doc_ids)} documents")
@@ -231,29 +270,33 @@ class QueryExecutor(Transformer):
         percentile = float(items[0].value)
         comparison = items[1].value
         reference = float(items[2].value)
-        # operator = None
-        # side = None
-        # if len(items) >= 5:
-        # operator = items[-2]
-        # side = items[-1]
 
-        # TODO: add filter
         hist_filter = None
+        if len(items) >= 5:
+            operator = items[-2]
+            side = items[-1]
+            col_filter = self._get_col_filter(operator, side)
+            if col_filter is not None:
+                hist_filter = col_to_hist_ids(col_filter, self.metadata.col_to_hist)
 
         result_hists = self.fainder_index.search(
             percentile, comparison, reference, self.fainder_mode, hist_filter
         )
-        # TODO: update last_result
-        return hist_to_col_ids(result_hists, self.metadata.hist_to_col)
+
+        col_ids = hist_to_col_ids(result_hists, self.metadata.hist_to_col)
+        self.last_result_cols = col_ids
+
+        return col_ids
 
     def keywordterm(self, items: list[Token]) -> tuple[set[int], Highlights]:
         logger.trace(f"Evaluating keyword term: {items}")
         keyword = items[0].value.strip()
-        # operator = items[-2] if len(items) > 2 else None
-        # side = items[-1] if len(items) > 2 else None
 
-        # TODO: add filter
         doc_filter = None
+        if len(items) >= 3:
+            operator = items[-2]
+            side = items[-1]
+            doc_filter = self._get_doc_filter(operator, side)
 
         # Get results and highlights
         result_docs, scores, highlights = self.lucene_connector.evaluate_query(
@@ -261,21 +304,25 @@ class QueryExecutor(Transformer):
         )
         self.updates_scores(result_docs, scores)
 
-        return set(result_docs), (highlights, set())  # Return empty set for column highlights
+        results_docs_set = set(result_docs)
+        self.last_result_docs = results_docs_set
+
+        return results_docs_set, (highlights, set())  # Return empty set for column highlights
 
     def nameterm(self, items: list[Token]) -> set[uint32]:
         logger.trace(f"Evaluating column term: {items}")
         column = items[0].value.strip()
         k = int(items[1].value.strip())
-        # operator = items[-2] if len(items) > 2 else None
-        # side = items[-1] if len(items) > 2 else None
 
-        # TODO: fix this
         column_filter = None
+        if len(items) >= 4:
+            operator = items[-2]
+            side = items[-1]
+            column_filter = self._get_col_filter(operator, side)
 
         result = self.hnsw_index.search(column, k, column_filter)
         logger.trace(f"Result of column search with column:{column} k:{k}r: {result}")
-        # TODO: update results
+        self.last_result_cols = result
 
         return result
 
@@ -307,7 +354,9 @@ class QueryExecutor(Transformer):
         to_negate = items[0]
         # For column expressions, we negate using the set of all column IDs
         all_columns = {uint32(col_id) for col_id in self.metadata.col_to_doc}
-        return all_columns - to_negate
+        result_cols = all_columns - to_negate
+        self.last_result_cols = result_cols
+        return result_cols
 
     def columnterm(self, items: tuple[Token, set[uint32]]) -> set[uint32]:
         logger.trace(f"Evaluating column term with {items} items")
@@ -317,10 +366,12 @@ class QueryExecutor(Transformer):
         self, items: tuple[Token, set[uint32] | tuple[set[int], Highlights]]
     ) -> tuple[set[int], Highlights]:
         logger.trace(f"Evaluating term with items: {items}")
+        doc_ids: set[int]
         if items[0].value.strip().lower() in ["column", "col"]:
             col_ids: set[uint32] = items[1]  # type: ignore
-            return col_to_doc_ids(col_ids, self.metadata.col_to_doc), ({}, col_ids)
-        doc_ids: set[int]
+            doc_ids = col_to_doc_ids(col_ids, self.metadata.col_to_doc)
+            self.last_result_docs = doc_ids
+            return doc_ids, ({}, col_ids)
         highlights: Highlights
         doc_ids, highlights = items[1]  # type: ignore
         return doc_ids, highlights
@@ -329,7 +380,9 @@ class QueryExecutor(Transformer):
         logger.trace(f"Evaluating NOT expression with {len(items)} items")
         to_negate, _ = items[0]
         all_docs = set(self.metadata.doc_to_cols.keys())
-        return all_docs - to_negate, ({}, set())  # Negate all documents
+        result_docs = all_docs - to_negate
+        self.last_result_docs = result_docs
+        return result_docs, ({}, set())
 
     def expression(self, items: list[tuple[set[int], Highlights]]) -> tuple[set[int], Highlights]:
         logger.trace(f"Evaluating expression with {len(items[0])} items")

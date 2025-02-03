@@ -73,5 +73,5 @@ def evaluator() -> QueryEvaluator:
         fainder_index=fainder_index,
         hnsw_index=column_index,
         metadata=metadata,
-        cache_size=100,
+        cache_size=0,
     )

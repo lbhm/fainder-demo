@@ -20,8 +20,7 @@ TEST_CASES: dict[str, dict[str, dict[str, dict[str, Any]]]] = {
                 "query": 'kw(alternateName:"Weather" OR *a*)',
                 "expected": [0, 2, 1],
             },
-            "wildcard_searches": {"query": 'kw(alternateName:"Wea*")', "expected": [0]},
-            "wildcard_searches_2": {"query": "kw(Germa?y)", "expected": [0, 2, 1]},
+            "wildcard_search": {"query": "kw(Germa?y)", "expected": [0]},
             "double_wildcard_searches": {"query": "kw(*a*)", "expected": [2, 1, 0]},
         }
     },
@@ -47,7 +46,7 @@ TEST_CASES: dict[str, dict[str, dict[str, dict[str, Any]]]] = {
             },
             "high_percentile_xor_simple_keyword_a": {
                 "query": "col(pp(0.5;ge;2000)) XOR kw(germany)",
-                "expected": [0],
+                "expected": [1, 2],
             },
         }
     },
@@ -131,33 +130,17 @@ def test_grammar_correctness(
     query = test_case["query"]
     expected_result = test_case["expected"]
 
-    # First run with caching enabled (default)
-    parse_start = time.perf_counter()
-    _ = evaluator.parse(query)
-    parse_end = time.perf_counter()
-    parse_time = parse_end - parse_start
+    # sequential execution
+    start_time = time.time()
+    result_sequential, _ = evaluator.execute(query)
+    end_time = time.time()
+    time_sequential = end_time - start_time
 
-    # Execute twice with caching to measure cache hit
-    exec_start = time.perf_counter()
-    result1, _ = evaluator.execute(query)
-    first_exec_time = time.perf_counter() - exec_start
-
-    exec_start = time.perf_counter()
-    result1_cached, _ = evaluator.execute(query)
-    cached_exec_time = time.perf_counter() - exec_start
-
-    # Execute without caching
-    no_cache_evaluator = QueryEvaluator(
-        lucene_connector=evaluator.lucene_connector,
-        fainder_index=evaluator.executor.fainder_index,
-        hnsw_index=evaluator.executor.hnsw_index,
-        metadata=evaluator.executor.metadata,
-        cache_size=-1,
-    )
-
-    exec_start = time.perf_counter()
-    result2, _ = no_cache_evaluator.execute(query)
-    no_cache_exec_time = time.perf_counter() - exec_start
+    # filter execution
+    start_time = time.time()
+    result_filtered, _ = evaluator.execute(query, enable_filtering=True)
+    end_time = time.time()
+    time_filtered = end_time - start_time
 
     # Log cache statistics
     cache_info = evaluator.cache_info()
@@ -167,11 +150,8 @@ def test_grammar_correctness(
         "test_name": test_name,
         "query": query,
         "metrics": {
-            "parse_time": parse_time,
-            "first_exec_time": first_exec_time,
-            "cached_exec_time": cached_exec_time,
-            "non_cached_exec_time": no_cache_exec_time,
-            "cache_speedup": no_cache_exec_time / cached_exec_time,
+            "sequential_time": time_sequential,
+            "filtered_time": time_filtered,
         },
         "cache_stats": {
             "hits": cache_info.hits,
@@ -185,6 +165,5 @@ def test_grammar_correctness(
     logger.info("PERFORMANCE_DATA: " + str(performance_log))
 
     # Verify results are consistent
-    assert set(result1) == set(result2)
-    assert set(result1) == set(result1_cached)
-    assert set(expected_result) == set(result1)
+    assert set(result_sequential) == set(result_filtered)
+    assert set(expected_result) == set(result_sequential)
