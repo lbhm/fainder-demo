@@ -256,7 +256,7 @@ words # The search page will contain multiple search bars
 </template>
 
 <script setup>
-import { onMounted, onUnmounted, ref, watch, computed } from "vue";
+import { onMounted, ref, watch, computed } from "vue";
 
 const props = defineProps({
   searchQuery: String,
@@ -281,6 +281,11 @@ const temp_enable_highlighting = ref(
   route.query.enable_highlighting !== "false"
 ); // Default to true
 const current_rows = ref(1);
+
+// Add these new refs for column terms management
+const columnTerms = ref([]);
+const percentileTerms = ref([]);
+const combinedTerms = ref([]);
 
 const { fainder_mode, enable_highlighting } = useSearchState();
 
@@ -354,9 +359,93 @@ const handleKeyDown = (event) => {
   }
 };
 
+const parseExistingQuery = (query) => {
+  if (!query) return;
+  if (!props.simpleBuilder) {
+    searchQuery.value = query;
+    return;
+  }
+  console.log("Parsing existing query:", query);
+
+  // Split by AND to only process terms connected by AND
+  const andTerms = query.split(/\s+AND\s+/);
+  let remainingTerms = [];
+
+  andTerms.forEach(term => {
+    const term_trimmed = term.trim();
+    
+    // Skip terms that are part of OR operations
+    if (term_trimmed.includes(' OR ')) {
+      remainingTerms.push(term_trimmed);
+      return;
+    }
+
+    // Check for column name predicate
+    if (term_trimmed.match(/^COLUMN\(NAME\([^)]+\)\)$/)) {
+      const [column, threshold] = term_trimmed
+        .match(/NAME\(([^;]+);(\d+)\)/i)
+        ?.slice(1) || [];
+      if (column && threshold) {
+        columnTerms.value.push({
+          column,
+          threshold: parseFloat(threshold)
+        });
+      }
+    }
+    // Check for percentile predicate
+    else if (term_trimmed.match(/^COLUMN\(PERCENTILE\([^)]+\)\)$/)) {
+      const [percentile, comparison, value] = term_trimmed
+        .match(/PERCENTILE\((\d*\.?\d+);(ge|gt|le|lt);(\d*\.?\d+)\)/i)
+        ?.slice(1) || [];
+      if (percentile && comparison && value) {
+        percentileTerms.value.push({
+          percentile: parseFloat(percentile),
+          comparison,
+          value: parseFloat(value)
+        });
+      }
+    }
+    // Check for combined predicates
+    else if (term_trimmed.match(/^COLUMN\(NAME\([^)]+\)\s+AND\s+PERCENTILE\([^)]+\)\)$/)) {
+      const nameMatch = term_trimmed.match(/NAME\(([^;]+);(\d+)\)/i);
+      const percentileMatch = term_trimmed.match(/PERCENTILE\((\d*\.?\d+);(ge|gt|le|lt);(\d*\.?\d+)\)/i);
+      
+      if (nameMatch && percentileMatch) {
+        const [column, threshold] = nameMatch.slice(1);
+        const [percentile, comparison, value] = percentileMatch.slice(1);
+        
+        combinedTerms.value.push({
+          column,
+          threshold: parseFloat(threshold),
+          percentile: parseFloat(percentile),
+          comparison,
+          value: parseFloat(value)
+        });
+      }
+    }
+    // If term doesn't match any predicate patterns or contains OR, keep it
+    else {
+      remainingTerms.push(term_trimmed);
+    }
+  });
+
+  // Set the remaining query
+  searchQuery.value = remainingTerms.join(' AND ').trim();
+
+  // Debug output
+  console.log('Parsed query results:', {
+    combinedTerms: combinedTerms.value,
+    columnTerms: columnTerms.value,
+    percentileTerms: percentileTerms.value,
+    remainingQuery: searchQuery.value
+  });
+};
+
+// Call the test function during development
 onMounted(() => {
   if (props.searchQuery) {
-    highlightSyntax(props.searchQuery);
+    parseExistingQuery(props.searchQuery);
+    highlightSyntax(searchQuery.value);
   }
 
   // Focus the textarea
@@ -364,10 +453,6 @@ onMounted(() => {
   if (textarea) {
     textarea.focus();
   }
-});
-
-onUnmounted(() => {
-  // Remove window event listener cleanup
 });
 
 const textareaMaxHeight = computed(() => `${props.lines * 24 + 26}px`);
@@ -578,10 +663,6 @@ const highlightSyntax = (value) => {
   highlightedQuery.value = highlighted;
 };
 
-// Add these new refs for column terms management
-const columnTerms = ref([]);
-const percentileTerms = ref([]);
-const combinedTerms = ref([]);
 
 // Remove a column term
 const removeColumnTerm = (index) => {

@@ -781,14 +781,6 @@ async function searchData({ query: searchQuery }) {
   });
 }
 
-const processedKeywords = computed(() => {
-  if (!selectedResult.value?.keywords) return [];
-  return selectedResult.value.keywords.map((keyword) => {
-    const parts = keyword.split(" > ");
-    return parts[parts.length - 1];
-  });
-});
-
 const formatNumber = (value) => {
   if (value === undefined || value === null) return "-";
   // Check if the value is an integer
