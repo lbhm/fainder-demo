@@ -67,7 +67,7 @@ export const useSearchOperations = () => {
         };
         results.value = null;
         selectedResultIndex.value = 0;
-        throw error.value;
+        return;
       }
 
       const r = await response.json();
