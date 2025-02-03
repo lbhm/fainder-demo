@@ -257,6 +257,7 @@ words # The search page will contain multiple search bars
 
 <script setup>
 import { onMounted, ref, watch, computed } from "vue";
+import { fi } from "vuetify/locale";
 
 const props = defineProps({
   searchQuery: String,
@@ -343,6 +344,25 @@ watch(highlightEnabled, (value) => {
   // Update highlighting
   highlightSyntax(searchQuery.value);
 });
+
+const first_time = ref(true);
+
+// Add a watch for showSimpleBuilder
+watch(showSimpleBuilder, (isOpen) => {
+  if (isOpen && first_time.value) {
+    // Clear existing terms
+    first_time.value = false;
+    columnTerms.value = [];
+    percentileTerms.value = [];
+    combinedTerms.value = [];
+    
+    if (searchQuery.value) {
+      parseExistingQuery(searchQuery.value);
+      highlightSyntax(searchQuery.value);
+    }
+  }
+});
+
 
 const handleKeyDown = (event) => {
   if (!isSearchFocused.value) return;
@@ -444,7 +464,7 @@ const parseExistingQuery = (query) => {
 // Call the test function during development
 onMounted(() => {
   if (props.searchQuery) {
-    parseExistingQuery(props.searchQuery);
+    searchQuery.value = props.searchQuery;
     highlightSyntax(searchQuery.value);
   }
 
