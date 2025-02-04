@@ -7,70 +7,9 @@ from loguru import logger
 
 from backend.query_evaluator import QueryEvaluator
 
-TEST_CASES: dict[str, dict[str, dict[str, dict[str, Any]]]] = {
-    "base_keyword_queries": {
-        "queries": {
-            "double_wildcard_search": {"query": "kw(*a*)"},
-            "wildcard_search": {"query": "kw(a*)"},
-        }
-    },
-    "base_simple_keyword_queries": {
-        "queries": {
-            # just some words that are likely to be in the collection
-            "simple_keyword_1": {"query": "kw(born)"},
-            "simple_keyword_2": {"query": "kw(by)"},
-            "simple_keyword_3": {"query": "kw(blood)"},
-            "simple_keyword_4": {"query": "kw(heart)"},
-            "simple_keyword_5": {"query": "kw(lung)"},
-            "simple_keyword_6": {"query": "kw(test)"},
-            "simple_keyword_7": {"query": "kw(germany)"},
-            "simple_keyword_8": {"query": "kw(italy)"},
-            "simple_keyword_9": {"query": "kw(usa)"},
-            "simple_keyword_10": {"query": "kw(bank)"},
-        }
-    },
-    "base_keyword_queries_1": {
-        "queries": {
-            "simple_keyword": {"query": "kw(lung)"},
-            "not_keyword": {
-                "query": "NOT kw(lung)",
-            },
-            "wildcard_search": {"query": "kw(lu?g)"},
-            "double_wildcard_searches": {"query": "kw(?u?g)"},
-            "field_specific_keyword": {"query": 'kw(alternateName:"Lung")'},
-        }
-    },
-    "base_keyword_queries_2": {
-        "queries": {
-            "simple_keyword": {"query": "kw(heart)"},
-            "not_keyword": {
-                "query": "NOT kw(heart)",
-            },
-            "wildcard_search": {"query": "kw(he?rt)"},
-            "double_wildcard_searches": {"query": "kw(h?art)"},
-            "field_specific_keyword": {"query": 'kw(alternateName:"Heart")'},
-        }
-    },
-    "base_percentile_queries": {
-        "queries": {
-            "small_percentile_1": {"query": "col(pp(0.5;le;2000))"},
-            "small_percentile_2": {"query": "col(pp(0.5;le;1000))"},
-            "small_percentile_3": {"query": "col(pp(0.5;le;500))"},
-            "small_percentile_4": {"query": "col(pp(0.5;le;200))"},
-            "high_percentile_1": {"query": "col(pp(0.9;ge;1000000))"},
-            "high_percentile_2": {"query": "col(pp(0.9;ge;2000000))"},
-            "high_percentile_3": {"query": "col(pp(0.9;ge;3000000))"},
-            "high_percentile_4": {"query": "col(pp(0.9;ge;4000000))"},
-        }
-    },
-    "base_name_queryies": {
-        "queries": {
-            "simple_name": {"query": "col(name(age; 0))"},
-            "not_name": {"query": "col(NOT name(age; 0))"},
-            "simple_name_2": {"query": "col(name(age; 3))"},
-        },
-    },
-}
+from .generate_test_cases import generate_all_test_cases
+
+TEST_CASES = generate_all_test_cases()
 
 
 def execute_and_time(
