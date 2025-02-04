@@ -24,6 +24,8 @@ def _setup_and_teardown() -> Generator[None, Any, None]:
     # Setup code
 
     # Create logs directory if it doesn't exist
+    base_log_dir = Path("logs")
+    base_log_dir.mkdir(exist_ok=True)
     log_dir = Path("logs/logs")
     log_dir.mkdir(exist_ok=True)
 
@@ -48,6 +50,7 @@ def _setup_and_teardown() -> Generator[None, Any, None]:
                 "cache_misses",
                 "cache_size",
                 "results_consistent",
+                "num_results"  # Added new column
             ]
         )
 
@@ -61,7 +64,7 @@ def _setup_and_teardown() -> Generator[None, Any, None]:
         filter=lambda record: record["level"].name == "INFO",
     )
     logger.add(
-        "logs/query_performance__{time:YYYY-MM-DD HH:mm:ss}.log",
+        "logs/logs/query_performance__{time:YYYY-MM-DD HH:mm:ss}.log",
         format="{time:YYYY-MM-DD HH:mm:ss} | {message}",
         filter=lambda record: record["level"].name == "INFO",
         rotation="1 day",

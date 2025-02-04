@@ -24,7 +24,8 @@ DEFAULT_HIGH_PERCENTILE: Final[float] = 0.9
 DEFAULT_OPERATORS: Final[dict[str, list[str]]] = {"small": ["le"], "large": ["ge"]}
 
 # Logical operators
-LOGICAL_OPERATORS: Final[list[str]] = ["AND", "OR", "XOR"]
+#LOGICAL_OPERATORS: Final[list[str]] = ["AND", "OR", "XOR"]
+LOGICAL_OPERATORS: Final[list[str]] = ["AND"]
 
 # Name query related constants
 DEFAULT_COLUMN_NAMES: Final[list[str]] = ["age", "height", "weight"]

@@ -7,7 +7,7 @@ from loguru import logger
 
 from backend.query_evaluator import QueryEvaluator
 
-from .generate_test_cases import generate_all_test_cases
+from performance_tests.generate_test_cases import generate_all_test_cases
 
 TEST_CASES = generate_all_test_cases()
 
@@ -50,6 +50,7 @@ def log_performance_csv(
     test_name: str,
     query: str,
     timings: dict[str, float],
+    results: dict[str, Any],  # Added results parameter
     cache_info: Any,
     is_consistent: bool,
 ) -> None:
@@ -71,6 +72,7 @@ def log_performance_csv(
                     cache_info.misses,
                     cache_info.curr_size,
                     is_consistent,
+                    len(results[scenario])  # Add number of results
                 ]
             )
 
@@ -106,7 +108,16 @@ def test_performance(
 
     # Log to CSV
     csv_path = pytest.csv_log_path  # type: ignore
-    log_performance_csv(csv_path, category, test_name, query, timings, cache_info, is_consistent)
+    log_performance_csv(
+        csv_path, 
+        category, 
+        test_name, 
+        query, 
+        timings, 
+        results,  # Added results parameter
+        cache_info, 
+        is_consistent
+    )
 
     # Create detailed performance log for console/file
     performance_log = {
