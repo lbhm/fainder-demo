@@ -134,7 +134,7 @@ words # The search page will contain multiple search bars
                   <v-col cols="5">
                     <v-text-field
                       v-model="columnFilter.threshold"
-                      label="Threshold"
+                      label="Semantic Neighbors"
                       type="number"
                       variant="outlined"
                       density="comfortable"
@@ -427,7 +427,7 @@ async function searchData() {
 
   // Process plain text as keyword search
   if (isPlainText && query) {
-    query = `kw(${query})`;
+    query = `KW(${query})`;
   }
 
   // Combine filter terms with query
