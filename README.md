@@ -140,6 +140,9 @@ cd ../ui/
 npm install
 ```
 
+**Note:** `eslint` and `vue-tsc` are currently not integrated into the `pre-commit` hooks.
+Therefore, you should run `npm run lint` and `npm run typecheck` before committing UI changes.
+
 ##### Docker Development
 
 If you want to use Docker for development, you can use the following command to start the
