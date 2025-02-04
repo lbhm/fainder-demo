@@ -278,7 +278,7 @@ const emit = defineEmits(["searchData"]);
 const route = useRoute();
 const temp_fainder_mode = ref(route.query.fainder_mode || "low_memory");
 const temp_enable_highlighting = ref(
-  route.query.enable_highlighting !== "false"
+  route.query.enable_highlighting !== "false",
 ); // Default to true
 const current_rows = ref(1);
 
@@ -387,19 +387,19 @@ async function searchData() {
 
   // Add column terms
   const columnQueryTerms = columnTerms.value.map(
-    (term) => `COLUMN(NAME(${term.column};${term.threshold}))`
+    (term) => `COLUMN(NAME(${term.column};${term.threshold}))`,
   );
 
   // Add percentile terms
   const percentileQueryTerms = percentileTerms.value.map(
     (term) =>
-      `COLUMN(PERCENTILE(${term.percentile};${term.comparison};${term.value}))`
+      `COLUMN(PERCENTILE(${term.percentile};${term.comparison};${term.value}))`,
   );
 
   // Add combined terms
   const combinedQueryTerms = combinedTerms.value.map(
     (term) =>
-      `COLUMN(NAME(${term.column};${term.threshold}) AND PERCENTILE(${term.percentile};${term.comparison};${term.value}))`
+      `COLUMN(NAME(${term.column};${term.threshold}) AND PERCENTILE(${term.percentile};${term.comparison};${term.value}))`,
   );
   if (columnQueryTerms.length) {
     terms.push(columnQueryTerms.join(" AND "));
@@ -422,7 +422,7 @@ async function searchData() {
   // Check if query is just plain text (no operators or functions)
   const isPlainText =
     !/(?:pp|percentile|kw|keyword|col|column)\s*\(|AND|OR|XOR|NOT|\(|\)/.test(
-      query
+      query,
     );
 
   // Process plain text as keyword search
@@ -489,7 +489,7 @@ const validateSyntax = (value) => {
         // Check if it contains name or percentile terms
         if (
           !/^(?:col|column)\s*\(\s*(?:name\s*\([^;]+;\s*\d+\)|pp\s*\([^)]+\))\s*\)$/i.test(
-            func
+            func,
           )
         ) {
           // Check if it has invalid keyword inside
@@ -509,7 +509,7 @@ const validateSyntax = (value) => {
       } else if (lowFunc.startsWith("pp") || lowFunc.startsWith("percentile")) {
         if (
           !/^(?:pp|percentile)\s*\(\s*\d+(?:\.\d+)?\s*;\s*(?:ge|gt|le|lt)\s*;\s*\d+(?:\.\d+)?\s*\)$/i.test(
-            func
+            func,
           )
         ) {
           isValid.value = false;
@@ -544,7 +544,7 @@ const highlightSyntax = (value) => {
   // Highlight all function names consistently
   highlighted = highlighted.replace(
     /\b(kw|keyword|name|pp|percentile|col|column)\s*\(/gi,
-    '<span class="function">$1</span>('
+    '<span class="function">$1</span>(',
   );
 
   // Highlight content inside function calls

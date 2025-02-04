@@ -148,7 +148,7 @@ page
                   <v-list>
                     <v-list-item
                       v-for="file in selectedResult.distribution.filter(
-                        (file) => file.contentSize
+                        (file) => file.contentSize,
                       )"
                       :key="file['@id']"
                       :href="file.contentUrl"
@@ -357,7 +357,7 @@ page
                                       v-for="(
                                         [value, count], index
                                       ) in Object.entries(
-                                        field.most_common
+                                        field.most_common,
                                       ).slice(0, 3)"
                                       :key="value"
                                     >
@@ -476,7 +476,7 @@ console.log(selectedResultIndex.value);
 
 // Add computed for selected result
 const selectedResult = computed(() =>
-  results.value ? results.value[selectedResultIndex.value] : null
+  results.value ? results.value[selectedResultIndex.value] : null,
 );
 
 // Initialize state from route
@@ -569,7 +569,7 @@ watch(currentPage, async (newPage) => {
     query.value,
     newPage,
     fainder_mode.value,
-    enable_highlighting.value
+    enable_highlighting.value,
   );
 
   // Update URL with new page
@@ -593,7 +593,7 @@ watch(updatePerPage, (newPerPage) => {
       query.value,
       currentPage.value,
       fainder_mode.value,
-      enable_highlighting.value
+      enable_highlighting.value,
     );
   }
 });
@@ -635,7 +635,7 @@ const retrySearch = async () => {
     query.value,
     currentPage.value,
     fainder_mode.value,
-    enable_highlighting.value
+    enable_highlighting.value,
   );
 };
 
@@ -644,7 +644,7 @@ await searchOperations.loadResults(
   query.value,
   currentPage.value,
   fainder_mode.value,
-  enable_highlighting.value
+  enable_highlighting.value,
 );
 
 const chartOptions = ref({

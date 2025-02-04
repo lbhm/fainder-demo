@@ -12,17 +12,17 @@ export const useSearchState = () => {
   const resultCount = useState("result-count", () => 0);
   const currentPage = useState(
     "current-page",
-    () => parseInt(route.query.page as string) || 1
+    () => parseInt(route.query.page as string) || 1,
   );
   const totalPages = useState("total-pages", () => 1);
   const query = useState(
     "search-query",
-    () => (route.query.query as string) || ""
+    () => (route.query.query as string) || "",
   );
   // Initialize with route query or default value
   const fainder_mode = useState(
     "index-type",
-    () => (route.query.fainder_mode as string) || "low_memory"
+    () => (route.query.fainder_mode as string) || "low_memory",
   );
 
   // Add perPage state
@@ -30,7 +30,7 @@ export const useSearchState = () => {
 
   const enable_highlighting = useState(
     "enable-highlighting",
-    () => route.query.enable_highlighting !== "false" // Default to true if not explicitly set to false
+    () => route.query.enable_highlighting !== "false", // Default to true if not explicitly set to false
   );
 
   return {

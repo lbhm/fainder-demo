@@ -1,7 +1,7 @@
 <template>
   <v-app>
     <v-app-bar :elevation="0" height="85">
-      <Logo size="medium" class="mr-4 ml-4 clickable" @click="gotoHome"/>
+      <Logo size="medium" class="mr-4 ml-4 clickable" @click="gotoHome" />
       <v-spacer></v-spacer>
 
       <!-- Add search component in app bar only on results page -->
@@ -56,18 +56,28 @@
               <v-icon icon="mdi-marker"></v-icon>
             </template>
             <v-list-item-title>
-              {{ highlightEnabled ? 'Disable Syntax Highlight' : 'Enable Syntax Highlight' }}
+              {{
+                highlightEnabled
+                  ? "Disable Syntax Highlight"
+                  : "Enable Syntax Highlight"
+              }}
             </v-list-item-title>
           </v-list-item>
 
           <v-list-item @click="toggleTheme">
             <template v-slot:prepend>
-              <v-icon :icon="theme.global.current.value.dark ? 'mdi-weather-sunny' : 'mdi-weather-night'"
-                     :color="theme.global.current.value.dark ? 'yellow' : 'indigo'">
+              <v-icon
+                :icon="
+                  theme.global.current.value.dark
+                    ? 'mdi-weather-sunny'
+                    : 'mdi-weather-night'
+                "
+                :color="theme.global.current.value.dark ? 'yellow' : 'indigo'"
+              >
               </v-icon>
             </template>
             <v-list-item-title>
-              {{ theme.global.current.value.dark ? 'Light Mode' : 'Dark Mode' }}
+              {{ theme.global.current.value.dark ? "Light Mode" : "Dark Mode" }}
             </v-list-item-title>
           </v-list-item>
         </v-list>
@@ -96,7 +106,12 @@
             :lines="3"
             :queryBuilder="false"
             :simpleBuilder="true"
-            @searchData="(data) => { searchData(data); showSearchDialog = false; }"
+            @searchData="
+              (data) => {
+                searchData(data);
+                showSearchDialog = false;
+              }
+            "
           />
         </v-container>
       </v-card>
@@ -109,78 +124,90 @@
 </template>
 
 <script setup>
-  import { useTheme } from 'vuetify'
-  import { useRoute } from 'vue-router'
-  import Logo from '~/components/Logo.vue'
+import { useTheme } from "vuetify";
+import { useRoute } from "vue-router";
+import Logo from "~/components/Logo.vue";
 
+function gotoHome() {
+  console.log("go to home");
+  return navigateTo({ path: "/" });
+}
 
-  function gotoHome() {
-    console.log('go to home')
-    // keep everything in the query except the query string
-    return navigateTo({path:'/', query: { ...route.query, query: undefined, theme: theme.global.name.value }})
-  }
+function gotoHome() {
+  console.log("go to home");
+  // keep everything in the query except the query string
+  return navigateTo({
+    path: "/",
+    query: { ...route.query, query: undefined, theme: theme.global.name.value },
+  });
+}
+const { loadResults } = useSearchOperations();
+const route = useRoute();
+const theme = useTheme();
+const { query, fainder_mode, currentPage, selectedResultIndex } =
+  useSearchState();
+const colorMode = useColorMode();
+const highlightEnabled = useCookie("fainder_highlight_enabled", {
+  default: () => true,
+});
 
-  const { loadResults } = useSearchOperations();
-  const route = useRoute();
-  const theme = useTheme();
-  const { query, fainder_mode, currentPage, selectedResultIndex } = useSearchState();
-  const colorMode = useColorMode();
-  const highlightEnabled = useCookie('fainder_highlight_enabled', { default: () => true })
+const internalSearchQuery = computed(() => route.query.query);
+const searchComponentKey = ref(0);
 
-  const internalSearchQuery = computed(() => route.query.query);
-  const searchComponentKey = ref(0);
+let currentTheme = route.query.theme || colorMode.value;
+theme.global.name.value = currentTheme === "dark" ? "dark" : "light";
 
-  let currentTheme = route.query.theme || colorMode.value;
-  theme.global.name.value = currentTheme === "dark" ? "dark" : "light";
+function toggleTheme() {
+  theme.global.name.value =
+    theme.global.name.value === "dark" ? "light" : "dark";
 
-  function toggleTheme() {
-    theme.global.name.value = theme.global.name.value === 'dark' ? "light" : "dark";
+  navigateTo({
+    path: route.path,
+    query: {
+      ...route.query,
+      theme: theme.global.name.value,
+    },
+  });
+}
 
+function toggleHighlight() {
+  highlightEnabled.value = !highlightEnabled.value;
+}
 
-    navigateTo({
-      path: route.path,
-      query: {
-        ...route.query,
-        theme: theme.global.name.value
-      }
-    });
+const showSearchDialog = ref(false);
 
-  }
+async function searchData({
+  query: searchQuery,
+  fainder_mode: newfainder_mode,
+  enable_highlighting,
+}) {
+  query.value = searchQuery;
+  fainder_mode.value = newfainder_mode;
 
-  function toggleHighlight() {
-    highlightEnabled.value = !highlightEnabled.value
-  }
+  currentPage.value = 1;
+  selectedResultIndex.value = 0;
 
-  const showSearchDialog = ref(false);
+  await loadResults(searchQuery, 1, newfainder_mode, enable_highlighting);
 
-  async function searchData({ query: searchQuery, fainder_mode: newfainder_mode, enable_highlighting }) {
-    query.value = searchQuery;
-    fainder_mode.value = newfainder_mode;
+  await navigateTo({
+    path: "/results",
+    query: {
+      query: searchQuery,
+      page: 1,
+      index: 0,
+      fainder_mode: newfainder_mode,
+      enable_highlighting,
+      theme: theme.global.name.value,
+    },
+  });
 
-    currentPage.value = 1;
-    selectedResultIndex.value = 0;
-
-    await loadResults(searchQuery, 1, newfainder_mode,enable_highlighting);
-
-    await navigateTo({
-        path: '/results',
-        query: {
-            query: searchQuery,
-            page: 1,
-            index: 0,
-            fainder_mode: newfainder_mode,
-            enable_highlighting,
-            theme: theme.global.name.value,
-        },
-    });
-
-    searchComponentKey.value++;
-  }
+  searchComponentKey.value++;
+}
 </script>
 
 <style scoped>
 .app-bar-search {
-  max-width: 1200px;  /* Increased from 800px */
+  max-width: 1200px; /* Increased from 800px */
   flex-grow: 1;
 }
 
