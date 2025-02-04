@@ -1,6 +1,6 @@
+import csv
 import json
 import sys
-import csv
 import time
 from collections.abc import Generator
 from pathlib import Path
@@ -31,21 +31,25 @@ def _setup_and_teardown() -> Generator[None, Any, None]:
     performance_log_dir.mkdir(exist_ok=True)
 
     # Create CSV performance log file and write headers
-    csv_log_path = performance_log_dir / f"performance_metrics_{time.strftime('%Y%m%d_%H%M%S')}.csv"
-    with open(csv_log_path, 'w', newline='') as csvfile:
+    csv_log_path = (
+        performance_log_dir / f"performance_metrics_{time.strftime('%Y%m%d_%H%M%S')}.csv"
+    )
+    with open(csv_log_path, "w", newline="") as csvfile:
         writer = csv.writer(csvfile)
-        writer.writerow([
-            'timestamp',
-            'category',
-            'test_name',
-            'query',
-            'scenario',
-            'execution_time',
-            'cache_hits',
-            'cache_misses',
-            'cache_size',
-            'results_consistent'
-        ])
+        writer.writerow(
+            [
+                "timestamp",
+                "category",
+                "test_name",
+                "query",
+                "scenario",
+                "execution_time",
+                "cache_hits",
+                "cache_misses",
+                "cache_size",
+                "results_consistent",
+            ]
+        )
 
     # Remove default handler
     logger.remove()
@@ -64,7 +68,7 @@ def _setup_and_teardown() -> Generator[None, Any, None]:
     )
 
     # Add CSV log path to pytest's config
-    pytest.csv_log_path = csv_log_path
+    pytest.csv_log_path = csv_log_path  # type: ignore
 
     yield
 
@@ -72,24 +76,20 @@ def _setup_and_teardown() -> Generator[None, Any, None]:
     pass
 
 
-
-
 @pytest.fixture(scope="module")
 def performance_evaluator() -> QueryEvaluator:
-    settings = Settings() # type: ignore # uses the environment variables
+    settings = Settings()  # type: ignore # uses the environment variables
     with settings.metadata_path.open() as file:
         metadata = Metadata(**json.load(file))
 
     lucene_connector = LuceneConnector(settings.lucene_host, settings.lucene_port)
-    
+
     fainder_index = FainderIndex(
         metadata=metadata,
         rebinning_path=settings.rebinning_index_path,
         conversion_path=settings.conversion_index_path,
     )
-    column_index = ColumnIndex(
-        path=settings.hnsw_index_path, metadata=metadata
-    )
+    column_index = ColumnIndex(path=settings.hnsw_index_path, metadata=metadata)
     return QueryEvaluator(
         lucene_connector=lucene_connector,
         fainder_index=fainder_index,
