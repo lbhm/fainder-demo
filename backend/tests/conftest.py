@@ -22,7 +22,7 @@ def _setup_and_teardown() -> Generator[None, Any, None]:
     # Setup code
 
     # Create logs directory if it doesn't exist
-    log_dir = Path("logs")
+    log_dir = Path("logs/logs")
     log_dir.mkdir(exist_ok=True)
 
     # Remove default handler
@@ -65,9 +65,7 @@ def evaluator() -> QueryEvaluator:
         rebinning_path=settings.rebinning_index_path,
         conversion_path=settings.conversion_index_path,
     )
-    column_index = ColumnIndex(
-        path=settings.hnsw_index_path, metadata=metadata, use_embeddings=False
-    )
+    column_index = ColumnIndex(path=settings.hnsw_index_path, metadata=metadata)
     return QueryEvaluator(
         lucene_connector=lucene_connector,
         fainder_index=fainder_index,
