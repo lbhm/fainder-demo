@@ -140,6 +140,15 @@ cd ../ui/
 npm install
 ```
 
+##### Docker Development
+
+If you want to use Docker for development, you can use the following command to start the
+components in development mode:
+
+```bash
+FASTAPI_MODE=dev NUXT_MODE=dev docker compose up --build --watch
+```
+
 ## Generating gRPC Code
 
 The Fainder backend uses gRPC to communicate with the Lucene service. To generate the necessary
