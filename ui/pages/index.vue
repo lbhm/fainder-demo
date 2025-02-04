@@ -5,12 +5,12 @@
         <Wordmark size="large" />
       </div>
       <Search_Component
-        :searchQuery="query"
+        :search-query="query"
         :inline="true"
         :lines="5"
-        :queryBuilder="false"
-        :simpleBuilder="true"
-        @searchData="searchData"
+        :query-builder="false"
+        :simple-builder="true"
+        @search-data="searchData"
       />
     </div>
   </v-main>

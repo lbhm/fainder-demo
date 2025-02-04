@@ -5,7 +5,7 @@ page
 
 <template>
   <v-main>
-    <v-divider></v-divider>
+    <v-divider />
     <div class="pa-5">
       <!-- Error message -->
       <v-alert v-if="error" type="error" class="mt-4" prominent>
@@ -53,7 +53,7 @@ page
             indeterminate
             color="primary"
             class="mt-4"
-          ></v-progress-circular>
+          />
 
           <!-- Results list -->
           <v-virtual-scroll
@@ -61,8 +61,8 @@ page
             mode="manual"
             :items="results"
           >
-            <template v-slot:default="{ item }">
-              <v-card @click="selectResult(item)" :height="80" elevation="0">
+            <template #default="{ item }">
+              <v-card :height="80" elevation="0" @click="selectResult(item)">
                 <div class="d-flex align-center">
                   <v-img
                     :src="item.thumbnailUrl"
@@ -75,7 +75,7 @@ page
                     class="flex-shrink-0 rounded-image"
                   >
                     <!-- Fallback for failed image load -->
-                    <template v-slot:placeholder>
+                    <template #placeholder>
                       <v-icon size="48" color="grey-lighten-2"
                         >mdi-image</v-icon
                       >
@@ -85,11 +85,11 @@ page
                     <v-card-title
                       class="text-truncate highlight-text"
                       v-html="'<strong>' + item.name + '</strong>'"
-                    ></v-card-title>
+                    />
                     <v-card-subtitle
                       class="text-truncate highlight-text"
                       v-html="item.alternateName"
-                    ></v-card-subtitle>
+                    />
                   </div>
                 </div>
               </v-card>
@@ -107,7 +107,7 @@ page
               :total-visible="totalVisible"
               rounded="circle"
               width="70%"
-            ></v-pagination>
+            />
           </div>
         </div>
 
@@ -120,11 +120,11 @@ page
                   <v-card-title
                     class="highlight-text"
                     v-html="'<strong>' + selectedResult.name + '</strong>'"
-                  ></v-card-title>
+                  />
                   <v-card-subtitle
                     class="highlight-text"
                     v-html="selectedResult.alternateName"
-                  ></v-card-subtitle>
+                  />
                 </div>
               </div>
 
@@ -133,7 +133,7 @@ page
                 class="flex-shrink-0"
               >
                 <v-menu location="bottom">
-                  <template v-slot:activator="{ props }">
+                  <template #activator="{ props }">
                     <v-btn
                       color="primary"
                       v-bind="props"
@@ -202,7 +202,7 @@ page
                         <span
                           class="metadata-value highlight-text"
                           v-html="selectedResult?.creator?.name || '-'"
-                        ></span>
+                        />
                       </div>
                       <div class="metadata-item">
                         <span class="metadata-label">License</span>
@@ -215,7 +215,7 @@ page
                         <span
                           class="metadata-value keywords-value"
                           v-html="selectedResult?.creator?.name || '-'"
-                        ></span>
+                        />
                       </div>
                     </div>
                   </div>
@@ -252,11 +252,11 @@ page
                       >
                         <div class="field-header mb-2">
                           <span
+                            v-if="field.marked_name"
                             class="text-h6 highlight-text"
                             v-html="field.marked_name"
-                            v-if="field.marked_name"
-                          ></span>
-                          <span class="text-h6" v-else> {{ field.name }}</span>
+                          />
+                          <span v-else class="text-h6"> {{ field.name }}</span>
                           <v-chip class="ml-2" density="compact">{{
                             field.dataType[0]
                           }}</v-chip>
@@ -270,8 +270,8 @@ page
                             />
                           </div>
                           <div
-                            class="statistics-container"
                             v-if="field.statistics"
+                            class="statistics-container"
                           >
                             <table class="statistics-table">
                               <tbody>
@@ -332,7 +332,7 @@ page
                           <div class="categorical-summary">
                             <div class="categorical-layout">
                               <div class="unique-values-section">
-                                <div class="large-stat" v-if="field.n_unique">
+                                <div v-if="field.n_unique" class="large-stat">
                                   <div class="stat-title">Unique Values</div>
                                   <div class="stat-number">
                                     {{ formatNumber(field.n_unique) }}
@@ -341,8 +341,8 @@ page
                               </div>
                               <div class="value-distribution">
                                 <table
-                                  class="statistics-table"
                                   v-if="field.most_common"
+                                  class="statistics-table"
                                 >
                                   <thead>
                                     <tr>
@@ -354,9 +354,7 @@ page
                                   </thead>
                                   <tbody>
                                     <template
-                                      v-for="(
-                                        [value, count], index
-                                      ) in Object.entries(
+                                      v-for="[value, count] in Object.entries(
                                         field.most_common,
                                       ).slice(0, 3)"
                                       :key="value"
@@ -393,21 +391,21 @@ page
                         <td
                           class="highlight-text"
                           v-html="selectedResult?.creator?.name || '-'"
-                        ></td>
+                        />
                       </tr>
                       <tr>
                         <td><strong>Publisher</strong></td>
                         <td
                           class="highlight-text"
                           v-html="selectedResult?.publisher?.name || '-'"
-                        ></td>
+                        />
                       </tr>
                       <tr>
                         <td><strong>License</strong></td>
                         <td
                           class="highlight-text"
                           v-html="selectedResult?.license?.name || '-'"
-                        ></td>
+                        />
                       </tr>
                       <tr>
                         <td><strong>Date Published</strong></td>
@@ -417,7 +415,7 @@ page
                             selectedResult?.datePublished.substring(0, 10) ||
                             '-'
                           "
-                        ></td>
+                        />
                       </tr>
                       <tr>
                         <td><strong>Date Modified</strong></td>
@@ -426,7 +424,7 @@ page
                           v-html="
                             selectedResult?.dateModified.substring(0, 10) || '-'
                           "
-                        ></td>
+                        />
                       </tr>
                       <tr>
                         <td><strong>Keywords</strong></td>
@@ -434,7 +432,7 @@ page
                           style="white-space: pre-line"
                           class="highlight-text"
                           v-html="selectedResult?.keywords || '-'"
-                        ></td>
+                        />
                       </tr>
                     </tbody>
                   </v-table>
@@ -755,7 +753,7 @@ const getChartData = (field, index) => {
         barPercentage: 1,
         categoryPercentage: 1,
         segment: {
-          backgroundColor: (context) => chartColors[index % chartColors.length],
+          backgroundColor: (_) => chartColors[index % chartColors.length],
         },
         parsing: {
           xAxisKey: "x0",
@@ -765,29 +763,6 @@ const getChartData = (field, index) => {
     ],
   };
 };
-
-async function searchData({ query: searchQuery }) {
-  showSearchModal.value = false;
-  await loadResults(searchQuery);
-  query.value = searchQuery;
-
-  return await navigateTo({
-    path: "/results",
-    query: {
-      query: searchQuery,
-      index: 0,
-      theme: theme.global.name.value,
-    },
-  });
-}
-
-const processedKeywords = computed(() => {
-  if (!selectedResult.value?.keywords) return [];
-  return selectedResult.value.keywords.map((keyword) => {
-    const parts = keyword.split(" > ");
-    return parts[parts.length - 1];
-  });
-});
 
 const formatNumber = (value) => {
   if (value === undefined || value === null) return "-";

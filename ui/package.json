@@ -7,7 +7,7 @@
     "dev": "nuxt dev",
     "format": "prettier --write .",
     "generate": "nuxt generate",
-    "lint": "eslint .",
+    "lint": "eslint . --fix",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "typecheck": "nuxt typecheck"

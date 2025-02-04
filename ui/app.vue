@@ -2,33 +2,33 @@
   <v-app>
     <v-app-bar :elevation="0" height="85">
       <Logo size="medium" class="mr-4 ml-4 clickable" @click="gotoHome" />
-      <v-spacer></v-spacer>
+      <v-spacer />
 
       <!-- Add search component in app bar only on results page -->
       <template v-if="route.path === '/results'">
         <Search_Component
           :key="searchComponentKey"
-          :searchQuery="internalSearchQuery"
+          :search-query="internalSearchQuery"
           :inline="true"
           :lines="1"
-          :queryBuilder="false"
-          @searchData="searchData"
+          :query-builder="false"
           class="app-bar-search"
+          @search-data="searchData"
         />
         <v-btn
           icon
-          @click="showSearchDialog = true"
           density="compact"
           class="ml-2"
+          @click="showSearchDialog = true"
         >
           <v-icon>mdi-arrow-expand</v-icon>
         </v-btn>
       </template>
 
-      <v-spacer></v-spacer>
+      <v-spacer />
 
       <v-menu class="mr">
-        <template v-slot:activator="{ props }">
+        <template #activator="{ props }">
           <v-btn icon v-bind="props">
             <v-icon>mdi-menu</v-icon>
           </v-btn>
@@ -36,24 +36,24 @@
 
         <v-list>
           <v-list-item @click="navigateTo('/upload')">
-            <template v-slot:prepend>
-              <v-icon icon="mdi-upload"></v-icon>
+            <template #prepend>
+              <v-icon icon="mdi-upload" />
             </template>
             <v-list-item-title>Upload Datasets</v-list-item-title>
           </v-list-item>
 
           <v-list-item @click="navigateTo('/about')">
-            <template v-slot:prepend>
-              <v-icon icon="mdi-information"></v-icon>
+            <template #prepend>
+              <v-icon icon="mdi-information" />
             </template>
             <v-list-item-title>About</v-list-item-title>
           </v-list-item>
 
-          <v-divider class="mx-3"></v-divider>
+          <v-divider class="mx-3" />
 
           <v-list-item @click="toggleHighlight">
-            <template v-slot:prepend>
-              <v-icon icon="mdi-marker"></v-icon>
+            <template #prepend>
+              <v-icon icon="mdi-marker" />
             </template>
             <v-list-item-title>
               {{
@@ -65,7 +65,7 @@
           </v-list-item>
 
           <v-list-item @click="toggleTheme">
-            <template v-slot:prepend>
+            <template #prepend>
               <v-icon
                 :icon="
                   theme.global.current.value.dark
@@ -73,8 +73,7 @@
                     : 'mdi-weather-night'
                 "
                 :color="theme.global.current.value.dark ? 'yellow' : 'indigo'"
-              >
-              </v-icon>
+              />
             </template>
             <v-list-item-title>
               {{ theme.global.current.value.dark ? "Light Mode" : "Dark Mode" }}
@@ -88,7 +87,7 @@
     <v-dialog
       v-model="showSearchDialog"
       transition="dialog-top-transition"
-      maxWidth="56rem"
+      max-width="56rem"
     >
       <v-card elevation="0">
         <v-toolbar dark color="primary">
@@ -101,12 +100,12 @@
         <v-container class="pt-6">
           <Search_Component
             :key="searchComponentKey"
-            :searchQuery="route.query.query"
+            :search-query="route.query.query"
             :inline="true"
             :lines="3"
-            :queryBuilder="false"
-            :simpleBuilder="true"
-            @searchData="
+            :query-builder="false"
+            :simple-builder="true"
+            @search-data="
               (data) => {
                 searchData(data);
                 showSearchDialog = false;
@@ -126,7 +125,7 @@
 <script setup>
 import { useTheme } from "vuetify";
 import { useRoute } from "vue-router";
-import Logo from "~/components/Logo.vue";
+import Logo from "~/components/FainderLogo.vue";
 
 function gotoHome() {
   console.log("go to home");
@@ -154,7 +153,7 @@ const highlightEnabled = useCookie("fainder_highlight_enabled", {
 const internalSearchQuery = computed(() => route.query.query);
 const searchComponentKey = ref(0);
 
-let currentTheme = route.query.theme || colorMode.value;
+const currentTheme = route.query.theme || colorMode.value;
 theme.global.name.value = currentTheme === "dark" ? "dark" : "light";
 
 function toggleTheme() {

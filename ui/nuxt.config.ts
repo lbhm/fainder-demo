@@ -34,6 +34,7 @@ export default defineNuxtConfig({
     },
   },
   mdc: {
+    // TODO: Document why we use this
     headings: {
       anchorLinks: {
         h3: false,

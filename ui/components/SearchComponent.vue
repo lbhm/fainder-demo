@@ -14,19 +14,19 @@ words # The search page will contain multiple search bars
               density="comfortable"
               :error="!isValid"
               :rules="[validateSyntax]"
-              @update:model-value="highlightSyntax"
-              @keydown="handleKeyDown"
-              @focus="isSearchFocused = true"
-              @blur="isSearchFocused = false"
               hide-details="true"
               :rows="current_rows"
               class="search-input"
               append-inner-icon="mdi-magnify"
-              @click:append-inner="searchData"
               :auto-grow="true"
               autofocus
+              @update:model-value="highlightSyntax"
+              @keydown="handleKeyDown"
+              @focus="isSearchFocused = true"
+              @blur="isSearchFocused = false"
+              @click:append-inner="searchData"
             />
-            <div class="syntax-highlight" v-html="highlightedQuery"></div>
+            <div class="syntax-highlight" v-html="highlightedQuery" />
             <div v-if="syntaxError" class="error-message">
               {{ syntaxError }}
             </div>
@@ -35,13 +35,12 @@ words # The search page will contain multiple search bars
         <v-col cols="1">
           <v-btn
             icon="mdi-cog"
-            @click="showSettings = true"
             variant="text"
             elevation="0"
             density="compact"
             class="ml-2"
-          >
-          </v-btn>
+            @click="showSettings = true"
+          />
         </v-col>
       </v-row>
 
@@ -50,9 +49,9 @@ words # The search page will contain multiple search bars
         <v-col cols="12">
           <v-btn
             v-if="!showSimpleBuilder"
-            @click="showSimpleBuilder = true"
             prepend-icon="mdi-plus"
             elevation="0"
+            @click="showSimpleBuilder = true"
           >
             Add Column Filters
           </v-btn>
@@ -84,9 +83,9 @@ words # The search page will contain multiple search bars
                 v-for="(term, index) in columnTerms"
                 :key="`col-${index}`"
                 closable
+                color="primary"
                 @click:close="removeColumnTerm(index)"
                 @click="transferColumnTerm(term, index)"
-                color="primary"
               >
                 COLUMN(NAME({{ term.column }};{{ term.threshold }}))
               </v-chip>
@@ -94,9 +93,9 @@ words # The search page will contain multiple search bars
                 v-for="(term, index) in percentileTerms"
                 :key="`percentile-${index}`"
                 closable
+                color="indigo"
                 @click:close="removePercentileTerm(index)"
                 @click="transferPercentileTerm(term, index)"
-                color="indigo"
               >
                 COLUMN(PERCENTILE({{ term.percentile }};{{ term.comparison }};{{
                   term.value
@@ -106,9 +105,9 @@ words # The search page will contain multiple search bars
                 v-for="(term, index) in combinedTerms"
                 :key="`combined-${index}`"
                 closable
+                color="success"
                 @click:close="combinedTerms.splice(index, 1)"
                 @click="transferCombinedTerm(term, index)"
-                color="success"
               >
                 COLUMN(NAME({{ term.column }};{{ term.threshold }}) AND
                 PERCENTILE({{ term.percentile }};{{ term.comparison }};{{
@@ -145,7 +144,7 @@ words # The search page will contain multiple search bars
               </v-col>
             </v-row>
 
-            <v-divider class="my-4"></v-divider>
+            <v-divider class="my-4" />
 
             <v-row>
               <v-col cols="12">
@@ -193,18 +192,18 @@ words # The search page will contain multiple search bars
                 <div class="d-flex justify-end gap-2">
                   <v-btn
                     color="success"
-                    @click="addFilters"
                     :disabled="!isColumnFilterValid && !isPercentileFilterValid"
                     prepend-icon="mdi-plus"
                     class="mr-2"
+                    @click="addFilters"
                   >
                     Add
                   </v-btn>
                   <v-btn
                     color="primary"
-                    @click="searchData"
                     prepend-icon="mdi-magnify"
                     :disabled="!hasActiveFilters"
+                    @click="searchData"
                   >
                     Run Query
                   </v-btn>
@@ -232,7 +231,7 @@ words # The search page will contain multiple search bars
             v-model="temp_enable_highlighting"
             label="Enable Highlighting"
             color="primary"
-          ></v-switch>
+          />
         </v-card-text>
 
         <v-card-actions>
@@ -240,14 +239,14 @@ words # The search page will contain multiple search bars
           <v-btn
             color="error"
             variant="text"
-            @click="cancelSettings"
             icon="mdi-close"
+            @click="cancelSettings"
           />
           <v-btn
             color="success"
             variant="text"
-            @click="saveSettings"
             icon="mdi-check"
+            @click="saveSettings"
           />
         </v-card-actions>
       </v-card>
@@ -259,7 +258,10 @@ words # The search page will contain multiple search bars
 import { onMounted, onUnmounted, ref, watch, computed } from "vue";
 
 const props = defineProps({
-  searchQuery: String,
+  searchQuery: {
+    type: String,
+    default: "",
+  },
   inline: {
     type: Boolean,
     default: false,
@@ -435,7 +437,7 @@ async function searchData() {
     query = query ? `${query} AND ${filterQuery}` : filterQuery;
   }
 
-  let s_query = query;
+  const s_query = query;
   console.log("Search query:", s_query);
   console.log("Index type:", fainder_mode.value);
   console.log("Highlighting enabled:", enable_highlighting.value);
@@ -526,7 +528,7 @@ const validateSyntax = (value) => {
     }
 
     return true;
-  } catch (e) {
+  } catch {
     isValid.value = false;
     syntaxError.value = "Invalid query syntax";
     return false;
@@ -563,15 +565,15 @@ const highlightSyntax = (value) => {
 
   // Handle brackets
   let bracketLevel = 0;
-  const maxBracketLevels = 4;
+  const nBracketColors = 4;
 
-  highlighted = highlighted.replace(/[\(\)]/g, (match) => {
+  highlighted = highlighted.replace(/[()]/g, (match) => {
     if (match === "(") {
-      bracketLevel = Math.min(bracketLevel + 1, maxBracketLevels);
-      return `<span class="bracket-${bracketLevel - 1}">(</span>`;
+      bracketLevel += 1;
+      return `<span class="bracket-${(bracketLevel - 1) % nBracketColors}">(</span>`;
     } else {
       bracketLevel = Math.max(bracketLevel - 1, 0);
-      return `<span class="bracket-${bracketLevel}">)</span>`;
+      return `<span class="bracket-${bracketLevel % nBracketColors}">)</span>`;
     }
   });
 

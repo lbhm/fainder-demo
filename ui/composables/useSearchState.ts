@@ -7,7 +7,10 @@ export const useSearchState = () => {
     return indexFromRoute ? parseInt(indexFromRoute as string) : 0;
   });
   const isLoading = useState("search-loading", () => false);
-  const error = useState("search-error", () => null);
+  const error = useState<{ message: string; details: unknown }>(
+    "search-error",
+    () => ({ message: "", details: null }),
+  );
   const searchTime = useState("search-time", () => 0);
   const resultCount = useState("result-count", () => 0);
   const currentPage = useState(
