@@ -40,7 +40,7 @@ jobs:
           python-version: ${{ matrix.python }}
           enable-cache: true
       - name: Install Python dependencies
-        run: uv sync --frozen --extras dev
+        run: uv sync --frozen --extra dev
       - name: Start Lucene server
         run: |
           cd lucene
