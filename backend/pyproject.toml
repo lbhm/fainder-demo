@@ -47,6 +47,7 @@ dev = [
     "mypy~=1.13",
     "pre-commit~=4.0",
     "pytest~=8.3",
+    "pytest-cov~=6.0.0",
     "types-protobuf~=5.29",
 ]
 
