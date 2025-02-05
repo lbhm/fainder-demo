@@ -18,7 +18,7 @@ jobs:
     name: Python ${{ matrix.python }}
 
     env:
-      DATA_DIR: ${{ github.workspace }}/data
+      DATA_DIR: ${{ github.workspace }}/backend/tests/assets
       COLLECTION_NAME: toy_collection
       LOG_LEVEL: DEBUG
 
@@ -43,8 +43,6 @@ jobs:
       - name: Install Python dependencies
         working-directory: backend
         run: uv sync --frozen --extra dev
-      - name: Create data directory
-        run: mkdir -p "$DATA_DIR"/"$COLLECTION_NAME"
       - name: Start Lucene server
         working-directory: lucene
         run: |

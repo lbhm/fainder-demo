@@ -140,7 +140,7 @@ public class LuceneIndexer {
         try {
             // Check if the data directory exists
             if (!Files.exists(dataPath)) {
-                logger.error("Data directory does not exist");
+                logger.error("Data directory {} does not exist", dataPath);
                 throw new RuntimeException("Data directory does not exist!");
             }
 
