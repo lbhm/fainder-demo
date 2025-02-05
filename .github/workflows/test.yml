@@ -1,0 +1,50 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.11", "3.12"]
+
+    name: Python ${{ matrix.python }}
+
+    env:
+      DATA_DIR: ${{ github.workspace }}/data
+      COLLECTION_NAME: toy_collection
+      LOG_LEVEL: DEBUG
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "21"
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python }}
+          enable-cache: true
+      - name: Install Python dependencies
+        run: uv sync --frozen --extras dev
+      - name: Start Lucene server
+        run: |
+          cd lucene
+          mvn clean package
+          java --enable-native-access=ALL-UNNAMED --add-modules jdk.incubator.vector -jar target/fainder-demo-1.0-SNAPSHOT.jar
+      - name: Run tests
+        run: uv run pytest tests/
