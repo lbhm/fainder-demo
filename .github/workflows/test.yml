@@ -30,6 +30,7 @@ jobs:
         with:
           distribution: "temurin"
           java-version: "21"
+          cache: maven
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -42,6 +43,8 @@ jobs:
       - name: Install Python dependencies
         working-directory: backend
         run: uv sync --frozen --extra dev
+      - name: Create data directory
+        run: mkdir -p "$DATA_DIR"/"$COLLECTION_NAME"
       - name: Start Lucene server
         working-directory: lucene
         run: |
