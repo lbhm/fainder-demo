@@ -1,0 +1,55 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.11", "3.12"]
+
+    name: Python ${{ matrix.python }}
+
+    env:
+      DATA_DIR: ${{ github.workspace }}/backend/tests/assets
+      COLLECTION_NAME: toy_collection
+      LOG_LEVEL: DEBUG
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "21"
+          cache: maven
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python }}
+          enable-cache: true
+      - name: Install Python dependencies
+        working-directory: backend
+        run: uv sync --frozen --extra dev
+      - name: Start Lucene server
+        working-directory: lucene
+        run: |
+          mvn clean package
+          java --enable-native-access=ALL-UNNAMED --add-modules jdk.incubator.vector -jar target/fainder-demo-1.0-SNAPSHOT.jar &
+      - name: Run tests
+        working-directory: backend
+        run: |
+          sleep 1  # Wait for Lucene server to start
+          uv run pytest tests --junitxml=tests/pytest.xml --cov=backend --cov-report=term-missing:skip-covered

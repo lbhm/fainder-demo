@@ -43,6 +43,10 @@ venv/
 .ruff_cache/
 model_cache/
 
+# Pytest
+.coverage
+pytest.xml
+
 # Local project folders
 data/
 logs/
