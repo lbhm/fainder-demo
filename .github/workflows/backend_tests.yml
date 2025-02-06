@@ -1,19 +1,30 @@
-name: Tests
+name: Backend Tests
 
 on:
   push:
     branches:
       - main
+    paths:
+      - ".github/workflows/backend_tests.yml"
+      - "backend/**"
+      - "lucene/**"
   pull_request:
     branches:
       - main
+    paths:
+      - ".github/workflows/backend_tests.yml"
+      - "backend/**"
+      - "lucene/**"
 
 jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python: ["3.11", "3.12"]
+        python:
+          - "3.11"
+          # Only test one Python version for now to save computation budget
+          # - "3.12"
 
     name: Python ${{ matrix.python }}
 
@@ -38,7 +49,6 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v5
         with:
-          python-version: ${{ matrix.python }}
           enable-cache: true
       - name: Install Python dependencies
         working-directory: backend
@@ -51,5 +61,5 @@ jobs:
       - name: Run tests
         working-directory: backend
         run: |
-          sleep 1  # Wait for Lucene server to start
+          sleep 1
           uv run pytest tests --junitxml=tests/pytest.xml --cov=backend --cov-report=term-missing:skip-covered
