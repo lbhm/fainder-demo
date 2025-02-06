@@ -8,7 +8,7 @@ page
     <v-divider />
     <div class="pa-5">
       <!-- Error message -->
-      <v-alert v-if="!hasNoError" type="error" class="mt-4" prominent>
+      <v-alert v-if="hasError" type="error" class="mt-4" prominent>
         <v-alert-title>Search Error</v-alert-title>
         <div class="error-details">
           <p>{{ error.message }}</p>
@@ -28,7 +28,7 @@ page
 
       <!-- Empty results message -->
       <v-alert
-        v-if="!isLoading && hasNoError && (!results || results.length === 0)"
+        v-if="!isLoading && !hasError && (!results || results.length === 0)"
         type="info"
         class="mt-4"
       >
@@ -40,7 +40,7 @@ page
         <div class="list-container">
           <!-- Add search stats -->
           <div
-            v-if="!isLoading && hasNoError && results && results.length > 0"
+            v-if="!isLoading && !hasError && results && results.length > 0"
             class="search-stats mb-4"
           >
             Found {{ resultCount }} results in {{ searchTime.toFixed(4) }}s
@@ -57,7 +57,7 @@ page
 
           <!-- Results list -->
           <v-virtual-scroll
-            v-if="!isLoading && hasNoError && results && results.length > 0"
+            v-if="!isLoading && !hasError && results && results.length > 0"
             mode="manual"
             :items="results"
           >
@@ -98,7 +98,7 @@ page
 
           <!-- Pagination controls -->
           <div
-            v-if="!isLoading && hasNoError && results && results.length > 0"
+            v-if="!isLoading && !hasError && results && results.length > 0"
             class="pagination-controls mt-4"
           >
             <v-pagination
@@ -506,7 +506,10 @@ const toggleDescription = () => {
   showFullDescription.value = !showFullDescription.value;
 };
 
-const hasNoError = computed(() => error.message != "");
+const hasError = computed(() => {
+  if (!error) return true;
+  return error.value.message != "";
+});
 
 // Computed property for dropdown items
 const recordSetItems = computed(() => {
