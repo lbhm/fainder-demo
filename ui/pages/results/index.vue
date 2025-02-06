@@ -265,8 +265,8 @@ page
                         <div v-if="field.histogram" class="field-content">
                           <div class="histogram-container">
                             <Bar
-                              :chart-data="getChartData(field, fieldIndex)"
-                              :chart-options="chartOptions"
+                              :data="getChartData(field, fieldIndex)"
+                              :options="chartOptions"
                             />
                           </div>
                           <div
