@@ -13,7 +13,7 @@ export default defineNuxtConfig({
   modules: [
     (_options, nuxt) => {
       nuxt.hooks.hook("vite:extendConfig", (config) => {
-        // @ts-expect-error
+        // @ts-expect-error - This is a private API
         config.plugins.push(vuetify({ autoImport: true }));
       });
     },

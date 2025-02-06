@@ -8,7 +8,7 @@ page
     <v-divider />
     <div class="pa-5">
       <!-- Error message -->
-      <v-alert v-if="error" type="error" class="mt-4" prominent>
+      <v-alert v-if="!hasNoError" type="error" class="mt-4" prominent>
         <v-alert-title>Search Error</v-alert-title>
         <div class="error-details">
           <p>{{ error.message }}</p>
@@ -28,7 +28,7 @@ page
 
       <!-- Empty results message -->
       <v-alert
-        v-if="!isLoading && !error && (!results || results.length === 0)"
+        v-if="!isLoading && hasNoError && (!results || results.length === 0)"
         type="info"
         class="mt-4"
       >
@@ -40,7 +40,7 @@ page
         <div class="list-container">
           <!-- Add search stats -->
           <div
-            v-if="!isLoading && !error && results && results.length > 0"
+            v-if="!isLoading && hasNoError && results && results.length > 0"
             class="search-stats mb-4"
           >
             Found {{ resultCount }} results in {{ searchTime.toFixed(4) }}s
@@ -57,7 +57,7 @@ page
 
           <!-- Results list -->
           <v-virtual-scroll
-            v-if="!isLoading && !error && results && results.length > 0"
+            v-if="!isLoading && hasNoError && results && results.length > 0"
             mode="manual"
             :items="results"
           >
@@ -98,7 +98,7 @@ page
 
           <!-- Pagination controls -->
           <div
-            v-if="!isLoading && !error && results && results.length > 0"
+            v-if="!isLoading && hasNoError && results && results.length > 0"
             class="pagination-controls mt-4"
           >
             <v-pagination
@@ -113,7 +113,7 @@ page
 
         <div class="details-container">
           <v-card v-if="selectedResult" elevation="0">
-            <div class="d-flex align-center pa-4">
+            <div class="d-flex align-center">
               <div class="flex-grow-1">
                 <!-- Wrap title and subtitle in a container -->
                 <div class="content-container">
@@ -457,7 +457,7 @@ const searchOperations = useSearchOperations();
 // Use the search state
 const {
   results,
-  selectedResultIndex, // Change to selectedResultIndex
+  selectedResultIndex,
   isLoading,
   error,
   searchTime,
@@ -506,6 +506,8 @@ const toggleDescription = () => {
   showFullDescription.value = !showFullDescription.value;
 };
 
+const hasNoError = computed(() => error.message != "");
+
 // Computed property for dropdown items
 const recordSetItems = computed(() => {
   if (!selectedResult.value?.recordSet) return [];
@@ -521,19 +523,34 @@ const selectedFile = computed(() => {
   return selectedResult.value.recordSet[selectedFileIndex.value];
 });
 
+const calculatePerPage = (height) => {
+  const availableHeight = height - headerHeight - paginationHeight;
+  const itemsPerPage = Math.floor(availableHeight / itemHeight);
+  // Ensure we show at least 3 items and at most 15 items
+  return Math.max(3, Math.min(15, itemsPerPage));
+};
+
 // Add ref for window height
 const windowHeight = ref(window.innerHeight);
 const itemHeight = 80; // Height of each result card in pixels
 const headerHeight = 200; // Approximate height of header elements (search + stats)
 const paginationHeight = 56; // Height of pagination controls
 
-// Update perPage to be calculated based on available height
-const updatePerPage = computed(() => {
-  const availableHeight = windowHeight.value - headerHeight - paginationHeight;
-  const itemsPerPage = Math.floor(availableHeight / itemHeight);
-  // Ensure we show at least 3 items and at most 15 items
-  perPage.value = Math.max(3, Math.min(15, itemsPerPage));
-  return perPage.value;
+// Set initial perPage value
+perPage.value = calculatePerPage(windowHeight.value);
+
+// Update perPage when the window height changes
+watch(windowHeight, (newHeight) => {
+  perPage.value = calculatePerPage(newHeight);
+  // reload results with new perPage value
+  if (query.value) {
+    searchOperations.loadResults(
+      query.value,
+      currentPage.value,
+      fainder_mode.value,
+      enable_highlighting.value,
+    );
+  }
 });
 
 const handleResize = () => {
@@ -582,18 +599,6 @@ watch(currentPage, async (newPage) => {
       theme: theme.global.name.value,
     },
   });
-});
-
-watch(updatePerPage, (newPerPage) => {
-  if (currentPage.value > 0) {
-    perPage.value = newPerPage;
-    searchOperations.loadResults(
-      query.value,
-      currentPage.value,
-      fainder_mode.value,
-      enable_highlighting.value,
-    );
-  }
 });
 
 const selectResult = (result) => {

@@ -1,7 +1,11 @@
 <template>
   <v-app>
     <v-app-bar :elevation="0" height="85">
-      <Logo size="medium" class="mr-4 ml-4 clickable" @click="gotoHome" />
+      <FainderLogo
+        size="medium"
+        class="mr-4 ml-4 clickable"
+        @click="gotoHome"
+      />
       <v-spacer />
 
       <!-- Add search component in app bar only on results page -->
@@ -125,12 +129,6 @@
 <script setup>
 import { useTheme } from "vuetify";
 import { useRoute } from "vue-router";
-import Logo from "~/components/FainderLogo.vue";
-
-function gotoHome() {
-  console.log("go to home");
-  return navigateTo({ path: "/" });
-}
 
 function gotoHome() {
   console.log("go to home");

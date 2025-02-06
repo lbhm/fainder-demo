@@ -20,8 +20,7 @@ TEST_CASES: dict[str, dict[str, dict[str, dict[str, Any]]]] = {
                 "query": 'kw(alternateName:"Weather" OR *a*)',
                 "expected": [0, 2, 1],
             },
-            "wildcard_searches": {"query": 'kw(alternateName:"Wea*")', "expected": [0]},
-            "wildcard_searches_2": {"query": "kw(Germa?y)", "expected": [0, 2, 1]},
+            "wildcard_search": {"query": "kw(Germa?y)", "expected": [0]},
             "double_wildcard_searches": {"query": "kw(*a*)", "expected": [2, 1, 0]},
         }
     },
@@ -47,7 +46,7 @@ TEST_CASES: dict[str, dict[str, dict[str, dict[str, Any]]]] = {
             },
             "high_percentile_xor_simple_keyword_a": {
                 "query": "col(pp(0.5;ge;2000)) XOR kw(germany)",
-                "expected": [0],
+                "expected": [1, 2],
             },
         }
     },

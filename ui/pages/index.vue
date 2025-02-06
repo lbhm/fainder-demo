@@ -2,7 +2,7 @@
   <v-main class="d-flex align-center justify-center">
     <div class="search-wrapper">
       <div class="d-flex justify-center">
-        <Wordmark size="large" />
+        <FainderWordmark size="large" />
       </div>
       <Search_Component
         :search-query="query"
