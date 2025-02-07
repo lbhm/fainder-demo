@@ -2,7 +2,7 @@
 
 <template>
   <v-main>
-    <v-divider></v-divider>
+    <v-divider />
     <div class="pa-5">
       <h1>About</h1>
       <p>This is the about page</p>

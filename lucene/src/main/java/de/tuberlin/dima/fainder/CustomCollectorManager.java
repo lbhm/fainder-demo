@@ -5,7 +5,6 @@ import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.search.TotalHits;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -21,12 +20,12 @@ public class CustomCollectorManager implements CollectorManager<CustomCollector,
     }
 
     @Override
-    public CustomCollector newCollector() throws IOException {
+    public CustomCollector newCollector() {
         return new CustomCollector(filterDocIds, numHits);
     }
 
     @Override
-    public TopDocs reduce(Collection<CustomCollector> collectors) throws IOException {
+    public TopDocs reduce(Collection<CustomCollector> collectors) {
         List<ScoreDoc> allScoreDocs = new ArrayList<>();
         int totalHits = 0;
 

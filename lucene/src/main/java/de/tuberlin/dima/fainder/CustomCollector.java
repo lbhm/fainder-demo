@@ -1,6 +1,7 @@
 package de.tuberlin.dima.fainder;
 
 import org.apache.lucene.document.Document;
+import org.apache.lucene.index.LeafReader;
 import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.index.StoredFields;
 import org.apache.lucene.search.*;
@@ -12,7 +13,7 @@ public class CustomCollector implements Collector {
     private final Set<Integer> filterDocIds;
     private final TopScoreDocCollector topScoreDocCollector;
 
-    public CustomCollector(Set<Integer> filterDocIds, int numHits) throws IOException {
+    public CustomCollector(Set<Integer> filterDocIds, int numHits) {
         this.filterDocIds = filterDocIds;
         TopScoreDocCollectorManager topScoreDocCollectorManager = new TopScoreDocCollectorManager(numHits, Integer.MAX_VALUE);
         this.topScoreDocCollector = topScoreDocCollectorManager.newCollector();
@@ -21,7 +22,10 @@ public class CustomCollector implements Collector {
     @Override
     public LeafCollector getLeafCollector(LeafReaderContext context) throws IOException {
         LeafCollector leafCollector = topScoreDocCollector.getLeafCollector(context);
-        final StoredFields storedFields = context.reader().storedFields();
+        final StoredFields storedFields;
+        try (LeafReader reader = context.reader()) {
+            storedFields = reader.storedFields();
+        }
 
         return new LeafCollector() {
             @Override

@@ -26,54 +26,54 @@ fainder/
 ├── data  # placeholder for dataset profiles and index files
 ├── lucene  # Lucene extension for executing keyword queries (Java)
 ├── scripts  # scripts for installing and starting components (Bash)
-└── ui  # user interface (JavaScript)
+└── ui  # user interface (Vue)
 ```
 
 ## Getting Started
 
 ### Environment Configuration
 
-The demo uses environment variables to configure its components. You can export these variables
+Our system uses environment variables to configure its components. You can export these variables
 in your shell or create a `.env` file in the directory from where you start each component. The
 following variables are available (no default means it must be set):
 
 ```bash
-# Frontend
-NUXT_API_BASE=http://localhost:8000  # Backend API base URL
-
-# General backend
+# Backend
 DATA_DIR=                    # Directory containing dataset collections
 COLLECTION_NAME=             # Name of the dataset collection (subdirectoy in DATA_DIR)
 CROISSANT_DIR=croissant      # Subdirectory containing the Croissant files of a collection
 EMBEDDING_DIR=embeddings     # Subdirectory containing a HNSW index with column names
 FAINDER_DIR=fainder          # Subdirectory containing Fainder indices for a collection
 LUCENE_DIR=lucene            # Subdirectory containing a Lucene index for keyword predicates
-METADATA_FILE=metadata.json  # JSON or Pickle file with metadata about a collection
+METADATA_FILE=metadata.json  # JSON file with metadata about a collection
 QUERY_CACHE_SIZE=128         # Maximum number of query resuls to cache
 
 # Lucene
-LUCENE_HOST=127.0.0.1        # Hostname of the Lucene service
-LUCENE_PORT=8001             # Port of the Lucene service
-LUCENE_MAX_RESULTS=100000    # Maximum number of results returned by Lucene for a keyword predicate
-LUCENE_MIN_SCORE=1.0         # Minimum score for a keyword predicate to be considered
+LUCENE_HOST=127.0.0.1               # Hostname of the Lucene service
+LUCENE_PORT=8001                    # Port of the Lucene service
+LUCENE_MAX_RESULTS=100000           # Maximum number of search results returned by Lucene
+LUCENE_MIN_SCORE=1.0                # Minimum score for a document to be returned
 
 # Fainder
-FAINDER_N_CLUSTERS=50
-FAINDER_BIN_BUDGET=1000
-FAINDER_ALPHA=1.0
-FAINDER_TRANSFORM=None
-FAINDER_CLUSTER_ALGORITHM=kmeans
+FAINDER_N_CLUSTERS=50               # Number of index clusters
+FAINDER_BIN_BUDGET=1000             # Bin/storage budget
+FAINDER_ALPHA=1.0                   # Float value for additive smoothing
+FAINDER_TRANSFORM=None              # None, standard, robust, quantile, or power
+FAINDER_CLUSTER_ALGORITHM=kmeans    # kmeans, hdbscan, or agglomerative
 
 # Embeddings
-USE_EMBEDDINGS=True
-EMBEDDING_MODEL=all-MiniLM-L6-v2
-EMBEDDING_BATCH_SIZE=32
-HNSW_EF_CONSTRUCTION=400
-HNSW_N_BIDIRECTIONAL_LINKS=64
-HNSW_EF=50
+USE_EMBEDDINGS=True                 # Boolean to enable/disable embeddings
+EMBEDDING_MODEL=all-MiniLM-L6-v2    # Name of the embedding model on Hugging Face
+EMBEDDING_BATCH_SIZE=32             # Batch size for embedding generation (during indexing)
+HNSW_EF_CONSTRUCTION=400            # Construction parameter for HNSW
+HNSW_N_BIDIRECTIONAL_LINKS=64       # Number of bidirectional links for HNSW
+HNSW_EF=50                          # Search parameter for HNSW
+
+# Frontend
+NUXT_API_BASE=http://localhost:8000 # Backend API base URL
 
 # Misc
-LOG_LEVEL=INFO
+LOG_LEVEL=INFO                      # Logging level (TRACE, DEBUG, INFO, WARNING, ERROR)
 ```
 
 ### Data Preparation
@@ -111,7 +111,7 @@ To stop the containers, hit `Ctrl+C` or run:
 docker compose down
 ```
 
-### Run Locally
+### Run Locally / Developer Setup
 
 #### Prerequisites
 
@@ -124,23 +124,27 @@ docker compose down
 
 #### Installation
 
-TODO
-
-#### Developer Setup
-
 We recommend using [`uv`](https://docs.astral.sh/uv/) to manage the development environment of the
 backend component. You just have to run:
 
 ```bash
-cd backend/
-uv sync --extra dev
-uv run pre-commit install
+scripts/install.sh
+```
 
-cd ../ui/
-npm install
+**Note:** `eslint` and `vue-tsc` are currently not integrated into the `pre-commit` hooks.
+Therefore, you should run `npm run lint` and `npm run typecheck` before committing UI changes.
+
+##### Docker Development
+
+If you want to use Docker for development, you can use the following command to start the
+components in development mode:
+
+```bash
+FASTAPI_MODE=dev NUXT_MODE=dev docker compose up --build --watch
 ```
 
 ## Generating gRPC Code
 
 The Fainder backend uses gRPC to communicate with the Lucene service. To generate the necessary
-code, install the development dependencies in `backend/` and run `scripts/gen_proto.sh`.
+code, install the development dependencies in `backend/`, activate your virtual environment, and
+run `scripts/gen_proto.sh`.

@@ -7,5 +7,6 @@ RUN npm install --omit=dev
 RUN npm run build
 
 EXPOSE 3000
+ARG NUXT_MODE=preview
 
-CMD ["npm", "run", "dev"]
+CMD echo ${NUXT_MODE} && npm run $NUXT_MODE

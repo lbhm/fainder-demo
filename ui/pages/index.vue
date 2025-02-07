@@ -2,15 +2,15 @@
   <v-main class="d-flex align-center justify-center">
     <div class="search-wrapper">
       <div class="d-flex justify-center">
-        <Wordmark size="large" />
+        <FainderWordmark size="large" />
       </div>
       <Search_Component
-        :searchQuery="query"
+        :search-query="query"
         :inline="true"
         :lines="5"
-        :queryBuilder="false"
-        :simpleBuilder="true"
-        @searchData="searchData"
+        :query-builder="false"
+        :simple-builder="true"
+        @search-data="searchData"
       />
     </div>
   </v-main>

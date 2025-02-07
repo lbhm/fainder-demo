@@ -14,19 +14,19 @@ words # The search page will contain multiple search bars
               density="comfortable"
               :error="!isValid"
               :rules="[validateSyntax]"
-              @update:model-value="highlightSyntax"
-              @keydown="handleKeyDown"
-              @focus="isSearchFocused = true"
-              @blur="isSearchFocused = false"
               hide-details="true"
               :rows="current_rows"
               class="search-input"
               append-inner-icon="mdi-magnify"
-              @click:append-inner="searchData"
               :auto-grow="true"
               autofocus
+              @update:model-value="highlightSyntax"
+              @keydown="handleKeyDown"
+              @focus="isSearchFocused = true"
+              @blur="isSearchFocused = false"
+              @click:append-inner="searchData"
             />
-            <div class="syntax-highlight" v-html="highlightedQuery"></div>
+            <div class="syntax-highlight" v-html="highlightedQuery" />
             <div v-if="syntaxError" class="error-message">
               {{ syntaxError }}
             </div>
@@ -35,13 +35,12 @@ words # The search page will contain multiple search bars
         <v-col cols="1">
           <v-btn
             icon="mdi-cog"
-            @click="showSettings = true"
             variant="text"
             elevation="0"
             density="compact"
             class="ml-2"
-          >
-          </v-btn>
+            @click="showSettings = true"
+          />
         </v-col>
       </v-row>
 
@@ -50,9 +49,9 @@ words # The search page will contain multiple search bars
         <v-col cols="12">
           <v-btn
             v-if="!showSimpleBuilder"
-            @click="showSimpleBuilder = true"
             prepend-icon="mdi-plus"
             elevation="0"
+            @click="showSimpleBuilder = true"
           >
             Add Column Filters
           </v-btn>
@@ -84,9 +83,9 @@ words # The search page will contain multiple search bars
                 v-for="(term, index) in columnTerms"
                 :key="`col-${index}`"
                 closable
+                color="primary"
                 @click:close="removeColumnTerm(index)"
                 @click="transferColumnTerm(term, index)"
-                color="primary"
               >
                 COLUMN(NAME({{ term.column }};{{ term.threshold }}))
               </v-chip>
@@ -94,9 +93,9 @@ words # The search page will contain multiple search bars
                 v-for="(term, index) in percentileTerms"
                 :key="`percentile-${index}`"
                 closable
+                color="indigo"
                 @click:close="removePercentileTerm(index)"
                 @click="transferPercentileTerm(term, index)"
-                color="indigo"
               >
                 COLUMN(PERCENTILE({{ term.percentile }};{{ term.comparison }};{{
                   term.value
@@ -106,9 +105,9 @@ words # The search page will contain multiple search bars
                 v-for="(term, index) in combinedTerms"
                 :key="`combined-${index}`"
                 closable
+                color="success"
                 @click:close="combinedTerms.splice(index, 1)"
                 @click="transferCombinedTerm(term, index)"
-                color="success"
               >
                 COLUMN(NAME({{ term.column }};{{ term.threshold }}) AND
                 PERCENTILE({{ term.percentile }};{{ term.comparison }};{{
@@ -134,7 +133,7 @@ words # The search page will contain multiple search bars
                   <v-col cols="5">
                     <v-text-field
                       v-model="columnFilter.threshold"
-                      label="Threshold"
+                      label="Semantic Neighbors"
                       type="number"
                       variant="outlined"
                       density="comfortable"
@@ -145,7 +144,7 @@ words # The search page will contain multiple search bars
               </v-col>
             </v-row>
 
-            <v-divider class="my-4"></v-divider>
+            <v-divider class="my-4" />
 
             <v-row>
               <v-col cols="12">
@@ -193,18 +192,18 @@ words # The search page will contain multiple search bars
                 <div class="d-flex justify-end gap-2">
                   <v-btn
                     color="success"
-                    @click="addFilters"
                     :disabled="!isColumnFilterValid && !isPercentileFilterValid"
                     prepend-icon="mdi-plus"
                     class="mr-2"
+                    @click="addFilters"
                   >
                     Add
                   </v-btn>
                   <v-btn
                     color="primary"
-                    @click="searchData"
                     prepend-icon="mdi-magnify"
                     :disabled="!hasActiveFilters"
+                    @click="searchData"
                   >
                     Run Query
                   </v-btn>
@@ -232,7 +231,7 @@ words # The search page will contain multiple search bars
             v-model="temp_enable_highlighting"
             label="Enable Highlighting"
             color="primary"
-          ></v-switch>
+          />
         </v-card-text>
 
         <v-card-actions>
@@ -240,14 +239,14 @@ words # The search page will contain multiple search bars
           <v-btn
             color="error"
             variant="text"
-            @click="cancelSettings"
             icon="mdi-close"
+            @click="cancelSettings"
           />
           <v-btn
             color="success"
             variant="text"
-            @click="saveSettings"
             icon="mdi-check"
+            @click="saveSettings"
           />
         </v-card-actions>
       </v-card>
@@ -259,7 +258,10 @@ words # The search page will contain multiple search bars
 import { onMounted, ref, watch, computed } from "vue";
 
 const props = defineProps({
-  searchQuery: String,
+  searchQuery: {
+    type: String,
+    default: "",
+  },
   inline: {
     type: Boolean,
     default: false,
@@ -278,7 +280,7 @@ const emit = defineEmits(["searchData"]);
 const route = useRoute();
 const temp_fainder_mode = ref(route.query.fainder_mode || "low_memory");
 const temp_enable_highlighting = ref(
-  route.query.enable_highlighting !== "false"
+  route.query.enable_highlighting !== "false",
 ); // Default to true
 const current_rows = ref(1);
 
@@ -354,14 +356,13 @@ watch(showSimpleBuilder, (isOpen) => {
     columnTerms.value = [];
     percentileTerms.value = [];
     combinedTerms.value = [];
-    
+
     if (searchQuery.value) {
       parseExistingQuery(searchQuery.value);
       highlightSyntax(searchQuery.value);
     }
   }
 });
-
 
 const handleKeyDown = (event) => {
   if (!isSearchFocused.value) return;
@@ -390,55 +391,61 @@ const parseExistingQuery = (query) => {
   const andTerms = query.split(/\s+AND\s+/);
   let remainingTerms = [];
 
-  andTerms.forEach(term => {
+  andTerms.forEach((term) => {
     const term_trimmed = term.trim();
-    
+
     // Skip terms that are part of OR operations
-    if (term_trimmed.includes(' OR ')) {
+    if (term_trimmed.includes(" OR ")) {
       remainingTerms.push(term_trimmed);
       return;
     }
 
     // Check for column name predicate
     if (term_trimmed.match(/^COLUMN\(NAME\([^)]+\)\)$/)) {
-      const [column, threshold] = term_trimmed
-        .match(/NAME\(([^;]+);(\d+)\)/i)
-        ?.slice(1) || [];
+      const [column, threshold] =
+        term_trimmed.match(/NAME\(([^;]+);(\d+)\)/i)?.slice(1) || [];
       if (column && threshold) {
         columnTerms.value.push({
           column,
-          threshold: parseFloat(threshold)
+          threshold: parseFloat(threshold),
         });
       }
     }
     // Check for percentile predicate
     else if (term_trimmed.match(/^COLUMN\(PERCENTILE\([^)]+\)\)$/)) {
-      const [percentile, comparison, value] = term_trimmed
-        .match(/PERCENTILE\((\d*\.?\d+);(ge|gt|le|lt);(\d*\.?\d+)\)/i)
-        ?.slice(1) || [];
+      const [percentile, comparison, value] =
+        term_trimmed
+          .match(/PERCENTILE\((\d*\.?\d+);(ge|gt|le|lt);(\d*\.?\d+)\)/i)
+          ?.slice(1) || [];
       if (percentile && comparison && value) {
         percentileTerms.value.push({
           percentile: parseFloat(percentile),
           comparison,
-          value: parseFloat(value)
+          value: parseFloat(value),
         });
       }
     }
     // Check for combined predicates
-    else if (term_trimmed.match(/^COLUMN\(NAME\([^)]+\)\s+AND\s+PERCENTILE\([^)]+\)\)$/)) {
+    else if (
+      term_trimmed.match(
+        /^COLUMN\(NAME\([^)]+\)\s+AND\s+PERCENTILE\([^)]+\)\)$/,
+      )
+    ) {
       const nameMatch = term_trimmed.match(/NAME\(([^;]+);(\d+)\)/i);
-      const percentileMatch = term_trimmed.match(/PERCENTILE\((\d*\.?\d+);(ge|gt|le|lt);(\d*\.?\d+)\)/i);
-      
+      const percentileMatch = term_trimmed.match(
+        /PERCENTILE\((\d*\.?\d+);(ge|gt|le|lt);(\d*\.?\d+)\)/i,
+      );
+
       if (nameMatch && percentileMatch) {
         const [column, threshold] = nameMatch.slice(1);
         const [percentile, comparison, value] = percentileMatch.slice(1);
-        
+
         combinedTerms.value.push({
           column,
           threshold: parseFloat(threshold),
           percentile: parseFloat(percentile),
           comparison,
-          value: parseFloat(value)
+          value: parseFloat(value),
         });
       }
     }
@@ -449,14 +456,14 @@ const parseExistingQuery = (query) => {
   });
 
   // Set the remaining query
-  searchQuery.value = remainingTerms.join(' AND ').trim();
+  searchQuery.value = remainingTerms.join(" AND ").trim();
 
   // Debug output
-  console.log('Parsed query results:', {
+  console.log("Parsed query results:", {
     combinedTerms: combinedTerms.value,
     columnTerms: columnTerms.value,
     percentileTerms: percentileTerms.value,
-    remainingQuery: searchQuery.value
+    remainingQuery: searchQuery.value,
   });
 };
 
@@ -491,19 +498,19 @@ async function searchData() {
 
   // Add column terms
   const columnQueryTerms = columnTerms.value.map(
-    (term) => `COLUMN(NAME(${term.column};${term.threshold}))`
+    (term) => `COLUMN(NAME(${term.column};${term.threshold}))`,
   );
 
   // Add percentile terms
   const percentileQueryTerms = percentileTerms.value.map(
     (term) =>
-      `COLUMN(PERCENTILE(${term.percentile};${term.comparison};${term.value}))`
+      `COLUMN(PERCENTILE(${term.percentile};${term.comparison};${term.value}))`,
   );
 
   // Add combined terms
   const combinedQueryTerms = combinedTerms.value.map(
     (term) =>
-      `COLUMN(NAME(${term.column};${term.threshold}) AND PERCENTILE(${term.percentile};${term.comparison};${term.value}))`
+      `COLUMN(NAME(${term.column};${term.threshold}) AND PERCENTILE(${term.percentile};${term.comparison};${term.value}))`,
   );
   if (columnQueryTerms.length) {
     terms.push(columnQueryTerms.join(" AND "));
@@ -526,12 +533,12 @@ async function searchData() {
   // Check if query is just plain text (no operators or functions)
   const isPlainText =
     !/(?:pp|percentile|kw|keyword|col|column)\s*\(|AND|OR|XOR|NOT|\(|\)/.test(
-      query
+      query,
     );
 
   // Process plain text as keyword search
   if (isPlainText && query) {
-    query = `kw(${query})`;
+    query = `KW(${query})`;
   }
 
   // Combine filter terms with query
@@ -539,7 +546,7 @@ async function searchData() {
     query = query ? `${query} AND ${filterQuery}` : filterQuery;
   }
 
-  let s_query = query;
+  const s_query = query;
   console.log("Search query:", s_query);
   console.log("Index type:", fainder_mode.value);
   console.log("Highlighting enabled:", enable_highlighting.value);
@@ -593,7 +600,7 @@ const validateSyntax = (value) => {
         // Check if it contains name or percentile terms
         if (
           !/^(?:col|column)\s*\(\s*(?:name\s*\([^;]+;\s*\d+\)|pp\s*\([^)]+\))\s*\)$/i.test(
-            func
+            func,
           )
         ) {
           // Check if it has invalid keyword inside
@@ -613,7 +620,7 @@ const validateSyntax = (value) => {
       } else if (lowFunc.startsWith("pp") || lowFunc.startsWith("percentile")) {
         if (
           !/^(?:pp|percentile)\s*\(\s*\d+(?:\.\d+)?\s*;\s*(?:ge|gt|le|lt)\s*;\s*\d+(?:\.\d+)?\s*\)$/i.test(
-            func
+            func,
           )
         ) {
           isValid.value = false;
@@ -630,7 +637,7 @@ const validateSyntax = (value) => {
     }
 
     return true;
-  } catch (e) {
+  } catch {
     isValid.value = false;
     syntaxError.value = "Invalid query syntax";
     return false;
@@ -648,7 +655,7 @@ const highlightSyntax = (value) => {
   // Highlight all function names consistently
   highlighted = highlighted.replace(
     /\b(kw|keyword|name|pp|percentile|col|column)\s*\(/gi,
-    '<span class="function">$1</span>('
+    '<span class="function">$1</span>(',
   );
 
   // Highlight content inside function calls
@@ -667,21 +674,20 @@ const highlightSyntax = (value) => {
 
   // Handle brackets
   let bracketLevel = 0;
-  const maxBracketLevels = 4;
+  const nBracketColors = 4;
 
-  highlighted = highlighted.replace(/[\(\)]/g, (match) => {
+  highlighted = highlighted.replace(/[()]/g, (match) => {
     if (match === "(") {
-      bracketLevel = Math.min(bracketLevel + 1, maxBracketLevels);
-      return `<span class="bracket-${bracketLevel - 1}">(</span>`;
+      bracketLevel += 1;
+      return `<span class="bracket-${(bracketLevel - 1) % nBracketColors}">(</span>`;
     } else {
       bracketLevel = Math.max(bracketLevel - 1, 0);
-      return `<span class="bracket-${bracketLevel}">)</span>`;
+      return `<span class="bracket-${bracketLevel % nBracketColors}">)</span>`;
     }
   });
 
   highlightedQuery.value = highlighted;
 };
-
 
 // Remove a column term
 const removeColumnTerm = (index) => {

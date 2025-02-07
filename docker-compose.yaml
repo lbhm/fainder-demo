@@ -27,6 +27,7 @@ services:
           path: backend/pyproject.toml
     # user: ${UID:-1000}:${GID:-1000}
     environment:
+      - FASTAPI_MODE=${FASTAPI_MODE:-run}
       - DATA_DIR=/app/data
       - COLLECTION_NAME=${COLLECTION_NAME:?COLLECTION_NAME is missing}
       - METADATA_FILE=${METADATA_FILE:-metadata.json}
@@ -55,6 +56,7 @@ services:
     # user: ${UID:-1000}:${GID:-1000}
     tmpfs: /tmp
     environment:
+      - NUXT_MODE=${NUXT_MODE:-preview}
       - NUXT_API_BASE=http://localhost:8000
     ports:
       - "3000:3000"

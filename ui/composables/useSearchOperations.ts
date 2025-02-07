@@ -18,13 +18,13 @@ export const useSearchOperations = () => {
     queryStr: string,
     page = 1,
     fainder_mode?: string,
-    enable_highlighting?: boolean
+    enable_highlighting?: boolean,
   ) => {
     isLoading.value = true;
-    error.value = null;
+    error.value = { message: "", details: null };
 
     console.log(
-      `Loading results for query: ${queryStr}, page: ${page}, fainder_mode: ${fainder_mode}, enable_highlighting: ${enable_highlighting}`
+      `Loading results for query: ${queryStr}, page: ${page}, fainder_mode: ${fainder_mode}, enable_highlighting: ${enable_highlighting}`,
     );
 
     try {

@@ -1,5 +1,6 @@
 package de.tuberlin.dima.fainder;
 
+import de.tuberlin.dima.fainder.LuceneSearch.SearchResult;
 import io.github.cdimascio.dotenv.Dotenv;
 import io.github.cdimascio.dotenv.DotenvException;
 import io.grpc.Server;
@@ -8,18 +9,14 @@ import io.grpc.stub.StreamObserver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import de.tuberlin.dima.fainder.LuceneSearch.SearchResult;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.ArrayList;
 import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.Set;
+import java.util.stream.Stream;
 
 public class LuceneServer {
     private static final Logger logger = LoggerFactory.getLogger(LuceneServer.class);
@@ -80,7 +77,8 @@ public class LuceneServer {
     private void start(int port) throws IOException {
         logger.info("Starting Lucene Server");
 
-        grpcServer = ServerBuilder.forPort(port).addService(new LuceneConnectorImpl()).build().start();
+        grpcServer = ServerBuilder.forPort(port).addService(new LuceneConnectorImpl()).build()
+                .start();
         logger.info("Server started, listening on {}", grpcServer.getPort());
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -109,11 +107,8 @@ public class LuceneServer {
             Set<Integer> docIds = new HashSet<>(queryRequest.getDocIdsList());
 
             QueryResponse.Builder responseBuilder = QueryResponse.newBuilder();
-
             SearchResult searchResults = luceneSearch.search(query, docIds, minScore, maxResults, queryRequest.getEnableHighlighting());
-
-            responseBuilder.addAllResults(searchResults.docIds)
-                          .addAllScores(searchResults.scores);
+            responseBuilder.addAllResults(searchResults.docIds).addAllScores(searchResults.scores);
 
             // Add highlights for each document
             for (Map.Entry<Integer, Map<String, String>> docEntry : searchResults.highlights.entrySet()) {
@@ -143,28 +138,33 @@ public class LuceneServer {
                 }
 
                 // Delete existing index directory
-                Files.walk(indexPath)
-                    .sorted(java.util.Comparator.reverseOrder())
-                    .map(Path::toFile)
-                    .forEach(java.io.File::delete);
+                try (Stream<Path> paths = Files.walk(indexPath)) {
+                    paths.sorted(java.util.Comparator.reverseOrder()).forEach(path -> {
+                        try {
+                            Files.delete(path);
+                        } catch (IOException e) {
+                            logger.warn("Failed to delete file: {}", path, e);
+                        }
+                    });
+                }
 
                 // Create new index
                 LuceneIndexer.createIndex(indexPath, dataPath);
                 luceneSearch = new LuceneSearch(indexPath);
 
                 RecreateIndexResponse response = RecreateIndexResponse.newBuilder()
-                    .setSuccess(true)
-                    .setMessage("Index successfully recreated")
-                    .build();
+                        .setSuccess(true)
+                        .setMessage("Index successfully recreated")
+                        .build();
 
                 responseObserver.onNext(response);
                 responseObserver.onCompleted();
             } catch (Exception e) {
                 logger.error("Failed to recreate index: {}", e.getMessage());
                 RecreateIndexResponse response = RecreateIndexResponse.newBuilder()
-                    .setSuccess(false)
-                    .setMessage("Failed to recreate index: " + e.getMessage())
-                    .build();
+                        .setSuccess(false)
+                        .setMessage("Failed to recreate index: " + e.getMessage())
+                        .build();
 
                 responseObserver.onNext(response);
                 responseObserver.onCompleted();

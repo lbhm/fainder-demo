@@ -47,9 +47,9 @@ public class LuceneSearch {
         searcher = new IndexSearcher(reader);
         // Configure analyzer to keep stop words
         analyzer = new StandardAnalyzer(CharArraySet.EMPTY_SET);
-        fieldParsers = searchFields.entrySet().stream()
-                .map(entry -> {
-                    QueryParser parser = new QueryParser(entry.getKey(), analyzer);
+        fieldParsers = searchFields.keySet().stream()
+                .map(field -> {
+                    QueryParser parser = new QueryParser(field, analyzer);
                     parser.setDefaultOperator(QueryParser.Operator.OR);
                     parser.setAllowLeadingWildcard(true); // TODO: Investigate performance impact
                     return parser;
@@ -89,7 +89,7 @@ public class LuceneSearch {
 
             // Fuzzy match for typos
             // Query fuzzyQuery = parser.parse("(" + queryText + "~)^" + boost);
-            //queryBuilder.add(fuzzyQuery, BooleanClause.Occur.SHOULD);
+            // queryBuilder.add(fuzzyQuery, BooleanClause.Occur.SHOULD);
 
             // Prefix match for partial words
             // Query prefixQuery = parser.parse("(" + queryText + "*)^" + (boost * 0.5f));
@@ -125,7 +125,7 @@ public class LuceneSearch {
 
             logger.info("Executing query {}. With filter: {} ", multiFieldQuery, docIds);
 
-            ScoreDoc[] hits = null;
+            ScoreDoc[] hits;
             if (docIds != null && !docIds.isEmpty()) {
                 // Create filter for allowed document IDs
                 // TODO: Does the docFilter actually help to reduce query execution time?
@@ -184,12 +184,10 @@ public class LuceneSearch {
             return new SearchResult(results, scores, highlights);
         } catch (ParseException e) {
             logger.error("Query parsing error: {}", e.getMessage());
-            e.printStackTrace();
             return new SearchResult(List.of(), List.of(), Map.of());
 
         } catch (IOException e) {
             logger.error("Query IO error: {}", e.getMessage());
-            e.printStackTrace();
             return new SearchResult(List.of(), List.of(), Map.of());
         }
     }

@@ -1,28 +1,29 @@
-import vuetify, { transformAssetUrls } from 'vite-plugin-vuetify'
+import vuetify, { transformAssetUrls } from "vite-plugin-vuetify";
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   ssr: false,
-  compatibilityDate: '2024-11-01',
+  compatibilityDate: "2024-11-01",
   devtools: { enabled: true },
   build: {
-    transpile: ['vuetify'],
+    transpile: ["vuetify"],
   },
   alias: {
-    '#app-manifest': 'node_modules/nuxt/dist/app/composables/manifest.js'
+    "#app-manifest": "node_modules/nuxt/dist/app/composables/manifest.js",
   },
   modules: [
     (_options, nuxt) => {
-      nuxt.hooks.hook('vite:extendConfig', (config) => {
-        // @ts-expect-error
-        config.plugins.push(vuetify({ autoImport: true }))
-      })
+      nuxt.hooks.hook("vite:extendConfig", (config) => {
+        // @ts-expect-error - This is a private API
+        config.plugins.push(vuetify({ autoImport: true }));
+      });
     },
-    '@nuxtjs/mdc', '@nuxtjs/color-mode'
+    "@nuxtjs/mdc",
+    "@nuxtjs/color-mode",
     //...
   ],
   runtimeConfig: {
     public: {
-      apiBase: process.env.NUXT_API_BASE || 'http://localhost:8000',
+      apiBase: process.env.NUXT_API_BASE || "http://localhost:8000",
     },
   },
   vite: {
@@ -33,11 +34,11 @@ export default defineNuxtConfig({
     },
   },
   mdc: {
+    // TODO: Document why we use this
     headings: {
       anchorLinks: {
         h3: false,
       },
     },
   },
-
-})
+});

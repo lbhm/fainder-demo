@@ -288,4 +288,12 @@ async def cache_statistics() -> CacheInfo:
     return query_evaluator.cache_info()
 
 
+@app.get("/clear_cache")
+async def clear_cache() -> MessageResponse:
+    """Clear the query result cache."""
+    query_evaluator.clear_cache()
+    logger.info("Cache cleared successfully")
+    return MessageResponse(message="Cache cleared successfully")
+
+
 # TODO: Recreate the alternative benchmarking endpoints with the new objects/approach
