@@ -19,6 +19,7 @@ export default defineNuxtConfig({
     },
     "@nuxtjs/mdc",
     "@nuxtjs/color-mode",
+    "@nuxt/test-utils/module",
     //...
   ],
   runtimeConfig: {

@@ -14,7 +14,7 @@ words # The search page will contain multiple search bars
               density="comfortable"
               :error="!isValid"
               :rules="[validateSyntax]"
-              hide-details="true"
+              :hide-details="true"
               :rows="current_rows"
               class="search-input"
               append-inner-icon="mdi-magnify"
@@ -83,7 +83,13 @@ words # The search page will contain multiple search bars
                 v-for="(term, index) in searchTerms"
                 :key="index"
                 closable
-                :color="term.type === 'column' ? 'primary' : term.type === 'percentile' ? 'indigo' : 'success'"
+                :color="
+                  term.type === 'column'
+                    ? 'primary'
+                    : term.type === 'percentile'
+                      ? 'indigo'
+                      : 'success'
+                "
                 @click:close="removeSearchTerm(index)"
                 @click="transferTerm(term, index)"
               >
@@ -91,11 +97,15 @@ words # The search page will contain multiple search bars
                   COLUMN(NAME({{ term.column }};{{ term.threshold }}))
                 </template>
                 <template v-else-if="term.type === 'percentile'">
-                  COLUMN(PERCENTILE({{ term.percentile }};{{ term.comparison }};{{ term.value }}))
+                  COLUMN(PERCENTILE({{ term.percentile }};{{
+                    term.comparison
+                  }};{{ term.value }}))
                 </template>
                 <template v-else>
                   COLUMN(NAME({{ term.column }};{{ term.threshold }}) AND
-                  PERCENTILE({{ term.percentile }};{{ term.comparison }};{{ term.value }}))
+                  PERCENTILE({{ term.percentile }};{{ term.comparison }};{{
+                    term.value
+                  }}))
                 </template>
               </v-chip>
             </v-chip-group>
@@ -240,6 +250,7 @@ words # The search page will contain multiple search bars
 
 <script setup lang="ts">
 import { onMounted, ref, watch, computed } from "vue";
+import { useQueryParser, type SearchTerm } from "../composables/useQueryParser";
 
 const props = defineProps({
   searchQuery: {
@@ -269,28 +280,28 @@ const temp_enable_highlighting = ref(
 const current_rows = ref(1);
 
 interface BaseSearchTerm {
-  type: 'column' | 'percentile' | 'combined';
+  type: "column" | "percentile" | "combined";
 }
 
 interface ColumnTerm extends BaseSearchTerm {
-  type: 'column';
+  type: "column";
   column: string;
   threshold: number;
 }
 
 interface PercentileTerm extends BaseSearchTerm {
-  type: 'percentile';
+  type: "percentile";
   percentile: number;
-  comparison: 'gt' | 'ge' | 'lt' | 'le';
+  comparison: "gt" | "ge" | "lt" | "le";
   value: number;
 }
 
 interface CombinedTerm extends BaseSearchTerm {
-  type: 'combined';
+  type: "combined";
   column: string;
   threshold: number;
   percentile: number;
-  comparison: 'gt' | 'ge' | 'lt' | 'le';
+  comparison: "gt" | "ge" | "lt" | "le";
   value: number;
 }
 
@@ -387,96 +398,25 @@ const handleKeyDown = (event) => {
   }
 };
 
+const { parseQuery } = useQueryParser();
+
 const parseExistingQuery = (query: string) => {
   if (!query) return;
   if (!props.simpleBuilder) {
     searchQuery.value = query;
     return;
   }
-  console.log("Parsing existing query:", query);
 
-  // Split by AND to only process terms connected by AND
-  const andTerms = query.split(/\s+AND\s+/);
-  const remainingTerms: string[] = [];
+  const { terms, remainingQuery } = parseQuery(query);
+  searchTerms.value = terms;
+  searchQuery.value = remainingQuery;
 
-  andTerms.forEach((term) => {
-    const term_trimmed = term.trim();
-
-    // Skip terms that are part of OR operations
-    if (term_trimmed.includes(" OR ")) {
-      remainingTerms.push(term_trimmed);
-      return;
-    }
-
-    // Check for column name predicate
-    if (term_trimmed.match(/^COLUMN\(NAME\([^)]+\)\)$/)) {
-      const [column, threshold] =
-        term_trimmed.match(/NAME\(([^;]+);(\d+)\)/i)?.slice(1) || [];
-      if (column && threshold) {
-        searchTerms.value.push({
-          type: 'column',
-          column,
-          threshold: parseFloat(threshold),
-        });
-      }
-    }
-    // Check for percentile predicate
-    else if (term_trimmed.match(/^COLUMN\(PERCENTILE\([^)]+\)\)$/)) {
-      const [percentile, comparison, value] =
-        term_trimmed
-          .match(/PERCENTILE\((\d*\.?\d+);(ge|gt|le|lt);(\d*\.?\d+)\)/i)
-          ?.slice(1) || [];
-      if (percentile && comparison && value) {
-        searchTerms.value.push({
-          type: 'percentile',
-          percentile: parseFloat(percentile),
-          comparison: comparison as 'gt' | 'ge' | 'lt' | 'le',
-          value: parseFloat(value),
-        });
-      }
-    }
-    // Check for combined predicates
-    else if (
-      term_trimmed.match(
-        /^COLUMN\(NAME\([^)]+\)\s+AND\s+PERCENTILE\([^)]+\)\)$/,
-      )
-    ) {
-      const nameMatch = term_trimmed.match(/NAME\(([^;]+);(\d+)\)/i);
-      const percentileMatch = term_trimmed.match(
-        /PERCENTILE\((\d*\.?\d+);(ge|gt|le|lt);(\d*\.?\d+)\)/i,
-      );
-
-      if (nameMatch && percentileMatch) {
-        const [column, threshold] = nameMatch.slice(1);
-        const [percentile, comparison, value] = percentileMatch.slice(1);
-
-        searchTerms.value.push({
-          type: 'combined',
-          column,
-          threshold: parseFloat(threshold),
-          percentile: parseFloat(percentile),
-          comparison: comparison as 'gt' | 'ge' | 'lt' | 'le',
-          value: parseFloat(value),
-        });
-      }
-    }
-    // If term doesn't match any predicate patterns or contains OR, keep it
-    else {
-      remainingTerms.push(term_trimmed);
-    }
-  });
-
-  // Set the remaining query
-  searchQuery.value = remainingTerms.join(" AND ").trim();
-
-  // Debug output
   console.log("Parsed query results:", {
     searchTerms: searchTerms.value,
     remainingQuery: searchQuery.value,
   });
 };
 
-// Call the test function during development
 onMounted(() => {
   if (props.searchQuery) {
     searchQuery.value = props.searchQuery;
@@ -506,14 +446,15 @@ async function searchData() {
 
   // Add column terms
   const columnQueryTerms = searchTerms.value
-    .filter((term) => term.type === 'column')
+    .filter((term) => term.type === "column")
     .map(
-      (term) => `COLUMN(NAME(${(term as ColumnTerm).column};${(term as ColumnTerm).threshold}))`,
+      (term) =>
+        `COLUMN(NAME(${(term as ColumnTerm).column};${(term as ColumnTerm).threshold}))`,
     );
 
   // Add percentile terms
   const percentileQueryTerms = searchTerms.value
-    .filter((term) => term.type === 'percentile')
+    .filter((term) => term.type === "percentile")
     .map(
       (term) =>
         `COLUMN(PERCENTILE(${(term as PercentileTerm).percentile};${(term as PercentileTerm).comparison};${(term as PercentileTerm).value}))`,
@@ -521,7 +462,7 @@ async function searchData() {
 
   // Add combined terms
   const combinedQueryTerms = searchTerms.value
-    .filter((term) => term.type === 'combined')
+    .filter((term) => term.type === "combined")
     .map(
       (term) =>
         `COLUMN(NAME(${(term as CombinedTerm).column};${(term as CombinedTerm).threshold}) AND PERCENTILE(${(term as CombinedTerm).percentile};${(term as CombinedTerm).comparison};${(term as CombinedTerm).value}))`,
@@ -571,7 +512,7 @@ async function searchData() {
   });
 }
 
-const validateSyntax = (value) => {
+const validateSyntax = (value: string) => {
   if (!value || value.trim() === "" || !highlightEnabled.value) {
     syntaxError.value = "";
     isValid.value = true;
@@ -658,7 +599,7 @@ const validateSyntax = (value) => {
   }
 };
 
-const highlightSyntax = (value) => {
+const highlightSyntax = (value: string) => {
   if (!value || !highlightEnabled.value) {
     highlightedQuery.value = value || "";
     return;
@@ -710,20 +651,20 @@ const removeSearchTerm = (index: number) => {
 
 const transferTerm = (term: SearchTerm, index: number) => {
   switch (term.type) {
-    case 'column':
+    case "column":
       columnFilter.value = {
         column: term.column,
         threshold: term.threshold.toString(),
       };
       break;
-    case 'percentile':
+    case "percentile":
       percentileFilter.value = {
         percentile: term.percentile.toString(),
         comparison: term.comparison,
         value: term.value.toString(),
       };
       break;
-    case 'combined':
+    case "combined":
       columnFilter.value = {
         column: term.column,
         threshold: term.threshold.toString(),
@@ -758,35 +699,46 @@ const isPercentileFilterValid = computed(() => {
 const addFilters = () => {
   if (isColumnFilterValid.value && !isPercentileFilterValid.value) {
     searchTerms.value.push({
-      type: 'column',
+      type: "column",
       column: columnFilter.value.column,
       threshold: parseFloat(columnFilter.value.threshold),
     });
-    columnFilter.value = { column: '', threshold: '' };
+    columnFilter.value = { column: "", threshold: "" };
   } else if (isPercentileFilterValid.value && !isColumnFilterValid.value) {
     searchTerms.value.push({
-      type: 'percentile',
+      type: "percentile",
       percentile: parseFloat(percentileFilter.value.percentile),
-      comparison: percentileFilter.value.comparison as 'gt' | 'ge' | 'lt' | 'le',
+      comparison: percentileFilter.value.comparison as
+        | "gt"
+        | "ge"
+        | "lt"
+        | "le",
       value: parseFloat(percentileFilter.value.value),
     });
-    percentileFilter.value = { percentile: '', comparison: '', value: '' };
+    percentileFilter.value = { percentile: "", comparison: "", value: "" };
   } else if (isColumnFilterValid.value && isPercentileFilterValid.value) {
     searchTerms.value.push({
-      type: 'combined',
+      type: "combined",
       column: columnFilter.value.column,
       threshold: parseFloat(columnFilter.value.threshold),
       percentile: parseFloat(percentileFilter.value.percentile),
-      comparison: percentileFilter.value.comparison as 'gt' | 'ge' | 'lt' | 'le',
+      comparison: percentileFilter.value.comparison as
+        | "gt"
+        | "ge"
+        | "lt"
+        | "le",
       value: parseFloat(percentileFilter.value.value),
     });
-    columnFilter.value = { column: '', threshold: '' };
-    percentileFilter.value = { percentile: '', comparison: '', value: '' };
+    columnFilter.value = { column: "", threshold: "" };
+    percentileFilter.value = { percentile: "", comparison: "", value: "" };
   }
 };
 
 const hasActiveFilters = computed(() => {
-  return searchTerms.value.length > 0 || (searchQuery.value && searchQuery.value.trim() !== '');
+  return (
+    searchTerms.value.length > 0 ||
+    (searchQuery.value && searchQuery.value.trim() !== "")
+  );
 });
 
 function cancelSettings() {
