@@ -84,4 +84,44 @@ describe("Query Parser", () => {
     ]);
     expect(result.remainingQuery).toBe("KW(a)");
   });
+
+  it("should parse complex query with keyword and multiple predicates with a different order", () => {
+    const result = parseQuery(
+      "COLUMN(NAME(age;1) AND PERCENTILE(0.01;gt;1)) AND KW(a)",
+    );
+    expect(result.terms).toEqual([
+      {
+        type: "combined",
+        column: "age",
+        threshold: 1,
+        percentile: 0.01,
+        comparison: "gt",
+        value: 1,
+      },
+    ]);
+    expect(result.remainingQuery).toBe("KW(a)");
+  });
+
+  it("should parse complex query with keyword and multiple predicates with a different order_2", () => {
+    const result = parseQuery(
+      "COLUMN(NAME(age;1) AND PERCENTILE(0.01;gt;1)) AND KW(a AND b) AND COLUMN(NAME(age;1)) AND KW(c)",
+    );
+
+    expect(result.terms).toEqual([
+      {
+        type: "combined",
+        column: "age",
+        threshold: 1,
+        percentile: 0.01,
+        comparison: "gt",
+        value: 1,
+      },
+      {
+        type: "column",
+        column: "age",
+        threshold: 1,
+      },
+    ]);
+    expect(result.remainingQuery).toBe("KW(a AND b) AND KW(c)");
+  });
 });
