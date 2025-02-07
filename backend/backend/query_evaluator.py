@@ -24,7 +24,7 @@ GRAMMAR = """
     not_col_expr: "NOT" columnterm | "NOT" "(" column_query ")"
     columnterm: NAME_OPERATOR "(" nameterm ")" | PERCENTILE_OPERATOR "(" percentileterm ")"
     percentileterm: FLOAT ";" COMPARISON ";" FLOAT
-    keywordterm: KEYWORD
+    keywordterm: LUCENE_QUERY
     nameterm: IDENTIFIER ";" NUMBER
     OPERATOR: "AND" | "OR" | "XOR"
     COMPARISON: "ge" | "gt" | "le" | "lt"
@@ -35,7 +35,7 @@ GRAMMAR = """
     NUMBER: /[0-9]+/
     FLOAT: /[0-9]+(\\.[0-9]+)?/
     IDENTIFIER: /[a-zA-Z0-9_]+/
-    KEYWORD: /[^;)]+/
+    LUCENE_QUERY: /([^()]|\\([^()]*\\))+/
     %ignore /\\s+/
 """
 
@@ -248,20 +248,16 @@ class QueryExecutor(Transformer):
 
     def keywordterm(self, items: list[Token]) -> tuple[set[int], Highlights]:
         logger.trace(f"Evaluating keyword term: {items}")
-        keyword = items[0].value.strip()
-        # operator = items[-2] if len(items) > 2 else None
-        # side = items[-1] if len(items) > 2 else None
-
-        # TODO: add filter
+        # Remove any extra whitespace but preserve internal spaces
+        query = " ".join(items[0].value.split())
         doc_filter = None
 
-        # Get results and highlights
         result_docs, scores, highlights = self.lucene_connector.evaluate_query(
-            keyword, doc_filter, self.enable_highlighting
+            query, doc_filter, self.enable_highlighting
         )
         self.updates_scores(result_docs, scores)
 
-        return set(result_docs), (highlights, set())  # Return empty set for column highlights
+        return set(result_docs), (highlights, set())
 
     def nameterm(self, items: list[Token]) -> set[uint32]:
         logger.trace(f"Evaluating column term: {items}")
