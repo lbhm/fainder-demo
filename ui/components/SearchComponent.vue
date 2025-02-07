@@ -250,7 +250,6 @@ words # The search page will contain multiple search bars
 
 <script setup lang="ts">
 import { onMounted, ref, watch, computed } from "vue";
-import { useQueryParser, type SearchTerm } from "../composables/useQueryParser";
 
 const props = defineProps({
   searchQuery: {
@@ -314,7 +313,7 @@ const { fainder_mode, enable_highlighting } = useSearchState();
 
 // Initialize fainder_mode if not already set
 if (!fainder_mode.value) {
-  fainder_mode.value = route.query.fainder_mode || "low_memory";
+  fainder_mode.value = String(route.query.fainder_mode) || "low_memory";
 }
 if (!enable_highlighting.value) {
   enable_highlighting.value = route.query.enable_highlighting !== "false"; // Default to true
@@ -383,7 +382,13 @@ watch(showSimpleBuilder, (isOpen) => {
   }
 });
 
-const handleKeyDown = (event) => {
+interface KeyboardEvent {
+  key: string;
+  shiftKey: boolean;
+  preventDefault: () => void;
+}
+
+const handleKeyDown = (event: KeyboardEvent): void => {
   if (!isSearchFocused.value) return;
 
   if (event.key === "Enter") {
@@ -424,7 +429,9 @@ onMounted(() => {
   }
 
   // Focus the textarea
-  const textarea = document.querySelector(".search-input textarea");
+  const textarea = document.querySelector(
+    ".search-input textarea",
+  ) as HTMLTextAreaElement;
   if (textarea) {
     textarea.focus();
   }
@@ -681,7 +688,7 @@ const transferTerm = (term: SearchTerm, index: number) => {
 
 const isColumnFilterValid = computed(() => {
   const f = columnFilter.value;
-  return f.column?.trim() && f.threshold !== "" && !isNaN(f.threshold);
+  return f.column?.trim() && f.threshold !== "" && !isNaN(Number(f.threshold));
 });
 
 const isPercentileFilterValid = computed(() => {
@@ -692,7 +699,7 @@ const isPercentileFilterValid = computed(() => {
     parseFloat(f.percentile) <= 1 &&
     f.comparison &&
     f.value !== "" &&
-    !isNaN(f.value)
+    !isNaN(Number(f.value))
   );
 });
 
@@ -747,7 +754,7 @@ function cancelSettings() {
 
 function saveSettings() {
   showSettings.value = false;
-  fainder_mode.value = temp_fainder_mode.value;
+  fainder_mode.value = String(temp_fainder_mode.value);
   enable_highlighting.value = temp_enable_highlighting.value;
   console.log("New fainder_mode:", fainder_mode.value);
   console.log("New highlighting enabled:", enable_highlighting.value);
@@ -758,7 +765,7 @@ function saveSettings() {
     query: {
       ...route.query,
       fainder_mode: temp_fainder_mode.value,
-      enable_highlighting: temp_enable_highlighting.value,
+      enable_highlighting: String(temp_enable_highlighting.value),
     },
   });
 }
