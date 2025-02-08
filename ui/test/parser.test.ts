@@ -1,9 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { useQueryParser } from "../composables/useQueryParser";
+import parseQuery from "../utils/queryParser";
 
 describe("Query Parser", () => {
-  const { parseQuery } = useQueryParser();
-
   it("should parse empty query", () => {
     const result = parseQuery("");
     expect(result.terms).toEqual([]);
@@ -20,9 +18,13 @@ describe("Query Parser", () => {
     const result = parseQuery("COLUMN(NAME(age;1))");
     expect(result.terms).toEqual([
       {
-        type: "column",
-        column: "age",
-        threshold: 1,
+        predicates: [
+          {
+            type: "name",
+            column: "age",
+            threshold: 1,
+          },
+        ],
       },
     ]);
     expect(result.remainingQuery).toBe("");
@@ -32,10 +34,14 @@ describe("Query Parser", () => {
     const result = parseQuery("COLUMN(PERCENTILE(0.01;gt;1))");
     expect(result.terms).toEqual([
       {
-        type: "percentile",
-        percentile: 0.01,
-        comparison: "gt",
-        value: 1,
+        predicates: [
+          {
+            type: "percentile",
+            percentile: 0.01,
+            comparison: "gt",
+            value: 1,
+          },
+        ],
       },
     ]);
     expect(result.remainingQuery).toBe("");
@@ -45,12 +51,19 @@ describe("Query Parser", () => {
     const result = parseQuery("COLUMN(NAME(age;1) AND PERCENTILE(0.01;gt;1))");
     expect(result.terms).toEqual([
       {
-        type: "combined",
-        column: "age",
-        threshold: 1,
-        percentile: 0.01,
-        comparison: "gt",
-        value: 1,
+        predicates: [
+          {
+            type: "name",
+            column: "age",
+            threshold: 1,
+          },
+          {
+            type: "percentile",
+            percentile: 0.01,
+            comparison: "gt",
+            value: 1,
+          },
+        ],
       },
     ]);
     expect(result.remainingQuery).toBe("");
@@ -60,9 +73,13 @@ describe("Query Parser", () => {
     const result = parseQuery("KW(test) AND COLUMN(NAME(age;1))");
     expect(result.terms).toEqual([
       {
-        type: "column",
-        column: "age",
-        threshold: 1,
+        predicates: [
+          {
+            type: "name",
+            column: "age",
+            threshold: 1,
+          },
+        ],
       },
     ]);
     expect(result.remainingQuery).toBe("KW(test)");
@@ -74,12 +91,19 @@ describe("Query Parser", () => {
     );
     expect(result.terms).toEqual([
       {
-        type: "combined",
-        column: "age",
-        threshold: 1,
-        percentile: 0.01,
-        comparison: "gt",
-        value: 1,
+        predicates: [
+          {
+            type: "name",
+            column: "age",
+            threshold: 1,
+          },
+          {
+            type: "percentile",
+            percentile: 0.01,
+            comparison: "gt",
+            value: 1,
+          },
+        ],
       },
     ]);
     expect(result.remainingQuery).toBe("KW(a)");
@@ -91,35 +115,53 @@ describe("Query Parser", () => {
     );
     expect(result.terms).toEqual([
       {
-        type: "combined",
-        column: "age",
-        threshold: 1,
-        percentile: 0.01,
-        comparison: "gt",
-        value: 1,
+        predicates: [
+          {
+            type: "name",
+            column: "age",
+            threshold: 1,
+          },
+          {
+            type: "percentile",
+            percentile: 0.01,
+            comparison: "gt",
+            value: 1,
+          },
+        ],
       },
     ]);
     expect(result.remainingQuery).toBe("KW(a)");
   });
 
-  it("should parse complex query with keyword and multiple predicates with a different order_2", () => {
+  it("should parse complex query with multiple terms and keywords", () => {
     const result = parseQuery(
-      "COLUMN(NAME(age;1) AND PERCENTILE(0.01;gt;1)) AND KW(a AND b) AND COLUMN(NAME(age;1)) AND KW(c)",
+      "COLUMN(NAME(age;1) AND PERCENTILE(0.01;gt;1)) AND KW(a AND b) AND COLUMN(NAME(height;2)) AND KW(c)",
     );
 
     expect(result.terms).toEqual([
       {
-        type: "combined",
-        column: "age",
-        threshold: 1,
-        percentile: 0.01,
-        comparison: "gt",
-        value: 1,
+        predicates: [
+          {
+            type: "name",
+            column: "age",
+            threshold: 1,
+          },
+          {
+            type: "percentile",
+            percentile: 0.01,
+            comparison: "gt",
+            value: 1,
+          },
+        ],
       },
       {
-        type: "column",
-        column: "age",
-        threshold: 1,
+        predicates: [
+          {
+            type: "name",
+            column: "height",
+            threshold: 2,
+          },
+        ],
       },
     ]);
     expect(result.remainingQuery).toBe("KW(a AND b) AND KW(c)");

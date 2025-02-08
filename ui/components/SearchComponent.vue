@@ -80,33 +80,29 @@ words # The search page will contain multiple search bars
             <!-- Combined filters list -->
             <v-chip-group class="mb-4" column>
               <v-chip
-                v-for="(term, index) in searchTerms"
-                :key="index"
+                v-for="(term, termIndex) in searchTerms"
+                :key="termIndex"
                 closable
-                :color="
-                  term.type === 'column'
-                    ? 'primary'
-                    : term.type === 'percentile'
-                      ? 'indigo'
-                      : 'success'
-                "
-                @click:close="removeSearchTerm(index)"
-                @click="transferTerm(term, index)"
+                color="primary"
+                @click:close="removeSearchTerm(termIndex)"
+                @click="transferTerm(term.predicates, termIndex)"
               >
-                <template v-if="term.type === 'column'">
-                  COLUMN(NAME({{ term.column }};{{ term.threshold }}))
+                COLUMN(
+                <template
+                  v-for="(predicate, predicateIndex) in term.predicates"
+                  :key="predicateIndex"
+                >
+                  <template v-if="predicateIndex > 0"> AND </template>
+                  <template v-if="predicate.type === 'name'">
+                    NAME({{ predicate.column }};{{ predicate.threshold }})
+                  </template>
+                  <template v-else>
+                    PERCENTILE({{ predicate.percentile }};{{
+                      predicate.comparison
+                    }};{{ predicate.value }})
+                  </template>
                 </template>
-                <template v-else-if="term.type === 'percentile'">
-                  COLUMN(PERCENTILE({{ term.percentile }};{{
-                    term.comparison
-                  }};{{ term.value }}))
-                </template>
-                <template v-else>
-                  COLUMN(NAME({{ term.column }};{{ term.threshold }}) AND
-                  PERCENTILE({{ term.percentile }};{{ term.comparison }};{{
-                    term.value
-                  }}))
-                </template>
+                )
               </v-chip>
             </v-chip-group>
 
@@ -250,6 +246,7 @@ words # The search page will contain multiple search bars
 
 <script setup lang="ts">
 import { onMounted, ref, watch, computed } from "vue";
+import parseQuery from "~/utils/queryParser";
 
 const props = defineProps({
   searchQuery: {
@@ -278,36 +275,7 @@ const temp_enable_highlighting = ref(
 ); // Default to true
 const current_rows = ref(1);
 
-interface BaseSearchTerm {
-  type: "column" | "percentile" | "combined";
-}
-
-interface ColumnTerm extends BaseSearchTerm {
-  type: "column";
-  column: string;
-  threshold: number;
-}
-
-interface PercentileTerm extends BaseSearchTerm {
-  type: "percentile";
-  percentile: number;
-  comparison: "gt" | "ge" | "lt" | "le";
-  value: number;
-}
-
-interface CombinedTerm extends BaseSearchTerm {
-  type: "combined";
-  column: string;
-  threshold: number;
-  percentile: number;
-  comparison: "gt" | "ge" | "lt" | "le";
-  value: number;
-}
-
-type SearchTerm = ColumnTerm | PercentileTerm | CombinedTerm;
-
-// Replace the three separate arrays with one typed array
-const searchTerms = ref<SearchTerm[]>([]);
+const searchTerms = ref<Term[]>([]);
 
 const { fainder_mode, enable_highlighting } = useSearchState();
 
@@ -403,8 +371,6 @@ const handleKeyDown = (event: KeyboardEvent): void => {
   }
 };
 
-const { parseQuery } = useQueryParser();
-
 const parseExistingQuery = (query: string) => {
   if (!query) return;
   if (!props.simpleBuilder) {
@@ -447,48 +413,9 @@ async function searchData() {
     return;
   }
 
-  // Combine search query with filter terms
-
-  const terms = [];
-
-  // Add column terms
-  const columnQueryTerms = searchTerms.value
-    .filter((term) => term.type === "column")
-    .map(
-      (term) =>
-        `COLUMN(NAME(${(term as ColumnTerm).column};${(term as ColumnTerm).threshold}))`,
-    );
-
-  // Add percentile terms
-  const percentileQueryTerms = searchTerms.value
-    .filter((term) => term.type === "percentile")
-    .map(
-      (term) =>
-        `COLUMN(PERCENTILE(${(term as PercentileTerm).percentile};${(term as PercentileTerm).comparison};${(term as PercentileTerm).value}))`,
-    );
-
-  // Add combined terms
-  const combinedQueryTerms = searchTerms.value
-    .filter((term) => term.type === "combined")
-    .map(
-      (term) =>
-        `COLUMN(NAME(${(term as CombinedTerm).column};${(term as CombinedTerm).threshold}) AND PERCENTILE(${(term as CombinedTerm).percentile};${(term as CombinedTerm).comparison};${(term as CombinedTerm).value}))`,
-    );
-  if (columnQueryTerms.length) {
-    terms.push(columnQueryTerms.join(" AND "));
-  }
-
-  if (percentileQueryTerms.length) {
-    terms.push(percentileQueryTerms.join(" AND "));
-  }
-
-  if (combinedQueryTerms.length) {
-    terms.push(combinedQueryTerms.join(" AND "));
-  }
-  // Combine filter terms
-  const filterTerms = terms.join(" AND ");
-
-  const filterQuery = filterTerms ? `${filterTerms}` : "";
+  // Convert search terms to string using utility function
+  const filterTerms =
+    searchTerms.value.length > 0 ? termsToString(searchTerms.value) : "";
 
   let query = searchQuery.value?.trim() || "";
 
@@ -504,8 +431,8 @@ async function searchData() {
   }
 
   // Combine filter terms with query
-  if (filterQuery) {
-    query = query ? `${query} AND ${filterQuery}` : filterQuery;
+  if (filterTerms) {
+    query = query ? `${query} AND ${filterTerms}` : filterTerms;
   }
 
   const s_query = query;
@@ -515,7 +442,7 @@ async function searchData() {
   emit("searchData", {
     query: s_query,
     fainder_mode: fainder_mode.value,
-    enable_highlighting: enable_highlighting.value, // Add this line
+    enable_highlighting: enable_highlighting.value,
   });
 }
 
@@ -656,32 +583,20 @@ const removeSearchTerm = (index: number) => {
   searchTerms.value.splice(index, 1);
 };
 
-const transferTerm = (term: SearchTerm, index: number) => {
-  switch (term.type) {
-    case "column":
+const transferTerm = (predicates: Predicate[], index: number) => {
+  for (const predicate of predicates) {
+    if (predicate.type === "name") {
       columnFilter.value = {
-        column: term.column,
-        threshold: term.threshold.toString(),
+        column: predicate.column,
+        threshold: predicate.threshold.toString(),
       };
-      break;
-    case "percentile":
+    } else {
       percentileFilter.value = {
-        percentile: term.percentile.toString(),
-        comparison: term.comparison,
-        value: term.value.toString(),
+        percentile: predicate.percentile.toString(),
+        comparison: predicate.comparison,
+        value: predicate.value.toString(),
       };
-      break;
-    case "combined":
-      columnFilter.value = {
-        column: term.column,
-        threshold: term.threshold.toString(),
-      };
-      percentileFilter.value = {
-        percentile: term.percentile.toString(),
-        comparison: term.comparison,
-        value: term.value.toString(),
-      };
-      break;
+    }
   }
   removeSearchTerm(index);
 };
@@ -704,15 +619,19 @@ const isPercentileFilterValid = computed(() => {
 });
 
 const addFilters = () => {
-  if (isColumnFilterValid.value && !isPercentileFilterValid.value) {
-    searchTerms.value.push({
-      type: "column",
+  const predicates: Predicate[] = [];
+
+  if (isColumnFilterValid.value) {
+    predicates.push({
+      type: "name",
       column: columnFilter.value.column,
       threshold: parseFloat(columnFilter.value.threshold),
     });
     columnFilter.value = { column: "", threshold: "" };
-  } else if (isPercentileFilterValid.value && !isColumnFilterValid.value) {
-    searchTerms.value.push({
+  }
+
+  if (isPercentileFilterValid.value) {
+    predicates.push({
       type: "percentile",
       percentile: parseFloat(percentileFilter.value.percentile),
       comparison: percentileFilter.value.comparison as
@@ -723,21 +642,10 @@ const addFilters = () => {
       value: parseFloat(percentileFilter.value.value),
     });
     percentileFilter.value = { percentile: "", comparison: "", value: "" };
-  } else if (isColumnFilterValid.value && isPercentileFilterValid.value) {
-    searchTerms.value.push({
-      type: "combined",
-      column: columnFilter.value.column,
-      threshold: parseFloat(columnFilter.value.threshold),
-      percentile: parseFloat(percentileFilter.value.percentile),
-      comparison: percentileFilter.value.comparison as
-        | "gt"
-        | "ge"
-        | "lt"
-        | "le",
-      value: parseFloat(percentileFilter.value.value),
-    });
-    columnFilter.value = { column: "", threshold: "" };
-    percentileFilter.value = { percentile: "", comparison: "", value: "" };
+  }
+
+  if (predicates.length > 0) {
+    searchTerms.value.push({ predicates });
   }
 };
 
