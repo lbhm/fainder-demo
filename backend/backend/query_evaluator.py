@@ -39,6 +39,13 @@ GRAMMAR = """
     %ignore /\\s+/
 """
 
+# Lucene query regex matches:
+# 1. [^()] - Any single character that is NOT a parenthesis (not ( or )) OR
+# 2. \([^()]*\\) - A sequence that:
+#    - \\( matches an opening parenthesis
+#    - [^()]* matches zero or more characters that are not parentheses
+#    - \\) matches a closing parenthesis
+
 # Type alias for highlights
 DocumentHighlights = dict[int, dict[str, str]]
 ColumnHighlights = set[uint32]  # set of column ids that should be highlighted
@@ -248,8 +255,7 @@ class QueryExecutor(Transformer):
 
     def keywordterm(self, items: list[Token]) -> tuple[set[int], Highlights]:
         logger.trace(f"Evaluating keyword term: {items}")
-        # Remove any extra whitespace but preserve internal spaces
-        query = " ".join(items[0].value.split())
+        query = items[0].value.strip()
         doc_filter = None
 
         result_docs, scores, highlights = self.lucene_connector.evaluate_query(
@@ -257,7 +263,7 @@ class QueryExecutor(Transformer):
         )
         self.updates_scores(result_docs, scores)
 
-        return set(result_docs), (highlights, set())
+        return set(result_docs), (highlights, set())  # Return empty set for column highlights
 
     def nameterm(self, items: list[Token]) -> set[uint32]:
         logger.trace(f"Evaluating column term: {items}")

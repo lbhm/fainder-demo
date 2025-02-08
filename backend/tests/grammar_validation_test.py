@@ -63,7 +63,7 @@ VALID_TEST_CASES = {
             "kw(test)\nAND col(pp(0.5;ge;20.0))",
         ]
     },
-    "lucene_queries": {
+    "advanced_lucene_queries": {
         "queries": [
             "kw((a AND b) OR c)",
             "kw((a AND b) OR (c AND d))",
