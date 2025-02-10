@@ -9,6 +9,10 @@ import org.apache.lucene.index.StoredFields;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.queryparser.classic.QueryParser;
+import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
+import org.apache.lucene.queryparser.flexible.core.QueryNodeException;
+import org.apache.lucene.queryparser.flexible.standard.StandardQueryParser;
+import org.apache.lucene.queryparser.flexible.standard.config.StandardQueryConfigHandler;
 import org.apache.lucene.search.*;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
@@ -28,15 +32,16 @@ public class LuceneSearch {
     private static final Logger logger = LoggerFactory.getLogger(LuceneSearch.class);
     private final IndexSearcher searcher;
     private final Map<String, Float> searchFields = Map.of(
-        "name", 2.0f,           // Boost name matches
-        "description", 1.0f,    // Normal weight for description
-        "keywords", 1.5f,       // Slightly boost keyword matches
-        "creator_name", 0.8f,   // Lower weight for creator
-        "publisher_name", 0.8f, // Lower weight for publisher
-        "alternateName", 0.5f   // Lowest weight for alternate names
+        "name", 5.0f,           // Boost name matches
+        "description", 2.0f,    // Normal weight for description
+        "keywords", 4.0f,       // Slightly boost keyword matches
+        "creator_name", 1.6f,   // Lower weight for creator
+        "publisher_name", 1.6f, // Lower weight for publisher
+        "alternateName", 3.0f
     );
     private final StandardAnalyzer analyzer;
     private final QueryParser[] fieldParsers;
+    private final MultiFieldQueryParser parser;
 
     // Constant flag for testing different implementations
     private final Boolean BOOL_FILTER;
@@ -57,6 +62,9 @@ public class LuceneSearch {
                 .toArray(QueryParser[]::new);
 
         BOOL_FILTER = false;
+        parser = new MultiFieldQueryParser(searchFields.keySet().toArray(new String[0]), analyzer, searchFields);
+        parser.setAllowLeadingWildcard(true);
+        parser.setDefaultOperator(QueryParser.Operator.AND);  // Changed from OR to AND
     }
 
 
@@ -72,32 +80,20 @@ public class LuceneSearch {
         }
     }
 
-    private Query createMultiFieldQuery(String queryText) throws ParseException {
-        // TODO: Investigate performance and if this breaks the query
-        BooleanQuery.Builder queryBuilder = new BooleanQuery.Builder();
+    private Query createMultiFieldQuery(String queryText) throws ParseException, QueryNodeException {
+        StandardQueryParser qpHelper = new StandardQueryParser();
+        StandardQueryConfigHandler config = (StandardQueryConfigHandler) qpHelper.getQueryConfigHandler();
+        config.set(StandardQueryConfigHandler.ConfigurationKeys.ALLOW_LEADING_WILDCARD, true);
+        config.set(StandardQueryConfigHandler.ConfigurationKeys.ANALYZER, analyzer);
+        config.set(StandardQueryConfigHandler.ConfigurationKeys.FIELD_BOOST_MAP, searchFields);
+        config.set(StandardQueryConfigHandler.ConfigurationKeys.MULTI_FIELDS, searchFields.keySet().toArray(new String[0]));
+        config.set(StandardQueryConfigHandler.ConfigurationKeys.DEFAULT_OPERATOR, StandardQueryConfigHandler.Operator.AND);
+        config.set(StandardQueryConfigHandler.ConfigurationKeys.MULTI_TERM_REWRITE_METHOD, MultiTermQuery.SCORING_BOOLEAN_REWRITE);
 
-        // Add a subquery for each field with its boost
-        int i = 0;
-        for (Map.Entry<String, Float> field : searchFields.entrySet()) {
-            // Create boosted queries for each type of match
-            Float boost = field.getValue();
-            QueryParser parser =  fieldParsers[i++];
-
-            // Exact match (highest boost)
-            Query exactQuery = parser.parse("(" + queryText + ")^" + boost);
-            queryBuilder.add(exactQuery, BooleanClause.Occur.SHOULD);
-
-            // Fuzzy match for typos
-            // Query fuzzyQuery = parser.parse("(" + queryText + "~)^" + boost);
-            // queryBuilder.add(fuzzyQuery, BooleanClause.Occur.SHOULD);
-
-            // Prefix match for partial words
-            // Query prefixQuery = parser.parse("(" + queryText + "*)^" + (boost * 0.5f));
-            // queryBuilder.add(prefixQuery, BooleanClause.Occur.SHOULD);
-        }
-
-        return queryBuilder.build();
+        Query query = qpHelper.parse(queryText, null);
+        return new BoostQuery(query, 5.0f);  // Boost entire query by 5x
     }
+
 
     /**
      * @param query      The query string
@@ -150,10 +146,11 @@ public class LuceneSearch {
             Map<Integer, Map<String, String>> highlights = new HashMap<>();
 
             for (ScoreDoc scoreDoc : hits) {
-                if (minScore != null && scoreDoc.score < minScore) continue;
-
                 Document doc = storedFields.document(scoreDoc.doc);
                 int resultId = Integer.parseInt(doc.get("id"));
+                // logger.info("Hit {}: {} (Score: {})", resultId, doc.get("name"), scoreDoc.score);
+                if (minScore != null && scoreDoc.score < minScore) continue;
+
                 Map<String, String> docHighlights = new HashMap<>();
 
                 if (enableHighlighting) {
@@ -173,7 +170,6 @@ public class LuceneSearch {
                         }
                     }
                 }
-                // logger.info("Hit {}: {} (Score: {})", resultId, doc.get("name"), scoreDoc.score);
                 results.add(resultId);
                 scores.add(scoreDoc.score);
                 if (!docHighlights.isEmpty()) {
@@ -186,7 +182,7 @@ public class LuceneSearch {
             logger.error("Query parsing error: {}", e.getMessage());
             return new SearchResult(List.of(), List.of(), Map.of());
 
-        } catch (IOException e) {
+        } catch (IOException | QueryNodeException e) {
             logger.error("Query IO error: {}", e.getMessage());
             return new SearchResult(List.of(), List.of(), Map.of());
         }

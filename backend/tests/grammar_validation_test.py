@@ -68,6 +68,8 @@ VALID_TEST_CASES = {
             "kw((a AND b) OR c)",
             "kw((a AND b) OR (c AND d))",
             "kw(+title:(deep learning) -content:neural)",
+            "kw(((a AND b) OR C) OR D) AND col(pp(0.5;ge;20.0))",
+            "kw((((a AND b) OR C) OR D) AND E) AND col(pp(0.5;ge;20.0))",
         ]
     },
 }

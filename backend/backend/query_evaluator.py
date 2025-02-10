@@ -19,19 +19,32 @@ GRAMMAR = """
     not_expr: "NOT" term | "NOT" "(" query ")"
     term: KEYWORD_OPERATOR "(" keywordterm ")"
         | COLUMN_OPERATOR "(" column_query ")"
+
+    keywordterm: lucene_query
+    lucene_query: lucene_clause+
+    lucene_clause: [REQUIRED_OP] [field_prefix] (TERM | "(" lucene_query ")")
+    field_prefix: TERM ":"
+
     column_query: col_expr (OPERATOR column_query)?
     col_expr: not_col_expr | columnterm | "(" column_query ")"
     not_col_expr: "NOT" columnterm | "NOT" "(" column_query ")"
-    columnterm: NAME_OPERATOR "(" nameterm ")" | PERCENTILE_OPERATOR "(" percentileterm ")"
+
+    columnterm: NAME_OPERATOR "(" nameterm ")"
+        | PERCENTILE_OPERATOR "(" percentileterm ")"
     percentileterm: FLOAT ";" COMPARISON ";" SIGNED_NUMBER
-    keywordterm: LUCENE_QUERY
     nameterm: IDENTIFIER ";" INT
+
     OPERATOR: "AND" | "OR" | "XOR"
     COMPARISON: "ge" | "gt" | "le" | "lt"
+
+    REQUIRED_OP: "+" | "-"
+    TERM: /[^():+-;]+/
+
     PERCENTILE_OPERATOR: ("pp"i | "percentile"i) _WSI?
     KEYWORD_OPERATOR: ("kw"i | "keyword"i) _WSI?
     COLUMN_OPERATOR: ("col"i | "column"i) _WSI?
     NAME_OPERATOR: ("name"i) _WSI?
+
     IDENTIFIER: /[a-zA-Z0-9_ ]+/
     LUCENE_QUERY: /([^()]|\\([^()]*\\))+/
     %ignore _WS
@@ -258,9 +271,54 @@ class QueryExecutor(Transformer):
         # TODO: update last_result
         return hist_to_col_ids(result_hists, self.metadata.hist_to_col)
 
+    def field_prefix(self, items: list[Token]) -> str:
+        """Process a field prefix into the format field:"""
+        logger.trace(f"Processing field prefix: {items}")
+        return f"{items[0].value}:"
+
+    def lucene_clause(self, items: list[Token | str | Tree]) -> str:
+        """Process a single Lucene clause including optional required operator and field prefix."""
+        logger.trace(f"Processing Lucene clause: {items}")
+        result = ""
+
+        for item in items:
+            if item:
+                if isinstance(item, Token):
+                    result += item.value
+                elif isinstance(item, Tree):
+                    # Handle field prefix tree
+                    if item.data == "field_prefix":
+                        list_items: list[Token] = item.children  # type: ignore
+                        result += self.field_prefix(list_items)
+                    else:
+                        result += self.lucene_query(item.children)
+                else:
+                    result += str(item)
+
+        return result.strip()
+
+    def lucene_query(self, items: list[str | Tree | Token]) -> str:
+        """Merge Lucene query clauses into a single query string."""
+        logger.trace(f"Merging Lucene query clauses: {items}")
+        query_parts = []
+
+        for item in items:
+            if isinstance(item, str | Token):
+                query_parts.append(str(item))
+            elif isinstance(item, Tree):
+                if item.data == "lucene_query":
+                    query_parts.append(f"({self.lucene_query(item.children)})")
+                elif item.data == "field_prefix":
+                    list_items: list[Token] = item.children  # type: ignore
+                    query_parts.append(self.field_prefix(list_items))
+
+        return " ".join(filter(None, query_parts)).strip()
+
     def keywordterm(self, items: list[Token]) -> tuple[set[int], Highlights]:
+        """Evaluate keyword term using merged Lucene query."""
         logger.trace(f"Evaluating keyword term: {items}")
-        query = items[0].value.strip()
+        # Extract the lucene query from items
+        query = str(items[0]).strip() if items else ""
         doc_filter = None
 
         result_docs, scores, highlights = self.lucene_connector.evaluate_query(
@@ -323,14 +381,18 @@ class QueryExecutor(Transformer):
     def term(
         self, items: tuple[Token, set[uint32] | tuple[set[int], Highlights]]
     ) -> tuple[set[int], Highlights]:
+        """Process a term, which can be either a keyword or column operation."""
         logger.trace(f"Evaluating term with items: {items}")
-        if items[0].value.strip().lower() in ["column", "col"]:
+        operator: str = items[0].value
+        if operator.strip().lower() in ["column", "col"]:
             col_ids: set[uint32] = items[1]  # type: ignore
             return col_to_doc_ids(col_ids, self.metadata.col_to_doc), ({}, col_ids)
-        doc_ids: set[int]
-        highlights: Highlights
-        doc_ids, highlights = items[1]  # type: ignore
-        return doc_ids, highlights
+        if operator.strip().lower() in ["keyword", "kw"]:
+            doc_ids: set[int]
+            highlights: Highlights
+            doc_ids, highlights = items[1]  # type: ignore
+            return doc_ids, highlights
+        raise ValueError(f"Unknown term: {items[0].value}")
 
     def not_expr(self, items: list[tuple[set[int], Highlights]]) -> tuple[set[int], Highlights]:
         logger.trace(f"Evaluating NOT expression with {len(items)} items")
