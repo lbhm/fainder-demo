@@ -291,7 +291,7 @@ class QueryExecutor(Transformer):
                         list_items: list[Token] = item.children  # type: ignore
                         result += self.field_prefix(list_items)
                     else:
-                        result += self.lucene_query(item.children)
+                        result += "(" + self.lucene_query(item.children) + ")"
                 else:
                     result += str(item)
 
@@ -312,7 +312,8 @@ class QueryExecutor(Transformer):
                     list_items: list[Token] = item.children  # type: ignore
                     query_parts.append(self.field_prefix(list_items))
 
-        return " ".join(filter(None, query_parts)).strip()
+        joined = " ".join(filter(None, query_parts)).strip()
+        return "(" + joined + ")"
 
     def keywordterm(self, items: list[Token]) -> tuple[set[int], Highlights]:
         """Evaluate keyword term using merged Lucene query."""
