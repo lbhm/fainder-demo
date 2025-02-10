@@ -23,7 +23,7 @@ GRAMMAR = """
     col_expr: not_col_expr | columnterm | "(" column_query ")"
     not_col_expr: "NOT" columnterm | "NOT" "(" column_query ")"
     columnterm: NAME_OPERATOR "(" nameterm ")" | PERCENTILE_OPERATOR "(" percentileterm ")"
-    percentileterm: FLOAT ";" COMPARISON ";" SIGNED_FLOAT
+    percentileterm: FLOAT ";" COMPARISON ";" SIGNED_NUMBER
     keywordterm: LUCENE_QUERY
     nameterm: IDENTIFIER ";" INT
     OPERATOR: "AND" | "OR" | "XOR"
@@ -38,7 +38,7 @@ GRAMMAR = """
     %ignore COMMENT
     %import common.INT
     %import common.FLOAT
-    %import common.SIGNED_FLOAT
+    %import common.SIGNED_NUMBER
     %import common.WS -> _WS
     %import common.WS_INLINE -> _WSI
     %import common.SH_COMMENT -> COMMENT
