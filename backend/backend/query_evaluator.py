@@ -23,20 +23,25 @@ GRAMMAR = """
     col_expr: not_col_expr | columnterm | "(" column_query ")"
     not_col_expr: "NOT" columnterm | "NOT" "(" column_query ")"
     columnterm: NAME_OPERATOR "(" nameterm ")" | PERCENTILE_OPERATOR "(" percentileterm ")"
-    percentileterm: FLOAT ";" COMPARISON ";" FLOAT
+    percentileterm: FLOAT ";" COMPARISON ";" SIGNED_FLOAT
     keywordterm: LUCENE_QUERY
-    nameterm: IDENTIFIER ";" NUMBER
+    nameterm: IDENTIFIER ";" INT
     OPERATOR: "AND" | "OR" | "XOR"
     COMPARISON: "ge" | "gt" | "le" | "lt"
-    PERCENTILE_OPERATOR: ("pp"i | "percentile"i) " "*
-    KEYWORD_OPERATOR: ("kw"i | "keyword"i) " "*
-    COLUMN_OPERATOR: ("col"i | "column"i) " "*
-    NAME_OPERATOR: ("name"i) " "*
-    NUMBER: /[0-9]+/
-    FLOAT: /[0-9]+(\\.[0-9]+)?/
-    IDENTIFIER: /[a-zA-Z0-9_]+/
+    PERCENTILE_OPERATOR: ("pp"i | "percentile"i) _WSI?
+    KEYWORD_OPERATOR: ("kw"i | "keyword"i) _WSI?
+    COLUMN_OPERATOR: ("col"i | "column"i) _WSI?
+    NAME_OPERATOR: ("name"i) _WSI?
+    IDENTIFIER: /[a-zA-Z0-9_ ]+/
     LUCENE_QUERY: /([^()]|\\([^()]*\\))+/
-    %ignore /\\s+/
+    %ignore _WS
+    %ignore COMMENT
+    %import common.INT
+    %import common.FLOAT
+    %import common.SIGNED_FLOAT
+    %import common.WS -> _WS
+    %import common.WS_INLINE -> _WSI
+    %import common.SH_COMMENT -> COMMENT
 """
 
 # Lucene query regex matches:

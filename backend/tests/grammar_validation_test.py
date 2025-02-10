@@ -130,18 +130,19 @@ INVALID_TEST_CASES = {
 )
 def test_query_evaluation_success(category: str, query: str, evaluator: QueryEvaluator) -> None:
     start_time = time.perf_counter()
-    r = evaluator.parse(query)
+    tree = evaluator.parse(query)
     duration = time.perf_counter() - start_time
 
     validation_log = {
         "type": "valid",
         "category": category,
         "query": query,
+        "parse_tree": tree.pretty(),
         "parse_time": duration,
     }
 
     logger.info("VALIDATION_DATA: " + str(validation_log))
-    assert not isinstance(r, Exception)
+    assert not isinstance(tree, Exception)
 
 
 @pytest.mark.parametrize(

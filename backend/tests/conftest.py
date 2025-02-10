@@ -35,7 +35,7 @@ def _setup_and_teardown() -> Generator[None, Any, None]:
         filter=lambda record: record["level"].name == "INFO",
     )
     logger.add(
-        "logs/query_performance__{time:YYYY-MM-DD HH:mm:ss}.log",
+        "logs/test_{time:YYYY-MM-DD HH:mm:ss}.log",
         format="{time:YYYY-MM-DD HH:mm:ss} | {message}",
         filter=lambda record: record["level"].name == "INFO",
         rotation="1 day",
