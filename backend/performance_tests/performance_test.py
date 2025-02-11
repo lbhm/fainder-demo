@@ -6,7 +6,6 @@ import pytest
 from loguru import logger
 
 from backend.query_evaluator import QueryEvaluator
-
 from performance_tests.generate_test_cases import generate_all_test_cases
 
 TEST_CASES = generate_all_test_cases()
@@ -72,7 +71,7 @@ def log_performance_csv(
                     cache_info.misses,
                     cache_info.curr_size,
                     is_consistent,
-                    len(results[scenario])  # Add number of results
+                    len(results[scenario]),  # Add number of results
                 ]
             )
 
@@ -109,14 +108,14 @@ def test_performance(
     # Log to CSV
     csv_path = pytest.csv_log_path  # type: ignore
     log_performance_csv(
-        csv_path, 
-        category, 
-        test_name, 
-        query, 
-        timings, 
+        csv_path,
+        category,
+        test_name,
+        query,
+        timings,
         results,  # Added results parameter
-        cache_info, 
-        is_consistent
+        cache_info,
+        is_consistent,
     )
 
     # Create detailed performance log for console/file
@@ -143,5 +142,9 @@ def test_performance(
 
     logger.info("PERFORMANCE_DATA: " + str(performance_log))
 
-    # Assert that all results are consistent
-    assert is_consistent, "Results differ between evaluation methods"
+    # Assert that all results are consistent and name
+    first_result = next(iter(results.values()))
+    for name, result in results.items():
+        assert len(result) == len(first_result), f"Results for {name} have different lengths"
+        assert set(result) == set(first_result), f"Results for {name} are inconsistent"
+        assert result == first_result, f"Results for {name} are inconsistent in order"
