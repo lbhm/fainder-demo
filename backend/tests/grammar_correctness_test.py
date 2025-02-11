@@ -137,6 +137,10 @@ TEST_CASES: dict[str, dict[str, dict[str, dict[str, Any]]]] = {
                 "query": "kw((*a* AND weather) OR Avocado)",
                 "expected": [0, 1],
             },
+            "double_nested_query": {
+                "query": "kw((*a* AND weather) OR (Avocado AND *a*))",
+                "expected": [0, 1],
+            },
         },
     },
 }

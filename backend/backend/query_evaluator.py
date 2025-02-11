@@ -276,7 +276,7 @@ class QueryExecutor(Transformer):
         logger.trace(f"Processing field prefix: {items}")
         return f"{items[0].value}:"
 
-    def lucene_clause(self, items: list[Token | str | Tree]) -> str:
+    def lucene_clause(self, items: list[Token | str]) -> str:
         """Process a single Lucene clause including optional required operator and field prefix."""
         logger.trace(f"Processing Lucene clause: {items}")
         result = ""
@@ -285,32 +285,19 @@ class QueryExecutor(Transformer):
             if item:
                 if isinstance(item, Token):
                     result += item.value
-                elif isinstance(item, Tree):
-                    # Handle field prefix tree
-                    if item.data == "field_prefix":
-                        list_items: list[Token] = item.children  # type: ignore
-                        result += self.field_prefix(list_items)
-                    else:
-                        result += "(" + self.lucene_query(item.children) + ")"
                 else:
                     result += str(item)
 
         return result.strip()
 
-    def lucene_query(self, items: list[str | Tree | Token]) -> str:
+    def lucene_query(self, items: list[str]) -> str:
         """Merge Lucene query clauses into a single query string."""
         logger.trace(f"Merging Lucene query clauses: {items}")
         query_parts = []
 
         for item in items:
-            if isinstance(item, str | Token):
+            if item:
                 query_parts.append(str(item))
-            elif isinstance(item, Tree):
-                if item.data == "lucene_query":
-                    query_parts.append(f"({self.lucene_query(item.children)})")
-                elif item.data == "field_prefix":
-                    list_items: list[Token] = item.children  # type: ignore
-                    query_parts.append(self.field_prefix(list_items))
 
         joined = " ".join(filter(None, query_parts)).strip()
         return "(" + joined + ")"

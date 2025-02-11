@@ -8,8 +8,6 @@ import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.StoredFields;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.queryparser.classic.ParseException;
-import org.apache.lucene.queryparser.classic.QueryParser;
-import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
 import org.apache.lucene.queryparser.flexible.core.QueryNodeException;
 import org.apache.lucene.queryparser.flexible.standard.StandardQueryParser;
 import org.apache.lucene.queryparser.flexible.standard.config.StandardQueryConfigHandler;
@@ -40,8 +38,8 @@ public class LuceneSearch {
         "alternateName", 3.0f
     );
     private final StandardAnalyzer analyzer;
-    private final QueryParser[] fieldParsers;
-    private final MultiFieldQueryParser parser;
+    private final StandardQueryParser qpHelper;
+
 
     // Constant flag for testing different implementations
     private final Boolean BOOL_FILTER;
@@ -49,22 +47,19 @@ public class LuceneSearch {
     public LuceneSearch(Path indexPath) throws IOException {
         Directory indexDir = FSDirectory.open(indexPath);
         IndexReader reader = DirectoryReader.open(indexDir);
+        BOOL_FILTER = false;
         searcher = new IndexSearcher(reader);
         // Configure analyzer to keep stop words
         analyzer = new StandardAnalyzer(CharArraySet.EMPTY_SET);
-        fieldParsers = searchFields.keySet().stream()
-                .map(field -> {
-                    QueryParser parser = new QueryParser(field, analyzer);
-                    parser.setDefaultOperator(QueryParser.Operator.OR);
-                    parser.setAllowLeadingWildcard(true); // TODO: Investigate performance impact
-                    return parser;
-                })
-                .toArray(QueryParser[]::new);
 
-        BOOL_FILTER = false;
-        parser = new MultiFieldQueryParser(searchFields.keySet().toArray(new String[0]), analyzer, searchFields);
-        parser.setAllowLeadingWildcard(true);
-        parser.setDefaultOperator(QueryParser.Operator.AND);  // Changed from OR to AND
+        qpHelper = new StandardQueryParser();
+        StandardQueryConfigHandler config = (StandardQueryConfigHandler) qpHelper.getQueryConfigHandler();
+        config.set(StandardQueryConfigHandler.ConfigurationKeys.ALLOW_LEADING_WILDCARD, true);
+        config.set(StandardQueryConfigHandler.ConfigurationKeys.ANALYZER, analyzer);
+        config.set(StandardQueryConfigHandler.ConfigurationKeys.FIELD_BOOST_MAP, searchFields);
+        config.set(StandardQueryConfigHandler.ConfigurationKeys.MULTI_FIELDS, searchFields.keySet().toArray(new String[0]));
+        config.set(StandardQueryConfigHandler.ConfigurationKeys.DEFAULT_OPERATOR, StandardQueryConfigHandler.Operator.AND);
+        config.set(StandardQueryConfigHandler.ConfigurationKeys.MULTI_TERM_REWRITE_METHOD, MultiTermQuery.SCORING_BOOLEAN_REWRITE);
     }
 
 
@@ -81,14 +76,6 @@ public class LuceneSearch {
     }
 
     private Query createMultiFieldQuery(String queryText) throws ParseException, QueryNodeException {
-        StandardQueryParser qpHelper = new StandardQueryParser();
-        StandardQueryConfigHandler config = (StandardQueryConfigHandler) qpHelper.getQueryConfigHandler();
-        config.set(StandardQueryConfigHandler.ConfigurationKeys.ALLOW_LEADING_WILDCARD, true);
-        config.set(StandardQueryConfigHandler.ConfigurationKeys.ANALYZER, analyzer);
-        config.set(StandardQueryConfigHandler.ConfigurationKeys.FIELD_BOOST_MAP, searchFields);
-        config.set(StandardQueryConfigHandler.ConfigurationKeys.MULTI_FIELDS, searchFields.keySet().toArray(new String[0]));
-        config.set(StandardQueryConfigHandler.ConfigurationKeys.DEFAULT_OPERATOR, StandardQueryConfigHandler.Operator.AND);
-        config.set(StandardQueryConfigHandler.ConfigurationKeys.MULTI_TERM_REWRITE_METHOD, MultiTermQuery.SCORING_BOOLEAN_REWRITE);
 
         Query query = qpHelper.parse(queryText, null);
         return new BoostQuery(query, 5.0f);  // Boost entire query by 5x
@@ -119,7 +106,7 @@ public class LuceneSearch {
                 highlighter.setMaxDocCharsToAnalyze(Integer.MAX_VALUE);
             }
 
-            logger.info("Executing query {}. With filter: {} ", multiFieldQuery, docIds);
+            logger.info("Input query {}. Executing query {}. With filter: {} ", query, multiFieldQuery, docIds);
 
             ScoreDoc[] hits;
             if (docIds != null && !docIds.isEmpty()) {
@@ -144,6 +131,8 @@ public class LuceneSearch {
             List<Integer> results = new ArrayList<>();
             List<Float> scores = new ArrayList<>();
             Map<Integer, Map<String, String>> highlights = new HashMap<>();
+
+            logger.info("Found {} hits", hits.length);
 
             for (ScoreDoc scoreDoc : hits) {
                 Document doc = storedFields.document(scoreDoc.doc);
@@ -176,6 +165,7 @@ public class LuceneSearch {
                     highlights.put(resultId, docHighlights);
                 }
             }
+            logger.info("Returning {} results over min Score {}", results.size(), minScore);
 
             return new SearchResult(results, scores, highlights);
         } catch (ParseException e) {
