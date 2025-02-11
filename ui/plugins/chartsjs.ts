@@ -14,6 +14,6 @@ export default defineNuxtPlugin(() => {
     BarElement,
     Title,
     Tooltip,
-    Legend
+    Legend,
   );
 });

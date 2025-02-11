@@ -10,6 +10,7 @@ TEST_CASES: dict[str, dict[str, dict[str, dict[str, Any]]]] = {
     "basic_keyword": {
         "queries": {
             "simple_keyword": {"query": "kw(germany)", "expected": [0]},
+            "simple_keyword_2": {"query": "kw(Avacado)", "expected": [1]},
             "not_keyword": {"query": "NOT kw(germany)", "expected": [2, 1]},
         }
     },
@@ -112,6 +113,35 @@ TEST_CASES: dict[str, dict[str, dict[str, dict[str, Any]]]] = {
                 "expected": [0],
             },
         }
+    },
+    "advanced_lucene_queries": {
+        "queries": {
+            "basic_query": {"query": "kw(data)", "expected": [2, 1, 0]},
+            "advanced_query": {
+                "query": "kw(*a* AND weather)",
+                "expected": [0],
+            },
+            "advanced_query_2": {
+                "query": "kw(weather OR Avocado)",
+                "expected": [0, 1],
+            },
+            "or_query": {
+                "query": "kw(TMDB OR weather OR Avocado)",
+                "expected": [0, 1, 2],
+            },
+            "nested_query": {
+                "query": "kw(*a* AND (weather OR Avocado))",
+                "expected": [0, 1],
+            },
+            "nested_query_2": {
+                "query": "kw((*a* AND weather) OR Avocado)",
+                "expected": [0, 1],
+            },
+            "double_nested_query": {
+                "query": "kw((*a* AND weather) OR (Avocado AND *a*))",
+                "expected": [0, 1],
+            },
+        },
     },
 }
 

@@ -17,7 +17,7 @@ public class JsonFileFinder {
 
     public static List<Path> getJsonFiles(Path directory) throws IOException {
         List<Path> jsonFiles = new ArrayList<>();
-        Files.walkFileTree(directory, new SimpleFileVisitor<Path>() {
+        Files.walkFileTree(directory, new SimpleFileVisitor<>() {
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
                 if (file.toString().endsWith(".json")) {

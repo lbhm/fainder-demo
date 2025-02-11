@@ -4,6 +4,8 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonSyntaxException;
+
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.*;
 import org.apache.lucene.index.IndexWriter;
@@ -140,7 +142,7 @@ public class LuceneIndexer {
         try {
             // Check if the data directory exists
             if (!Files.exists(dataPath)) {
-                logger.error("Data directory does not exist");
+                logger.error("Data directory {} does not exist", dataPath);
                 throw new RuntimeException("Data directory does not exist!");
             }
 
@@ -155,45 +157,48 @@ public class LuceneIndexer {
             Directory directory = FSDirectory.open(indexPath);
             StandardAnalyzer analyzer = new StandardAnalyzer();
             IndexWriterConfig config = new IndexWriterConfig(analyzer);
-            IndexWriter writer = new IndexWriter(directory, config);
-            Gson gson = new Gson();
-            for (Path filePath : jsonFiles) {
-                // Read the content of the file
-                String jsonContent = new String(Files.readAllBytes(filePath));
+            try (IndexWriter writer = new IndexWriter(directory, config)) {
+                Gson gson = new Gson();
+                for (Path filePath : jsonFiles) {
+                    // Read the content of the file
+                    String jsonContent = new String(Files.readAllBytes(filePath));
 
-                // Parse the JSON content into a JsonObject
-                JsonObject jsonObject = gson.fromJson(jsonContent, JsonObject.class);
+                    // Parse the JSON content into a JsonObject
+                    JsonObject jsonObject = gson.fromJson(jsonContent, JsonObject.class);
 
-                // check if the JSON object has an "id" field and if not, raise an error
-                if (!jsonObject.has("id")) {
-                    logger.error("JSON object does not have an 'id' field");
-                    throw new RuntimeException("JSON object does not have an 'id' field!");
-                }
-
-                // Create a new Lucene Document
-                Document document = new Document();
-
-                // Add configured fields
-                for (Map.Entry<String, FieldConfig> entry : FIELD_CONFIGS.entrySet()) {
-                    String fieldName = entry.getKey();
-                    JsonElement value = fieldName.contains(".") ?
-                        getNestedValue(jsonObject, fieldName) :
-                        jsonObject.get(fieldName);
-
-                    if (value != null) {
-                        addFieldToDocument(document, fieldName.replace(".", "_"),
-                            value, entry.getValue());
+                    // check if the JSON object has an "id" field and if not, raise an error
+                    if (!jsonObject.has("id")) {
+                        logger.error("JSON object does not have an 'id' field");
+                        throw new RuntimeException("JSON object does not have an 'id' field!");
                     }
+
+                    // Create a new Lucene Document
+                    Document document = new Document();
+
+                    // Add configured fields
+                    for (Map.Entry<String, FieldConfig> entry : FIELD_CONFIGS.entrySet()) {
+                        String fieldName = entry.getKey();
+                        JsonElement value = fieldName.contains(".") ?
+                            getNestedValue(jsonObject, fieldName) :
+                            jsonObject.get(fieldName);
+
+                        if (value != null) {
+                            addFieldToDocument(document, fieldName.replace(".", "_"),
+                                value, entry.getValue());
+                        }
+                    }
+
+                    // Add file path
+                    document.add(new StringField("path", filePath.toString(), Field.Store.YES));
+
+                    // Add document to index
+                    writer.addDocument(document);
                 }
-
-                // Add file path
-                document.add(new StringField("path", filePath.toString(), Field.Store.YES));
-
-                // Add document to index
-                writer.addDocument(document);
+                writer.commit();
+                writer.close();
+            } catch (JsonSyntaxException e) {
+                logger.error(Arrays.toString(e.getStackTrace()));
             }
-            writer.commit();
-            writer.close();
         } catch (IOException e) {
             logger.error(Arrays.toString(e.getStackTrace()));
         }

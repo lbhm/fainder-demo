@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "backend"
 dynamic = ["version"]
-description = " A search engine for text and distribution-aware dataset search."
+description = "A search engine for text and distribution-aware dataset search."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "Apache-2.0"
@@ -47,6 +47,7 @@ dev = [
     "mypy~=1.13",
     "pre-commit~=4.0",
     "pytest~=8.3",
+    "pytest-cov~=6.0.0",
     "types-protobuf~=5.29",
 ]
 
@@ -61,7 +62,7 @@ allow-direct-references = true
 
 [tool.ruff]
 line-length = 99
-target-version = "py310"
+target-version = "py311"
 exclude = ["proto"]
 
 [tool.ruff.lint]

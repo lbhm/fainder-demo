@@ -69,6 +69,15 @@ VALID_TEST_CASES = {
             "kw(test)\nAND col(pp(0.5;ge;20.0))",
         ]
     },
+    "advanced_lucene_queries": {
+        "queries": [
+            "kw((a AND b) OR c)",
+            "kw((a AND b) OR (c AND d))",
+            "kw(+title:(deep learning) -content:neural)",
+            "kw(((a AND b) OR C) OR D) AND col(pp(0.5;ge;20.0))",
+            "kw((((a AND b) OR C) OR D) AND E) AND col(pp(0.5;ge;20.0))",
+        ]
+    },
 }
 
 INVALID_TEST_CASES = {
@@ -129,18 +138,19 @@ INVALID_TEST_CASES = {
 )
 def test_query_evaluation_success(category: str, query: str, evaluator: QueryEvaluator) -> None:
     start_time = time.perf_counter()
-    r = evaluator.parse(query)
+    tree = evaluator.parse(query)
     duration = time.perf_counter() - start_time
 
     validation_log = {
         "type": "valid",
         "category": category,
         "query": query,
+        "parse_tree": tree.pretty(),
         "parse_time": duration,
     }
 
     logger.info("VALIDATION_DATA: " + str(validation_log))
-    assert not isinstance(r, Exception)
+    assert not isinstance(tree, Exception)
 
 
 @pytest.mark.parametrize(

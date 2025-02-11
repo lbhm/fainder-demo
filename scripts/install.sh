@@ -9,10 +9,8 @@
 # Backend setup
 (
     cd backend || exit
-    virtualenv venv
-    # shellcheck source=backend/.venv/bin/activate
-    source venv/bin/activate
-    pip install -e ".[dev]"
+    uv sync --extra dev
+    uv run pre-commit install
 )
 
 # Lucene setup

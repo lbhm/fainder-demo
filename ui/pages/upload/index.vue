@@ -2,13 +2,13 @@
 
 <template>
   <v-main>
-    <v-divider></v-divider>
+    <v-divider />
     <div class="d-flex align-center justify-center flex-column">
       <h1 class="mt-16">Upload Page</h1>
       <p>
         Upload new Croissant files with dataset profiles to the search engine.
       </p>
-      <v-form @submit.prevent="handleSubmit" class="mt-4">
+      <v-form class="mt-4" @submit.prevent="handleSubmit">
         <v-file-input
           v-model="files"
           label="Select Files"
@@ -23,7 +23,7 @@
               v.every((file) => file?.type === 'application/json') ||
               'Only JSON files are allowed',
           ]"
-        ></v-file-input>
+        />
         <div class="d-flex justify-end">
           <v-btn
             prepend-icon="mdi-upload"
@@ -42,7 +42,7 @@
         :type="alert.type"
         :text="alert.message"
         class="mt-4"
-      ></v-alert>
+      />
     </div>
   </v-main>
 </template>

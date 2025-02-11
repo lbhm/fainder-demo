@@ -1,5 +1,10 @@
 repos:
-  - repo: 'https://github.com/pre-commit/pre-commit-hooks'
+  - repo: meta
+    hooks:
+      - id: check-hooks-apply
+      - id: check-useless-excludes
+      # - id: identity
+  - repo: "https://github.com/pre-commit/pre-commit-hooks"
     rev: v5.0.0
     hooks:
       - id: check-case-conflict
@@ -11,11 +16,18 @@ repos:
       - id: end-of-file-fixer
       - id: mixed-line-ending
         args:
-          - '--fix=lf'
-      - id: requirements-txt-fixer
+          - "--fix=lf"
       - id: trailing-whitespace
+  - repo: "https://github.com/shellcheck-py/shellcheck-py"
+    rev: v0.10.0.1
+    hooks:
+      - id: shellcheck
+        name: shellcheck
+        args:
+          - "--severity=style"
+          - "-x"
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.9.2
+    rev: v0.9.4
     hooks:
       - id: ruff
         args:
@@ -35,17 +47,11 @@ repos:
         entry: ui/node_modules/.bin/prettier
         require_serial: true
         language: system
+        args:
+          - "--write"
         types_or:
           - css
           - html
           - javascript
           - ts
           - vue
-  - repo: 'https://github.com/shellcheck-py/shellcheck-py'
-    rev: v0.10.0.1
-    hooks:
-      - id: shellcheck
-        name: shellcheck
-        args:
-          - '--severity=style'
-          - '-x'
