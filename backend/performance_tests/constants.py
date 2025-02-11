@@ -24,7 +24,7 @@ DEFAULT_HIGH_PERCENTILE: Final[float] = 0.9
 DEFAULT_OPERATORS: Final[dict[str, list[str]]] = {"small": ["le"], "large": ["ge"]}
 
 # Logical operators
-#LOGICAL_OPERATORS: Final[list[str]] = ["AND", "OR", "XOR"]
+# LOGICAL_OPERATORS: Final[list[str]] = ["AND", "OR", "XOR"]
 LOGICAL_OPERATORS: Final[list[str]] = ["AND"]
 
 # Name query related constants
@@ -102,6 +102,18 @@ N_WAY_TEST_COMBINATIONS: Final[dict[str, list[list[str]]]] = {
             "pp(0.9;gt;4000)",
             "name(height; 4)",
             "pp(0.1;lt;500)",
+        ],
+    ],
+    "pp_chain": [
+        ["pp(0.25;lt;1000)", "pp(0.5;gt;2000)", "pp(0.75;lt;3000)"],
+        ["pp(0.1;lt;500)", "pp(0.9;gt;4000)", "pp(0.5;lt;1000)"],
+        [
+            "pp(0.25;lt;1000)",
+            "pp(0.5;gt;2000)",
+            "pp(0.75;lt;3000)",
+            "pp(0.1;lt;500)",
+            "pp(0.9;gt;4000)",
+            "pp(0.5;lt;1000)",
         ],
     ],
     "mixed_column_keyword": [

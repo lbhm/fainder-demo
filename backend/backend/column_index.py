@@ -90,4 +90,4 @@ class ColumnIndex:
                 f"distances {distances[0]}"
             )
         # TODO: add column filter
-        return result
+        return result if column_filter is None else result & column_filter
