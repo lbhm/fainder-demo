@@ -13,47 +13,41 @@ from backend.fainder_index import FainderIndex
 from backend.lucene_connector import LuceneConnector
 
 GRAMMAR = """
-    query: expression (OPERATOR query)?
-        | expression (OPERATOR expression)
-    expression: not_expr | term | "(" query ")"
-    not_expr: "NOT" term | "NOT" "(" query ")"
-    term: KEYWORD_OPERATOR "(" keywordterm ")"
-        | COLUMN_OPERATOR "(" column_query ")"
+    query:          expr (BOOLEAN_OP query)?
+    expr:           not_expr | term | "(" query ")"
+    not_expr:       "NOT" term | "NOT" "(" query ")"
+    term:           KEYWORD_OP "(" keywordterm ")" | COLUMN_OP "(" column_query ")"
 
-    keywordterm: lucene_query
-    lucene_query: lucene_clause+
-    lucene_clause: [REQUIRED_OP] [field_prefix] (TERM | "(" lucene_query ")")
-    field_prefix: TERM ":"
+    keywordterm:    lucene_query
+    lucene_query:   lucene_clause+
+    lucene_clause:  [LUCENE_OP] [field_prefix] (LUCENE_TERM | "(" lucene_query ")")
+    field_prefix:   IDENTIFIER ":"
 
-    column_query: col_expr (OPERATOR column_query)?
-    col_expr: not_col_expr | columnterm | "(" column_query ")"
-    not_col_expr: "NOT" columnterm | "NOT" "(" column_query ")"
+    column_query:   col_expr (BOOLEAN_OP column_query)?
+    col_expr:       not_col_expr | columnterm | "(" column_query ")"
+    not_col_expr:   "NOT" columnterm | "NOT" "(" column_query ")"
 
-    columnterm: NAME_OPERATOR "(" nameterm ")"
-        | PERCENTILE_OPERATOR "(" percentileterm ")"
-    percentileterm: FLOAT ";" COMPARISON ";" SIGNED_NUMBER
-    nameterm: IDENTIFIER ";" INT
+    columnterm:     NAME_OP "(" nameterm ")" | PERCENTILE_OP "(" percentileterm ")"
+    percentileterm: FLOAT ";" COMPARISON_OP ";" SIGNED_NUMBER
+    nameterm:       IDENTIFIER ";" INT
 
-    OPERATOR: "AND" | "OR" | "XOR"
-    COMPARISON: "ge" | "gt" | "le" | "lt"
+    KEYWORD_OP:     ("kw"i | "keyword"i)
+    COLUMN_OP:      ("col"i | "column"i)
+    NAME_OP:        ("name"i)
+    PERCENTILE_OP:  ("pp"i | "percentile"i)
+    BOOLEAN_OP:     "AND" | "OR" | "XOR"
+    COMPARISON_OP:  "ge" | "gt" | "le" | "lt"
+    LUCENE_OP:      "+" | "-"
 
-    REQUIRED_OP: "+" | "-"
-    TERM: /[^():+-;]+/
+    IDENTIFIER:     /[a-zA-Z0-9_ ]+/
+    LUCENE_TERM:    /[^():+-;]+/
 
-    PERCENTILE_OPERATOR: ("pp"i | "percentile"i) _WSI?
-    KEYWORD_OPERATOR: ("kw"i | "keyword"i) _WSI?
-    COLUMN_OPERATOR: ("col"i | "column"i) _WSI?
-    NAME_OPERATOR: ("name"i) _WSI?
-
-    IDENTIFIER: /[a-zA-Z0-9_ ]+/
-    LUCENE_QUERY: /[^():+-;]+/
     %ignore _WS
     %ignore COMMENT
     %import common.INT
     %import common.FLOAT
     %import common.SIGNED_NUMBER
     %import common.WS -> _WS
-    %import common.WS_INLINE -> _WSI
     %import common.SH_COMMENT -> COMMENT
 """
 
@@ -97,7 +91,7 @@ class QueryEvaluator:
         self,
         query: str,
         fainder_mode: FainderMode = "low_memory",
-        enable_highlighting: bool = True,
+        enable_highlighting: bool = False,
         enable_filtering: bool = False,
     ) -> tuple[list[int], Highlights]:
         # Reset state for new query
@@ -195,7 +189,7 @@ class QueryExecutor(Transformer):
         hnsw_index: ColumnIndex,
         metadata: Metadata,
         fainder_mode: FainderMode = "low_memory",
-        enable_highlighting: bool = True,
+        enable_highlighting: bool = False,
         enable_filtering: bool = False,
     ):
         self.lucene_connector = lucene_connector
@@ -224,7 +218,7 @@ class QueryExecutor(Transformer):
     def reset(
         self,
         fainder_mode: FainderMode,
-        enable_highlighting: bool = True,
+        enable_highlighting: bool = False,
         enable_filtering: bool = False,
     ) -> None:
         self.scores = defaultdict(float)
@@ -381,7 +375,7 @@ class QueryExecutor(Transformer):
         all_docs = set(self.metadata.doc_to_cols.keys())
         return all_docs - to_negate, ({}, set())  # Negate all documents
 
-    def expression(self, items: list[tuple[set[int], Highlights]]) -> tuple[set[int], Highlights]:
+    def expr(self, items: list[tuple[set[int], Highlights]]) -> tuple[set[int], Highlights]:
         logger.trace(f"Evaluating expression with {len(items[0])} items")
         return items[0]
 

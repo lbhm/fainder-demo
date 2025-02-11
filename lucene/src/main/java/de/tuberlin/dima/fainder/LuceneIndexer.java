@@ -197,7 +197,7 @@ public class LuceneIndexer {
                 writer.commit();
                 writer.close();
             } catch (JsonSyntaxException e) {
-                e.printStackTrace();
+                logger.error(Arrays.toString(e.getStackTrace()));
             }
         } catch (IOException e) {
             logger.error(Arrays.toString(e.getStackTrace()));

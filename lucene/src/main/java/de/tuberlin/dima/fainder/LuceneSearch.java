@@ -7,39 +7,35 @@ import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.StoredFields;
 import org.apache.lucene.index.Term;
-import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.queryparser.flexible.core.QueryNodeException;
 import org.apache.lucene.queryparser.flexible.standard.StandardQueryParser;
 import org.apache.lucene.queryparser.flexible.standard.config.StandardQueryConfigHandler;
 import org.apache.lucene.search.*;
+import org.apache.lucene.search.highlight.Highlighter;
+import org.apache.lucene.search.highlight.InvalidTokenOffsetsException;
+import org.apache.lucene.search.highlight.QueryScorer;
+import org.apache.lucene.search.highlight.SimpleHTMLFormatter;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.lucene.search.highlight.*;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.HashMap;
+import java.util.*;
 
 public class LuceneSearch {
     private static final Logger logger = LoggerFactory.getLogger(LuceneSearch.class);
     private final IndexSearcher searcher;
     private final Map<String, Float> searchFields = Map.of(
-        "name", 5.0f,           // Boost name matches
-        "description", 2.0f,    // Normal weight for description
-        "keywords", 4.0f,       // Slightly boost keyword matches
-        "creator_name", 1.6f,   // Lower weight for creator
-        "publisher_name", 1.6f, // Lower weight for publisher
-        "alternateName", 3.0f
-    );
+            "name", 5.0f,           // Boost name matches
+            "description", 2.0f,    // Normal weight for description
+            "keywords", 4.0f,       // Slightly boost keyword matches
+            "creator_name", 1.6f,   // Lower weight for creator
+            "publisher_name", 1.6f, // Lower weight for publisher
+            "alternateName", 3.0f);
     private final StandardAnalyzer analyzer;
-    private final StandardQueryParser qpHelper;
-
+    private final StandardQueryParser parser;
 
     // Constant flag for testing different implementations
     private final Boolean BOOL_FILTER;
@@ -52,8 +48,8 @@ public class LuceneSearch {
         // Configure analyzer to keep stop words
         analyzer = new StandardAnalyzer(CharArraySet.EMPTY_SET);
 
-        qpHelper = new StandardQueryParser();
-        StandardQueryConfigHandler config = (StandardQueryConfigHandler) qpHelper.getQueryConfigHandler();
+        parser = new StandardQueryParser();
+        StandardQueryConfigHandler config = (StandardQueryConfigHandler) parser.getQueryConfigHandler();
         config.set(StandardQueryConfigHandler.ConfigurationKeys.ALLOW_LEADING_WILDCARD, true);
         config.set(StandardQueryConfigHandler.ConfigurationKeys.ANALYZER, analyzer);
         config.set(StandardQueryConfigHandler.ConfigurationKeys.FIELD_BOOST_MAP, searchFields);
@@ -62,31 +58,11 @@ public class LuceneSearch {
         config.set(StandardQueryConfigHandler.ConfigurationKeys.MULTI_TERM_REWRITE_METHOD, MultiTermQuery.SCORING_BOOLEAN_REWRITE);
     }
 
-
-    public static class SearchResult {
-        public List<Integer> docIds;
-        public List<Float> scores;
-        public Map<Integer, Map<String, String>> highlights;  // Changed to Map<Integer, Map<String, String>>
-
-        public SearchResult(List<Integer> docIds, List<Float> scores, Map<Integer, Map<String, String>> highlights) {
-            this.docIds = docIds;
-            this.scores = scores;
-            this.highlights = highlights;
-        }
-    }
-
-    private Query createMultiFieldQuery(String queryText) throws ParseException, QueryNodeException {
-
-        Query query = qpHelper.parse(queryText, null);
-        return new BoostQuery(query, 5.0f);  // Boost entire query by 5x
-    }
-
-
     /**
-     * @param query      The query string
-     * @param docIds     Set of document IDs to filter (optional)
-     * @param minScore   The minimum score for a document to be included in the results
-     * @param maxResults The maximum number of documents to return
+     * @param query              The query string
+     * @param docIds             Set of document IDs to filter (optional)
+     * @param minScore           The minimum score for a document to be included in the results
+     * @param maxResults         The maximum number of documents to return
      * @param enableHighlighting Flag to enable or disable highlighting
      * @return A pair of lists: document IDs and their scores
      */
@@ -96,17 +72,17 @@ public class LuceneSearch {
         }
 
         try {
-            Query multiFieldQuery = createMultiFieldQuery(query);
+            Query boostedQuery = new BoostQuery(parser.parse(query, null), 5.0f);
             Highlighter highlighter = null;
 
             if (enableHighlighting) {
-                QueryScorer scorer = new QueryScorer(multiFieldQuery);
+                QueryScorer scorer = new QueryScorer(boostedQuery);
                 SimpleHTMLFormatter htmlFormatter = new SimpleHTMLFormatter("<mark>", "</mark>");
                 highlighter = new Highlighter(htmlFormatter, scorer);
                 highlighter.setMaxDocCharsToAnalyze(Integer.MAX_VALUE);
             }
 
-            logger.info("Input query {}. Executing query {}. With filter: {} ", query, multiFieldQuery, docIds);
+            logger.info("Input query {}. Executing query {}. With filter: {} ", query, boostedQuery, docIds);
 
             ScoreDoc[] hits;
             if (docIds != null && !docIds.isEmpty()) {
@@ -115,16 +91,16 @@ public class LuceneSearch {
                 if (BOOL_FILTER) {
                     Query docFilter = createDocFilter(docIds);
                     BooleanQuery.Builder queryBuilder = new BooleanQuery.Builder();
-                    queryBuilder.add(multiFieldQuery, BooleanClause.Occur.MUST);
+                    queryBuilder.add(boostedQuery, BooleanClause.Occur.MUST);
                     queryBuilder.add(docFilter, BooleanClause.Occur.FILTER);
-                    Query parsedQuery = queryBuilder.build();
-                    hits = searcher.search(parsedQuery, maxResults).scoreDocs;
+                    Query filteredQuery = queryBuilder.build();
+                    hits = searcher.search(filteredQuery, maxResults).scoreDocs;
                 } else {
                     CustomCollectorManager collectorManager = new CustomCollectorManager(maxResults, docIds);
-                    hits = searcher.search(multiFieldQuery, collectorManager).scoreDocs;
+                    hits = searcher.search(boostedQuery, collectorManager).scoreDocs;
                 }
             } else {
-                hits = searcher.search(multiFieldQuery, maxResults).scoreDocs;
+                hits = searcher.search(boostedQuery, maxResults).scoreDocs;
             }
 
             StoredFields storedFields = searcher.storedFields();
@@ -165,13 +141,9 @@ public class LuceneSearch {
                     highlights.put(resultId, docHighlights);
                 }
             }
-            logger.info("Returning {} results over min Score {}", results.size(), minScore);
+            logger.info("Returning {} results with score over {}", results.size(), minScore);
 
             return new SearchResult(results, scores, highlights);
-        } catch (ParseException e) {
-            logger.error("Query parsing error: {}", e.getMessage());
-            return new SearchResult(List.of(), List.of(), Map.of());
-
         } catch (IOException | QueryNodeException e) {
             logger.error("Query IO error: {}", e.getMessage());
             return new SearchResult(List.of(), List.of(), Map.of());
@@ -194,4 +166,15 @@ public class LuceneSearch {
         searcher.getIndexReader().close();
     }
 
+    public static class SearchResult {
+        public List<Integer> docIds;
+        public List<Float> scores;
+        public Map<Integer, Map<String, String>> highlights;  // Changed to Map<Integer, Map<String, String>>
+
+        public SearchResult(List<Integer> docIds, List<Float> scores, Map<Integer, Map<String, String>> highlights) {
+            this.docIds = docIds;
+            this.scores = scores;
+            this.highlights = highlights;
+        }
+    }
 }
