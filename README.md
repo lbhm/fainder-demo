@@ -97,7 +97,7 @@ restart the apllication or call the `/update_indices` endpoint. -->
 
 ### Run with Docker
 
-You need a recent version of Docker including `docker compose` to run the demo.
+You need a recent version of Docker including Docker Compose 2.22 or later to run the demo.
 
 Build and start the demo:
 
