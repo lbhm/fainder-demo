@@ -13,8 +13,8 @@ from backend.fainder_index import FainderIndex
 from backend.lucene_connector import LuceneConnector
 
 GRAMMAR = """
-    start: query
     query: expression (OPERATOR query)?
+        | expression (OPERATOR expression)
     expression: not_expr | term | "(" query ")"
     not_expr: "NOT" term | "NOT" "(" query ")"
     term: KEYWORD_OPERATOR "(" keywordterm ")"
@@ -46,7 +46,7 @@ GRAMMAR = """
     NAME_OPERATOR: ("name"i) _WSI?
 
     IDENTIFIER: /[a-zA-Z0-9_ ]+/
-    LUCENE_QUERY: /([^()]|\\([^()]*\\))+/
+    LUCENE_QUERY: /[^():+-;]+/
     %ignore _WS
     %ignore COMMENT
     %import common.INT
@@ -56,13 +56,6 @@ GRAMMAR = """
     %import common.WS_INLINE -> _WSI
     %import common.SH_COMMENT -> COMMENT
 """
-
-# Lucene query regex matches:
-# 1. [^()] - Any single character that is NOT a parenthesis (not ( or )) OR
-# 2. \([^()]*\\) - A sequence that:
-#    - \\( matches an opening parenthesis
-#    - [^()]* matches zero or more characters that are not parentheses
-#    - \\) matches a closing parenthesis
 
 # Type alias for highlights
 DocumentHighlights = dict[int, dict[str, str]]
@@ -80,7 +73,7 @@ class QueryEvaluator:
         cache_size: int = 128,
     ):
         self.lucene_connector = lucene_connector
-        self.grammar = Lark(GRAMMAR, start="start")
+        self.grammar = Lark(GRAMMAR, start="query")
         self.annotator = QueryAnnotator()
         self.executor = QueryExecutor(self.lucene_connector, fainder_index, hnsw_index, metadata)
 
@@ -418,20 +411,12 @@ class QueryExecutor(Transformer):
             case _:
                 raise ValueError(f"Unknown operator: {operator}")
 
-        result_highlights = self._merge_highlights(left_highlights, right_highlights, result_set)
-        return result_set, result_highlights
-
-    def start(self, items: list[tuple[set[int], Highlights]]) -> tuple[set[int], Highlights]:
-        doc_set, (doc_highlights, col_highlights) = items[0]
-
         if self.enable_highlighting:
-            # Only return the column highlights that are in the document set
-            filtered_col_highlights = col_ids_in_docs(
-                col_highlights, doc_set, self.metadata.doc_to_cols
+            result_highlights = self._merge_highlights(
+                left_highlights, right_highlights, result_set
             )
-            return doc_set, (doc_highlights, filtered_col_highlights)
-
-        return items[0]
+            return result_set, result_highlights
+        return result_set, ({}, set())
 
     def _merge_highlights(
         self, left_highlights: Highlights, right_highlights: Highlights, doc_ids: set[int]
@@ -488,8 +473,11 @@ class QueryExecutor(Transformer):
 
         # Merge column highlights
         result_columns = left_highlights[1] | right_highlights[1]
+        filtered_col_highlights = col_ids_in_docs(
+            result_columns, doc_ids, self.metadata.doc_to_cols
+        )
 
-        return result_document_highlights, result_columns
+        return result_document_highlights, filtered_col_highlights
 
 
 def col_ids_in_docs(
