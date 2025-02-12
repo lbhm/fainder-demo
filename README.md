@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD028 -->
 <!-- markdownlint-disable MD033 -->
 <p align="center">
   <picture>
@@ -84,8 +85,9 @@ must place your Croissant files into a folder and set the `DATA_DIR` and `COLLEC
 accordingly (see above, we recommend `./data/<collection_name/croissant` if you want to use the
 Docker setup).
 
-**Note:** Currently, you have to manually trigger the intial index creation. To do so, install the
-`backend` dependencies and run the following command:
+> [!NOTE]
+> Currently, you have to manually trigger the intial index creation. To do so, install the
+> `backend` dependencies and run the following command:
 
 ```bash
 python -m backend.indexing
@@ -131,10 +133,16 @@ backend component. You just have to run:
 scripts/install.sh
 ```
 
-**Note:** `eslint` and `vue-tsc` are currently not integrated into the `pre-commit` hooks.
-Therefore, you should run `npm run lint` and `npm run typecheck` before committing UI changes.
+> [!NOTE]
+> The `pre-commit` configuration expects that you installed the Python dependencies in a virtual
+> environment at `backend/.venv`. If you use a different location, you have to adjust the
+> configuration accordingly.
 
-##### Docker Development
+> [!NOTE]
+> `eslint` and `vue-tsc` are currently not integrated into the `pre-commit` hooks.
+> Therefore, you should run `npm run lint` and `npm run typecheck` before committing UI changes.
+
+#### Docker Development
 
 If you want to use Docker for development, you can use the following command to start the
 components in development mode:

@@ -15,7 +15,7 @@ from backend.query_evaluator import QueryEvaluator
 
 
 @pytest.fixture(autouse=True, scope="module")
-def _setup_and_teardown() -> Generator[None, Any, None]:
+def _setup_and_teardown() -> Generator[None, Any, None]:  # pyright: ignore[reportUnusedFunction]
     """
     Generic setup and teardown fixture that runs before and after each test.
     """
@@ -31,14 +31,13 @@ def _setup_and_teardown() -> Generator[None, Any, None]:
     # Add handlers for both file and console
     logger.add(
         sys.stdout,
-        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | {message}",
-        filter=lambda record: record["level"].name == "INFO",
+        format="{time:HH:mm:ss} | {level: >5} | {file}:{line} | <level>{message}</level>",
+        level="DEBUG",
     )
     logger.add(
         "logs/test_{time:YYYY-MM-DD HH:mm:ss}.log",
-        format="{time:YYYY-MM-DD HH:mm:ss} | {message}",
-        filter=lambda record: record["level"].name == "INFO",
-        rotation="1 day",
+        format="{time:HH:mm:ss} | {level: >5} | {file}:{line} | {message}",
+        level="DEBUG",
     )
 
     yield

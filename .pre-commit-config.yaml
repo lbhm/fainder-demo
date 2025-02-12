@@ -27,21 +27,28 @@ repos:
           - "--severity=style"
           - "-x"
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.9.4
+    rev: v0.9.6
     hooks:
       - id: ruff
         args:
           - "--fix"
       - id: ruff-format
+  - repo: https://github.com/RobertCraigie/pyright-python
+    rev: v1.1.394
+    hooks:
+    - id: pyright
+      args:
+        - "--project=backend/pyproject.toml"
+        - "--warnings"
   - repo: local
     hooks:
-      - id: mypy
-        name: mypy
-        entry: mypy
-        require_serial: true
-        language: system
-        types:
-          - python
+      # - id: mypy
+      #   name: mypy
+      #   entry: mypy
+      #   require_serial: true
+      #   language: system
+      #   types:
+      #     - python
       - id: prettier
         name: prettier
         entry: ui/node_modules/.bin/prettier

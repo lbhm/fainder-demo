@@ -140,7 +140,7 @@ def _apply_highlighting(
             for field, highlighted in doc_highlights[doc_id].items():
                 _apply_field_highlighting(doc, field, highlighted)
 
-        record_set: list[dict[str, Any]] = doc.get("recordSet", None)
+        record_set: list[dict[str, Any]] | None = doc.get("recordSet", None)
         if record_set is not None:
             _apply_column_highlighting(record_set, col_highlights)
 

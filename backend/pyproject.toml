@@ -104,6 +104,14 @@ explicit = true
 [tool.uv.sources]
 torch = { index = "pytorch" }
 
+[tool.pyright]
+inlucde = ["backend", "tests"]
+exclude = ["**/proto", "**/__pycache__", "**/.*"]
+# reportUnnecessaryTypeIgnoreComment = true
+typeCheckingMode = "strict"
+venvPath = "."
+venv = ".venv"
+
 [tool.mypy]
 ignore_missing_imports = true
 plugins = ["numpy.typing.mypy_plugin"]

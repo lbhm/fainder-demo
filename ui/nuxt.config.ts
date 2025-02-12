@@ -19,8 +19,9 @@ export default defineNuxtConfig({
     },
     "@nuxtjs/mdc",
     "@nuxtjs/color-mode",
-    "@nuxt/test-utils/module",
-    //...
+    ...(process.env.NODE_ENV === "production"
+      ? []
+      : ["@nuxt/test-utils/module"]),
   ],
   runtimeConfig: {
     public: {
