@@ -6,7 +6,7 @@ Run tests for the grammar:
 
 ```bash
 # NOTE: You have to start a Lucene instance first
-pytest tests
+uv run pytest tests
 ```
 
 Start fastapi dev server:
