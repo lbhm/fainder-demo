@@ -92,7 +92,7 @@ class QueryEvaluator:
         query: str,
         fainder_mode: FainderMode = "low_memory",
         enable_highlighting: bool = False,
-        enable_filtering: bool = False,
+        enable_filtering: bool = True,
     ) -> tuple[list[int], Highlights]:
         # Reset state for new query
         self.annotator.reset()
@@ -152,12 +152,14 @@ class QueryAnnotator(Visitor[Token]):
             self.parent_operator_docs = tree.children[1].value
 
             if isinstance(tree.children[0], Tree):
-                self.current_side = "left"
+                logger.trace(f"Visiting left side of query: {tree.children[0]}")
+                self.current_side_docs = "left"
                 self.visit(tree.children[0])
 
             # Visit right side
             if isinstance(tree.children[2], Tree):
-                self.current_side_cols = "right"
+                logger.trace(f"Visiting right side of query: {tree.children[2]}")
+                self.current_side_docs = "right"
                 self.visit(tree.children[2])
 
             self.parent_operator_docs = old_parent
@@ -179,7 +181,7 @@ class QueryAnnotator(Visitor[Token]):
             self.parent_operator_docs = tree.children[1].value
 
             if isinstance(tree.children[0], Tree):
-                self.current_side = "left"
+                self.current_side_cols = "left"
                 self.visit(tree.children[0])
 
             # Visit right side
@@ -196,17 +198,17 @@ class QueryAnnotator(Visitor[Token]):
     def percentileterm(self, tree: ParseTree) -> None:
         if self.parent_operator_cols:
             tree.children.append(Token("parent_op", self.parent_operator_cols))
-            tree.children.append(Token("side", self.current_side))
+            tree.children.append(Token("side", self.current_side_cols))
 
     def keywordterm(self, tree: ParseTree) -> None:
         if self.parent_operator_docs:
             tree.children.append(Token("parent_op", self.parent_operator_docs))
-            tree.children.append(Token("side", self.current_side))
+            tree.children.append(Token("side", self.current_side_docs))
 
     def columnterm(self, tree: ParseTree) -> None:
         if self.parent_operator_cols:
             tree.children.append(Token("parent_op", self.parent_operator_cols))
-            tree.children.append(Token("side", self.current_side))
+            tree.children.append(Token("side", self.current_side_docs))
 
 
 class QueryExecutor(Transformer[Token, tuple[set[int], Highlights]]):
@@ -343,6 +345,7 @@ class QueryExecutor(Transformer[Token, tuple[set[int], Highlights]]):
         if len(items) >= 3 and self.enable_filtering:
             operator = items[-2]
             side = items[-1]
+            logger.trace(f"Operator: {operator}, side: {side}")
             doc_filter = self._get_doc_filter(operator, side)
 
         result_docs, scores, highlights = self.lucene_connector.evaluate_query(
@@ -417,7 +420,7 @@ class QueryExecutor(Transformer[Token, tuple[set[int], Highlights]]):
         self, items: tuple[Token, set[uint32] | tuple[set[int], Highlights]]
     ) -> tuple[set[int], Highlights]:
         """Process a term, which can be either a keyword or column operation."""
-        logger.trace(f"Evaluating term with items: {items}")
+        # logger.trace(f"Evaluating term with items: {items}")
         operator: str = items[0].value
         doc_ids: set[int]
         if operator.strip().lower() in ["column", "col"]:

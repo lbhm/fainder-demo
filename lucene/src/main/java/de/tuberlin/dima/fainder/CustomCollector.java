@@ -3,6 +3,7 @@ package de.tuberlin.dima.fainder;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.LeafReader;
 import org.apache.lucene.index.LeafReaderContext;
+import org.apache.lucene.index.NumericDocValues;
 import org.apache.lucene.index.StoredFields;
 import org.apache.lucene.search.*;
 
@@ -22,24 +23,22 @@ public class CustomCollector implements Collector {
     @Override
     public LeafCollector getLeafCollector(LeafReaderContext context) throws IOException {
         LeafCollector leafCollector = topScoreDocCollector.getLeafCollector(context);
-        final StoredFields storedFields;
-        try (LeafReader reader = context.reader()) {
-            storedFields = reader.storedFields();
-        }
+        final NumericDocValues idValues = context.reader().getNumericDocValues("id");
 
         return new LeafCollector() {
+            private Scorable scorer;
+
             @Override
             public void setScorer(Scorable scorer) throws IOException {
+                this.scorer = scorer;
                 leafCollector.setScorer(scorer);
             }
 
             @Override
             public void collect(int doc) throws IOException {
-                Document document = storedFields.document(doc);
-                String idString = document.get("id");
-                if (idString != null) {
-                    int id = Integer.parseInt(idString);
-                    if (filterDocIds.contains(id)) {
+                if (idValues != null && idValues.advanceExact(doc)) {
+                    long docId = idValues.longValue();
+                    if (filterDocIds.contains((int) docId)) {
                         leafCollector.collect(doc);
                     }
                 }

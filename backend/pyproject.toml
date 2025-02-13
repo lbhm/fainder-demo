@@ -50,6 +50,10 @@ dev = [
     "pytest-cov~=6.0.0",
     "types-protobuf~=5.29",
 ]
+analysis = [
+    "matplotlib~=3.10.0",
+    "ipykernel~=6.29.5",
+]
 
 [project.urls]
 Repository = "https://github.com/lbhm/fainder-demo"

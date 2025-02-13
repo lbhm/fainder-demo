@@ -107,7 +107,17 @@ public class LuceneServer {
             Set<Integer> docIds = new HashSet<>(queryRequest.getDocIdsList());
 
             QueryResponse.Builder responseBuilder = QueryResponse.newBuilder();
-            SearchResult searchResults = luceneSearch.search(query, docIds, minScore, maxResults, queryRequest.getEnableHighlighting());
+            SearchResult searchResults;
+            try {
+                searchResults = luceneSearch.search(query, docIds, minScore, maxResults, queryRequest.getEnableHighlighting());
+            }
+            catch (IOException e) {
+                logger.error("Failed to search index: {}", e.getMessage());
+                responseObserver.onNext(responseBuilder.build());
+                responseObserver.onCompleted();
+                return;
+            }
+
             responseBuilder.addAllResults(searchResults.docIds).addAllScores(searchResults.scores);
 
             // Add highlights for each document
@@ -132,33 +142,44 @@ public class LuceneServer {
         @Override
         public void recreateIndex(RecreateIndexRequest request, StreamObserver<RecreateIndexResponse> responseObserver) {
             try {
-                // Close existing searcher to release file handles
-                if (luceneSearch != null) {
-                    luceneSearch.close();
-                }
+                synchronized (this) {
+                    // Create new index in a temporary location
+                    Path tempIndexPath = indexPath.resolveSibling(indexPath.getFileName() + "_temp");
+                    LuceneIndexer.createIndex(tempIndexPath, dataPath);
 
-                // Delete existing index directory
-                try (Stream<Path> paths = Files.walk(indexPath)) {
-                    paths.sorted(java.util.Comparator.reverseOrder()).forEach(path -> {
-                        try {
-                            Files.delete(path);
-                        } catch (IOException e) {
-                            logger.warn("Failed to delete file: {}", path, e);
+                    // Close existing searcher
+                    if (luceneSearch != null) {
+                        luceneSearch.close();
+                    }
+
+                    // Delete existing index directory
+                    if (Files.exists(indexPath)) {
+                        try (Stream<Path> paths = Files.walk(indexPath)) {
+                            paths.sorted(java.util.Comparator.reverseOrder())
+                                .forEach(path -> {
+                                    try {
+                                        Files.delete(path);
+                                    } catch (IOException e) {
+                                        logger.warn("Failed to delete: {}", path, e);
+                                    }
+                                });
                         }
-                    });
+                    }
+
+                    // Move new index to proper location
+                    Files.move(tempIndexPath, indexPath);
+
+                    // Create new searcher
+                    luceneSearch = new LuceneSearch(indexPath);
+
+                    RecreateIndexResponse response = RecreateIndexResponse.newBuilder()
+                            .setSuccess(true)
+                            .setMessage("Index successfully recreated")
+                            .build();
+
+                    responseObserver.onNext(response);
+                    responseObserver.onCompleted();
                 }
-
-                // Create new index
-                LuceneIndexer.createIndex(indexPath, dataPath);
-                luceneSearch = new LuceneSearch(indexPath);
-
-                RecreateIndexResponse response = RecreateIndexResponse.newBuilder()
-                        .setSuccess(true)
-                        .setMessage("Index successfully recreated")
-                        .build();
-
-                responseObserver.onNext(response);
-                responseObserver.onCompleted();
             } catch (Exception e) {
                 logger.error("Failed to recreate index: {}", e.getMessage());
                 RecreateIndexResponse response = RecreateIndexResponse.newBuilder()
