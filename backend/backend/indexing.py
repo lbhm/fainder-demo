@@ -4,7 +4,7 @@ import os
 import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import hnswlib  # type: ignore
 import numpy as np
@@ -17,6 +17,9 @@ from sentence_transformers import SentenceTransformer
 
 from backend.config import Settings
 from backend.croissant_store import Document
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 
 def generate_metadata(
@@ -179,14 +182,15 @@ def generate_embedding_index(
     seed: int = 42,
 ) -> None:
     strings = list(name_to_vector.keys())
-    ids = list(name_to_vector.values())
+    ids = np.array(name_to_vector.values(), dtype=np.uint64)
 
     logger.info("Generating embeddings")
     embedder = SentenceTransformer(
         model_name, cache_folder=(output_path / "model_cache").as_posix()
     )
-    embedder.compile()  # Maybe remove this
-    embeddings = embedder.encode(
+    # Maybe remove the module compilation if it does not help with performance
+    embedder.compile()  # pyright: ignore[reportUnknownMemberType]
+    embeddings: NDArray[np.float32] = embedder.encode(  # pyright: ignore[reportUnknownMemberType]
         sentences=strings,
         batch_size=batch_size,
         show_progress_bar=show_progress_bar,

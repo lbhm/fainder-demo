@@ -3,7 +3,7 @@ from collections import defaultdict
 from collections.abc import Sequence
 from functools import lru_cache
 
-from lark import Lark, Token, Transformer, Tree, Visitor
+from lark import Lark, ParseTree, Token, Transformer, Tree, Visitor
 from loguru import logger
 from numpy import uint32
 
@@ -84,7 +84,7 @@ class QueryEvaluator:
         self.executor = QueryExecutor(self.lucene_connector, fainder_index, hnsw_index, metadata)
         self.clear_cache()
 
-    def parse(self, query: str) -> Tree:
+    def parse(self, query: str) -> ParseTree:
         return self.grammar.parse(query)
 
     def _execute(
@@ -101,12 +101,11 @@ class QueryEvaluator:
         # Parse query
         parse_tree = self.parse(query)
         if enable_filtering:
+            # TODO: Do we need visit_topdown here?
             self.annotator.visit(parse_tree)
         logger.trace(f"Parse tree: {parse_tree.pretty()}")
 
         # Execute query
-        result: set[int]
-        highlights: Highlights
         result, highlights = self.executor.transform(parse_tree)
 
         # Sort by score
@@ -122,85 +121,95 @@ class QueryEvaluator:
         return CacheInfo(hits=hits, misses=misses, max_size=max_size, curr_size=curr_size)
 
 
-class QueryAnnotator(Visitor):
+class QueryAnnotator(Visitor[Token]):
     """
     This visitor goes top-down through the parse tree and annotates each percentile and keyword
     term with its parent operator and side (i.e., evaluation order) in the parent expression.
     """
 
-    # TODO: We need to investigate this class because nodes are annotated too often
-
     def __init__(self) -> None:
-        self.current_operator_docs: str | None = None
+        self.parent_operator_docs: str | None = None
         self.current_side_docs: str | None = None
-        self.current_operator_cols: str | None = None
+        self.parent_operator_cols: str | None = None
         self.current_side_cols: str | None = None
 
     def reset(self) -> None:
-        self.current_operator_docs = None
+        self.parent_operator_docs = None
         self.current_side_docs = None
-        self.current_operator_cols = None
+        self.parent_operator_cols = None
         self.current_side_cols = None
 
-    def query(self, tree: Tree):
+    def query(self, tree: ParseTree):
+        # TODO: We need to investigate this class because nodes are annotated too often
+        # NOTE: Calling visit again in this method will annotate the tree nodes multiple times
         if len(tree.children) == 3:  # Has operator
-            old_operator = self.current_operator_docs
-            old_side = self.current_side_docs
-
-            assert isinstance(tree.children[1], Token)
-            self.current_operator_docs = tree.children[1].value
-
-            # Visit left side
-            self.current_side_docs = "left"
-            self.visit(tree.children[0])
-
-            # Visit right side
-            self.current_side_docs = "right"
-            self.visit(tree.children[2])
-
-            self.current_operator_docs = old_operator
-            self.current_side_docs = old_side
-        else:
-            self.visit(tree.children[0])
-
-    def column_query(self, tree: Tree):
-        if len(tree.children) == 3:  # Has operator
-            old_operator = self.current_operator_cols
+            if not isinstance(tree.children[1], Token):
+                logger.error(f"Expected operator, got: {tree.children[1]}. Aborting annotation.")
+                return
+            old_parent = self.parent_operator_docs
             old_side = self.current_side_cols
 
-            assert isinstance(tree.children[1], Token)
-            self.current_operator_cols = tree.children[1].value
+            self.parent_operator_docs = tree.children[1].value
 
-            # Visit left side
-            self.current_side_cols = "left"
-            self.visit(tree.children[0])
+            if isinstance(tree.children[0], Tree):
+                self.current_side = "left"
+                self.visit(tree.children[0])
 
             # Visit right side
-            self.current_side_cols = "right"
-            self.visit(tree.children[2])
+            if isinstance(tree.children[2], Tree):
+                self.current_side_cols = "right"
+                self.visit(tree.children[2])
 
-            self.current_operator_cols = old_operator
+            self.parent_operator_docs = old_parent
+            self.current_side_docs = old_side
+        else:
+            if isinstance(tree.children[0], Tree):
+                self.visit(tree.children[0])
+
+    def column_query(self, tree: ParseTree):
+        # TODO: We need to investigate this class because nodes are annotated too often
+        # NOTE: Calling visit again in this method will annotate the tree nodes multiple times
+        if len(tree.children) == 3:  # Has operator
+            if not isinstance(tree.children[1], Token):
+                logger.error(f"Expected operator, got: {tree.children[1]}. Aborting annotation.")
+                return
+            old_parent = self.parent_operator_cols
+            old_side = self.current_side_cols
+
+            self.parent_operator_docs = tree.children[1].value
+
+            if isinstance(tree.children[0], Tree):
+                self.current_side = "left"
+                self.visit(tree.children[0])
+
+            # Visit right side
+            if isinstance(tree.children[2], Tree):
+                self.current_side_cols = "right"
+                self.visit(tree.children[2])
+
+            self.parent_operator_cols = old_parent
             self.current_side_cols = old_side
         else:
-            self.visit(tree.children[0])
+            if isinstance(tree.children[0], Tree):
+                self.visit(tree.children[0])
 
-    def percentileterm(self, tree: Tree) -> None:
-        if self.current_operator_cols:
-            tree.children.append(self.current_operator_cols)
-            tree.children.append(self.current_side_cols)
+    def percentileterm(self, tree: ParseTree) -> None:
+        if self.parent_operator_cols:
+            tree.children.append(Token("parent_op", self.parent_operator_cols))
+            tree.children.append(Token("side", self.current_side))
 
-    def keywordterm(self, tree: Tree) -> None:
-        if self.current_operator_docs:
-            tree.children.append(self.current_operator_docs)
-            tree.children.append(self.current_operator_docs)
+    def keywordterm(self, tree: ParseTree) -> None:
+        if self.parent_operator_docs:
+            tree.children.append(Token("parent_op", self.parent_operator_docs))
+            tree.children.append(Token("side", self.current_side))
 
-    def columnterm(self, tree: Tree) -> None:
-        if self.current_operator_cols:
-            tree.children.append(self.current_operator_cols)
-            tree.children.append(self.current_side_cols)
+    def columnterm(self, tree: ParseTree) -> None:
+        if self.parent_operator_cols:
+            tree.children.append(Token("parent_op", self.parent_operator_cols))
+            tree.children.append(Token("side", self.current_side))
 
 
-class QueryExecutor(Transformer):
+class QueryExecutor(Transformer[Token, tuple[set[int], Highlights]]):
     """This transformer evaluates the parse tree bottom-up and compute the query result."""
 
     fainder_mode: FainderMode
@@ -306,31 +315,24 @@ class QueryExecutor(Transformer):
         logger.trace(f"Processing field prefix: {items}")
         return f"{items[0].value}:"
 
-    def lucene_clause(self, items: list[Token | str]) -> str:
+    def lucene_clause(self, items: list[Token | str | None]) -> str:
         """Process a single Lucene clause including optional required operator and field prefix."""
         logger.trace(f"Processing Lucene clause: {items}")
         result = ""
 
         for item in items:
-            if item:
-                if isinstance(item, Token):
-                    result += item.value
-                else:
-                    result += str(item)
+            if isinstance(item, Token):
+                result += item.value
+            elif isinstance(item, str):
+                result += item
 
         return result.strip()
 
     def lucene_query(self, items: list[str]) -> str:
         """Merge Lucene query clauses into a single query string."""
         logger.trace(f"Merging Lucene query clauses: {items}")
-        query_parts = []
 
-        for item in items:
-            if item:
-                query_parts.append(str(item))
-
-        joined = " ".join(filter(None, query_parts)).strip()
-        return "(" + joined + ")"
+        return "(" + " ".join(items).strip() + ")"
 
     def keywordterm(self, items: list[Token]) -> tuple[set[int], Highlights]:
         """Evaluate keyword term using merged Lucene query."""
@@ -388,7 +390,7 @@ class QueryExecutor(Transformer):
                 result = left | right
             case "XOR":
                 result = left ^ right
-            case _:
+            case _:  # pyright: ignore[reportUnknownVariableType]
                 raise ValueError(f"Unknown operator: {operator}")
 
         self.last_result_cols = result
@@ -464,8 +466,7 @@ class QueryExecutor(Transformer):
                 result_set = left_set | right_set
             case "XOR":
                 result_set = left_set ^ right_set
-
-            case _:
+            case _:  # pyright: ignore[reportUnknownVariableType]
                 raise ValueError(f"Unknown operator: {operator}")
 
         if self.enable_highlighting:
@@ -562,4 +563,6 @@ def col_to_hist_ids(col_ids: set[uint32], col_to_hist: dict[int, int]) -> set[ui
 
 
 def hist_to_col_ids(hist_ids: set[uint32], hist_to_col: dict[int, int]) -> set[uint32]:
-    return {uint32(hist_to_col[int(hist_id)]) for hist_id in hist_ids if hist_id in hist_to_col}
+    return {
+        uint32(hist_to_col[int(hist_id)]) for hist_id in hist_ids if int(hist_id) in hist_to_col
+    }

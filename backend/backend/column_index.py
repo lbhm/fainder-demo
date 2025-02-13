@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import hnswlib  # type: ignore
 from loguru import logger
@@ -6,6 +7,10 @@ from numpy import uint32
 from sentence_transformers import SentenceTransformer
 
 from backend.config import ColumnSearchError, Metadata
+
+if TYPE_CHECKING:
+    import numpy as np
+    from numpy.typing import NDArray
 
 
 class ColumnIndex:
@@ -21,6 +26,7 @@ class ColumnIndex:
         self.vector_to_name = {v: k for k, v in self.name_to_vector.items()}
         self.vector_to_cols = metadata.vector_to_cols
         self.use_embeddings = use_embeddings
+        self.embedder: SentenceTransformer | None = None
 
         if not use_embeddings:
             return
@@ -30,10 +36,11 @@ class ColumnIndex:
         self.embedder = SentenceTransformer(
             model, cache_folder=(path.parent / "model_cache").as_posix()
         )
-        self.dimension = self.embedder.get_sentence_embedding_dimension()
-        logger.debug("Model loaded")
-        if self.dimension is None:
+        dimension = self.embedder.get_sentence_embedding_dimension()
+        if dimension is None:
             raise ValueError("Dimension of the model is not known, cannot initialize HNSW index")
+        self.dimension = dimension
+        logger.debug("Model loaded")
 
         # HNSW index
         logger.debug("Loading HNSW index")
@@ -71,7 +78,7 @@ class ColumnIndex:
                 raise ColumnSearchError("Embedding model is not available for approximate search")
 
             # Nearest neighbor search
-            embedding = self.embedder.encode(
+            embedding: NDArray[np.float32] = self.embedder.encode(  # pyright: ignore[reportUnknownMemberType]
                 column_name, convert_to_numpy=True, normalize_embeddings=True
             )
 
