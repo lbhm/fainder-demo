@@ -31,7 +31,7 @@ class LuceneConnector:
             logger.debug("gRPC channel closed")
 
     def evaluate_query(
-        self, query: str, doc_ids: set[int] | None = None, enable_highlighting: bool = True
+        self, query: str, doc_ids: set[int] | None = None, enable_highlighting: bool = False
     ) -> tuple[Sequence[int], Sequence[float], dict[int, dict[str, str]]]:
         """
         Evaluates a keyword query using the Lucene server.
@@ -39,7 +39,7 @@ class LuceneConnector:
         Args:
             query: The query string to be evaluated by Lucene.
             doc_ids: A set of document IDs to consider as a filter (none by default).
-            enable_highlighting: Whether to enable highlighting (default True).
+            enable_highlighting: Whether to enable highlighting (default False).
 
         Returns:
             list[int]: A list of document IDs that match the query.
