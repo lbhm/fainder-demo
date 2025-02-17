@@ -333,6 +333,21 @@ page
                             </table>
                           </div>
                         </div>
+                        <!-- Boolean Data -->
+                        <div
+                          v-else-if="
+                            field.n_true !== undefined &&
+                            field.n_false !== undefined
+                          "
+                          class="field-content boolean"
+                        >
+                          <div class="boolean-summary">
+                            <Bar
+                              :data="getBooleanChartData(field)"
+                              :options="booleanChartOptions"
+                            />
+                          </div>
+                        </div>
                         <!-- Categorical Data -->
                         <div v-else class="field-content categorical">
                           <div class="categorical-summary">
@@ -790,6 +805,77 @@ const getChartData = (field, index) => {
   };
 };
 
+const getBooleanChartData = (field) => {
+  return {
+    labels: ["True", "False"],
+    datasets: [
+      {
+        label: field.name,
+        backgroundColor: [
+          "rgba(77, 182, 172, 0.6)",
+          "rgba(248, 121, 121, 0.6)",
+        ], // Teal for true, Red for false
+        borderColor: "rgba(0, 0, 0, 0.1)",
+        borderWidth: 1,
+        borderRadius: 0,
+        data: [field.n_true, field.n_false],
+      },
+    ],
+  };
+};
+
+const booleanChartOptions = ref({
+  scales: {
+    y: {
+      beginAtZero: true,
+      title: {
+        display: true,
+        text: "Count",
+        font: {
+          size: 11,
+        },
+        padding: {
+          right: 10,
+        },
+      },
+    },
+    x: {
+      title: {
+        display: true,
+        text: "Value",
+        font: {
+          size: 11,
+        },
+        padding: {
+          top: 10,
+        },
+      },
+    },
+  },
+  plugins: {
+    tooltip: {
+      callbacks: {
+        label: (context) => {
+          return `${context.dataset.label}: ${context.raw}`;
+        },
+      },
+    },
+    legend: {
+      display: false,
+    },
+  },
+  responsive: true,
+  maintainAspectRatio: false,
+  layout: {
+    padding: {
+      left: 10,
+      right: 30,
+      top: 10,
+      bottom: 80,
+    },
+  },
+});
+
 const formatNumber = (value) => {
   if (value === undefined || value === null) return "-";
   // Check if the value is an integer
@@ -1189,6 +1275,13 @@ const formatNumber = (value) => {
   text-align: right;
   font-family: monospace;
   color: rgb(var(--v-theme-on-surface));
+}
+
+.boolean-summary {
+  background-color: rgba(var(--v-theme-surface), 0.8);
+  border-radius: 8px;
+  padding: 16px;
+  height: 300px;
 }
 
 /* Make the layout responsive */
