@@ -50,7 +50,11 @@ def _setup_and_teardown() -> Generator[None, Any, None]:
                 "cache_misses",
                 "cache_size",
                 "results_consistent",
-                "num_results"  # Added new column
+                "num_results",
+                "results",
+                "ids",
+                "num_terms",
+                "id_str",
             ]
         )
 

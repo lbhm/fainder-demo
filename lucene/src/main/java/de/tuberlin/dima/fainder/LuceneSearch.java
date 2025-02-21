@@ -48,6 +48,8 @@ public class LuceneSearch {
         reader = DirectoryReader.open(indexDir);
         BOOL_FILTER = false;
         searcher = new IndexSearcher(reader);
+
+
         // Configure analyzer to keep stop words
         analyzer = new StandardAnalyzer(CharArraySet.EMPTY_SET);
 
@@ -58,7 +60,10 @@ public class LuceneSearch {
         config.set(StandardQueryConfigHandler.ConfigurationKeys.FIELD_BOOST_MAP, searchFields);
         config.set(StandardQueryConfigHandler.ConfigurationKeys.MULTI_FIELDS, searchFields.keySet().toArray(new String[0]));
         config.set(StandardQueryConfigHandler.ConfigurationKeys.DEFAULT_OPERATOR, StandardQueryConfigHandler.Operator.AND);
-        config.set(StandardQueryConfigHandler.ConfigurationKeys.MULTI_TERM_REWRITE_METHOD, MultiTermQuery.SCORING_BOOLEAN_REWRITE);
+
+        // Use constant score rewrite for wildcard queries to improve performance
+        config.set(StandardQueryConfigHandler.ConfigurationKeys.MULTI_TERM_REWRITE_METHOD,
+                  MultiTermQuery.CONSTANT_SCORE_REWRITE);
     }
 
     public void refresh() throws IOException {
