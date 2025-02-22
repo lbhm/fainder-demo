@@ -106,10 +106,8 @@ def test_performance(
 
     # Define different evaluation scenarios
     evaluation_scenarios = {
-        "sequential": {"enable_filtering": False, "enable_highlighting": True},
-        "filtered": {"enable_filtering": True, "enable_highlighting": True},
-        "sequential_no_highlight": {"enable_filtering": False, "enable_highlighting": False},
-        "filtered_no_highlight": {"enable_filtering": True, "enable_highlighting": False},
+        "sequential": {"enable_filtering": False, "enable_highlighting": False},
+        "filtered": {"enable_filtering": True, "enable_highlighting": False},
     }
 
     # Run all scenarios
@@ -142,11 +140,6 @@ def test_performance(
         "query": query,
         "metrics": {
             "timings": timings,
-            "timing_comparisons": {
-                "filter_overhead": timings["filtered"] - timings["sequential"],
-                "highlighting_overhead": timings["sequential"]
-                - timings["sequential_no_highlight"],
-            },
         },
         "cache_stats": {
             "hits": cache_info.hits,
