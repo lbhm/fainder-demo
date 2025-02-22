@@ -1,9 +1,7 @@
-from itertools import combinations
 import json
+from itertools import combinations
 from pathlib import Path
 from typing import Any
-
-from loguru import logger
 
 from performance_tests.constants import (
     DEFAULT_HIGH_PERCENTILE,
@@ -42,7 +40,10 @@ def generate_simple_keyword_queries(
 
     field_prefix = f"{field_name}:" if field_name else ""
     return {
-        f"{prefix}_{i + 1}": {"query": f"kw({field_prefix}{word})", "keyword_id": f"{field_prefix}{word}"}
+        f"{prefix}_{i + 1}": {
+            "query": f"kw({field_prefix}{word})",
+            "keyword_id": f"{field_prefix}{word}",
+        }
         for i, word in enumerate(keywords)
     }
 
@@ -56,7 +57,8 @@ def generate_complex_keyword_queries(base_word: str) -> dict[str, dict[str, Any]
         "field_specific_keyword": {"query": f'kw(alternateName:"{base_word.capitalize()}")'},
     }
 
-def generate_percentile_terms(    
+
+def generate_percentile_terms(
     small_percentile: float = DEFAULT_SMALL_PERCENTILE,
     high_percentile: float = DEFAULT_HIGH_PERCENTILE,
     small_thresholds: list[int] = DEFAULT_SMALL_THRESHOLDS,
@@ -112,18 +114,19 @@ def generate_percentile_queries(
     for op in operators.get("small", ["le"]):
         for i, threshold in enumerate(small_thresholds, 1):
             queries[f"small_percentile_{op}_{i}"] = {
-                "query": f"col(pp({small_percentile};{op};{threshold}))", "percentile_id": f"pp({small_percentile};{op};{threshold})"
+                "query": f"col(pp({small_percentile};{op};{threshold}))",
+                "percentile_id": f"pp({small_percentile};{op};{threshold})",
             }
 
     # Generate large threshold queries
     for op in operators.get("large", ["ge"]):
         for i, threshold in enumerate(large_thresholds, 1):
             queries[f"high_percentile_{op}_{i}"] = {
-                "query": f"col(pp({high_percentile};{op};{threshold}))", "percentile_id": f"pp({high_percentile};{op};{threshold})"
+                "query": f"col(pp({high_percentile};{op};{threshold}))",
+                "percentile_id": f"pp({high_percentile};{op};{threshold})",
             }
 
     return queries
-
 
 
 def wrap_term(term: str) -> str:
@@ -139,6 +142,7 @@ def keyword_combinations(
     keywords: list[str],
     operators: list[str] = LOGICAL_OPERATORS,
     max_terms: int = MAX_COMBINED_TERMS,
+    internal_combinations: bool = False,
 ) -> dict[str, dict[str, Any]]:
     """
     Generate keyword combinations for testing.
@@ -154,7 +158,7 @@ def keyword_combinations(
     helper = []
     for i in range(0, len(keywords)):
         helper.append(i)
-  
+
     for operator in operators:
         for max in range(1, max_terms + 1):
             for j, combination in enumerate(combinations(helper, max), 1):
@@ -162,12 +166,19 @@ def keyword_combinations(
                     continue
                 combination_keywords = []
                 for term in combination:
-                    combination_keywords.append(wrap_term(keywords[term]))
+                    if internal_combinations:
+                        combination_keywords.append(keywords[term])
+                    else:
+                        combination_keywords.append(wrap_term(keywords[term]))
                 query = f" {operator} ".join(combination_keywords)
-                queries[f"keyword_combination_{operator}_{j}"] = {"query": query, "ids": [
-                    {"keyword_id": keywords[term]} for term in combination]
+                if internal_combinations:
+                    query = wrap_term(query)
+                queries[f"keyword_combination_{operator}_{j}"] = {
+                    "query": query,
+                    "ids": [{"keyword_id": keywords[term]} for term in combination],
                 }
     return queries
+
 
 def percentile_term_combinations(
     terms: list[str],
@@ -196,8 +207,10 @@ def percentile_term_combinations(
                 for term in combination:
                     combination_terms.append(terms[term])
                 query = f" {operator} ".join(combination_terms)
-                queries[f"percentile_combination_{operator}_{j}"] = {"query": wrap_term(query), "ids": 
-                [{"percentile_id": terms[term]} for term in combination]}
+                queries[f"percentile_combination_{operator}_{j}"] = {
+                    "query": wrap_term(query),
+                    "ids": [{"percentile_id": terms[term]} for term in combination],
+                }
 
     return queries
 
@@ -208,10 +221,11 @@ def generate_all_test_cases() -> dict[str, Any]:
     percentilequeries = generate_percentile_queries()
 
     keyword_combinations_queries = keyword_combinations(DEFAULT_KEYWORDS)
-    logger.info(f"keyword_combinations_queries: {keyword_combinations_queries}")
     percentile_combinations_queries = percentile_term_combinations(percentile_terms)
-    logger.info(f"percentile_combinations_queries: {percentile_combinations_queries}")
 
+    keyword_combinations_queries_internal = keyword_combinations(
+        DEFAULT_KEYWORDS, internal_combinations=True
+    )
 
     return {
         "base_keyword_queries": {"queries": keywordsqueries},
@@ -220,7 +234,7 @@ def generate_all_test_cases() -> dict[str, Any]:
         },
         "keyword_combinations": {"queries": keyword_combinations_queries},
         "percentile_combinations": {"queries": percentile_combinations_queries},
-
+        "keyword_combinations_internal": {"queries": keyword_combinations_queries_internal},
     }
 
 
