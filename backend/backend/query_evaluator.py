@@ -146,7 +146,6 @@ def get_keyword_term(tree: ParseTree) -> str | bool:
             return False
         assert isinstance(query.children[0], Tree)
         expr = query.children[0]
-        assert isinstance(expr, Tree)
         if expr.data == "term":
             term = expr.children[1]
             assert isinstance(term, Tree)
@@ -161,8 +160,6 @@ def get_keyword_term(tree: ParseTree) -> str | bool:
         assert isinstance(query, Tree)
         if query.data != "expr":
             return False
-        assert isinstance(query.children[0], Tree)
-        expr = query.children[0]
     elif tree.data == "expr":
         assert isinstance(tree.children[0], Tree)
         expr = tree.children[0]
