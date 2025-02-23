@@ -1,5 +1,6 @@
 import csv
 import time
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -23,13 +24,13 @@ def execute_and_time(
 
 def run_evaluation_scenarios(
     evaluator: QueryEvaluator, query: str, scenarios: dict[str, dict[str, Any]]
-) -> tuple[dict[str, float], dict[str, Any], bool]:
+) -> tuple[dict[str, float], dict[str, list[str]], bool]:
     """
     Run multiple evaluation scenarios for a query and return timing results.
     Returns (timings, results, is_consistent)
     """
-    timings = {}
-    results = {}
+    timings: dict[str, float] = {}
+    results: dict[str, list[str]] = {}
 
     for scenario_name, params in scenarios.items():
         result, execution_time = execute_and_time(evaluator, query, params)
@@ -44,7 +45,7 @@ def run_evaluation_scenarios(
 
 
 def log_performance_csv(
-    csv_path: str,
+    csv_path: Path,
     category: str,
     test_name: str,
     query: str,
@@ -53,12 +54,12 @@ def log_performance_csv(
     cache_info: Any,
     is_consistent: bool,
     ids: list[dict[str, str]],
-    id_str: str
+    id_str: str,
 ) -> None:
     """Log performance data to CSV file with one row per scenario."""
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
 
-    with open(csv_path, "a", newline="") as csvfile:
+    with csv_path.open("a", newline="") as csvfile:
         writer = csv.writer(csvfile)
         for scenario, execution_time in timings.items():
             writer.writerow(
@@ -73,11 +74,11 @@ def log_performance_csv(
                     cache_info.misses,
                     cache_info.curr_size,
                     is_consistent,
-                    len(results[scenario]), 
+                    len(results[scenario]),
                     results[scenario],
                     ids,
                     len(ids),
-                    id_str
+                    id_str,
                 ]
             )
 
@@ -95,14 +96,13 @@ def test_performance(
 ) -> None:
     query = test_case["query"]
     ids = test_case.get("ids", [])
-    keyword_id = test_case.get("keyword_id", None)
-    percentile_id = test_case.get("percentile_id", None)
+    keyword_id = test_case.get("keyword_id")
+    percentile_id = test_case.get("percentile_id")
     id_str = ""
     if keyword_id:
-        id_str = keyword_id 
+        id_str = keyword_id
     elif percentile_id:
         id_str = percentile_id
-    
 
     # Define different evaluation scenarios
     evaluation_scenarios = {
@@ -119,7 +119,7 @@ def test_performance(
     cache_info = performance_evaluator.cache_info()
 
     # Log to CSV
-    csv_path = pytest.csv_log_path  # type: ignore
+    csv_path = Path(pytest.csv_log_path)  # type: ignore
     log_performance_csv(
         csv_path,
         category,
@@ -130,7 +130,7 @@ def test_performance(
         cache_info,
         is_consistent,
         ids,
-        id_str
+        id_str,
     )
 
     # Create detailed performance log for console/file

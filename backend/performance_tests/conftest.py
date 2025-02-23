@@ -17,7 +17,7 @@ from backend.query_evaluator import QueryEvaluator
 
 
 @pytest.fixture(autouse=True, scope="module")
-def _setup_and_teardown() -> Generator[None, Any, None]:
+def _setup_and_teardown() -> Generator[None, Any, None]:  # pyright: ignore[reportUnusedFunction]
     """
     Generic setup and teardown fixture that runs before and after each test.
     """
@@ -36,7 +36,7 @@ def _setup_and_teardown() -> Generator[None, Any, None]:
     csv_log_path = (
         performance_log_dir / f"performance_metrics_{time.strftime('%Y%m%d_%H%M%S')}.csv"
     )
-    with open(csv_log_path, "w", newline="") as csvfile:
+    with csv_log_path.open("w", newline="") as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(
             [

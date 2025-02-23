@@ -35,8 +35,6 @@ def generate_simple_keyword_queries(
         prefix: Prefix for the query names
         field_name: Optional field name for field-specific searches
     """
-    if keywords is None:
-        keywords = DEFAULT_KEYWORDS
 
     field_prefix = f"{field_name}:" if field_name else ""
     return {
@@ -75,7 +73,7 @@ def generate_percentile_terms(
         large_thresholds: List of large threshold values. If None, uses defaults
         operators: Dictionary of operators to use for each threshold type
     """
-    terms = []
+    terms: list[str] = []
 
     # Generate small threshold terms
     for op in operators.get("small", ["le"]):
@@ -108,7 +106,7 @@ def generate_percentile_queries(
         operators: Dictionary of operators to use for each threshold type
     """
 
-    queries = {}
+    queries: dict[str, dict[str, Any]] = {}
 
     # Generate small threshold queries
     for op in operators.get("small", ["le"]):
@@ -152,19 +150,19 @@ def keyword_combinations(
         operators: List of logical operators to use
         max_terms: Maximum number of terms to combine
     """
-    queries = {}
+    queries: dict[str, dict[str, Any]] = {}
 
     # Generate all possible combinations of keywords
-    helper = []
+    helper: list[int] = []
     for i in range(0, len(keywords)):
         helper.append(i)
 
     for operator in operators:
-        for max in range(1, max_terms + 1):
-            for j, combination in enumerate(combinations(helper, max), 1):
+        for num_terms in range(1, max_terms + 1):
+            for j, combination in enumerate(combinations(helper, num_terms), 1):
                 if len(combination) == 0:
                     continue
-                combination_keywords = []
+                combination_keywords: list[str] = []
                 for term in combination:
                     if internal_combinations:
                         combination_keywords.append(keywords[term])
@@ -193,17 +191,17 @@ def percentile_term_combinations(
         operators: List of logical operators to use
         max_terms: Maximum number of terms to combine
     """
-    queries = {}
+    queries: dict[str, dict[str, Any]] = {}
 
     # Generate all possible combinations of terms
-    helper = []
+    helper: list[int] = []
     for i in range(0, len(terms)):
         helper.append(i)
 
     for operator in operators:
-        for max in range(1, max_terms + 1):
-            for j, combination in enumerate(combinations(helper, max), 1):
-                combination_terms = []
+        for num_terms in range(1, max_terms + 1):
+            for j, combination in enumerate(combinations(helper, num_terms), 1):
+                combination_terms: list[str] = []
                 for term in combination:
                     combination_terms.append(terms[term])
                 query = f" {operator} ".join(combination_terms)
