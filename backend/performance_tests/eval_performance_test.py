@@ -106,8 +106,26 @@ def test_performance(
 
     # Define different evaluation scenarios
     evaluation_scenarios = {
-        "sequential": {"enable_filtering": False, "enable_highlighting": False},
-        "filtered": {"enable_filtering": True, "enable_highlighting": False},
+        "sequential": {
+            "enable_filtering": False,
+            "enable_highlighting": False,
+            "enable_kw_merge": False,
+        },
+        "filtered": {
+            "enable_filtering": True,
+            "enable_highlighting": False,
+            "enable_kw_merge": False,
+        },
+        "kw_merge": {
+            "enable_filtering": False,
+            "enable_highlighting": False,
+            "enable_kw_merge": True,
+        },
+        "filtered_kw_merge": {
+            "enable_filtering": True,
+            "enable_highlighting": False,
+            "enable_kw_merge": True,
+        },
     }
 
     # Run all scenarios
