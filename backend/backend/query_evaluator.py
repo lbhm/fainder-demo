@@ -70,6 +70,7 @@ class QueryEvaluator:
         self.grammar = Lark(GRAMMAR, start="query")
         self.annotator = QueryAnnotator()
         self.executor = QueryExecutor(self.lucene_connector, fainder_index, hnsw_index, metadata)
+        self.merge_keywords = MergeKeywords()
 
         # NOTE: Don't use lru_cache on methods
         # See https://docs.astral.sh/ruff/rules/cached-instance-method/ for details
@@ -93,6 +94,7 @@ class QueryEvaluator:
         fainder_mode: FainderMode = "low_memory",
         enable_highlighting: bool = False,
         enable_filtering: bool = True,
+        enable_kw_merge: bool = True,
     ) -> tuple[list[int], Highlights]:
         # Reset state for new query
         self.annotator.reset()
@@ -100,6 +102,14 @@ class QueryEvaluator:
 
         # Parse query
         parse_tree = self.parse(query)
+        logger.trace(f"Parse tree: {parse_tree.pretty()}")
+
+        # Merge keywords
+        self.merge_keywords.merge = enable_kw_merge
+        parse_tree = self.merge_keywords.transform(parse_tree)
+        logger.trace(f"Parse tree after merging keywords: {parse_tree.pretty()}")
+
+        # Annotate parse tree
         if enable_filtering:
             # TODO: Do we need visit_topdown here?
             self.annotator.visit(parse_tree)
@@ -119,6 +129,129 @@ class QueryEvaluator:
     def cache_info(self) -> CacheInfo:
         hits, misses, max_size, curr_size = self.execute.cache_info()
         return CacheInfo(hits=hits, misses=misses, max_size=max_size, curr_size=curr_size)
+
+
+def get_keyword_term(tree: ParseTree) -> str | bool:
+    """Determine the keyword term from a keywordterm tree."""
+
+    # query -> expr -> query -> expr -> term -> keywordterm  or
+    # expr -> term -> keywordterm or
+    # query -> expr -> term -> keywordterm
+    logger.trace("get_keyword_term: ", tree)
+    expr: Tree
+    if tree.data == "query" and len(tree.children) == 1:
+        query = tree.children[0]
+        assert isinstance(query, Tree)
+        if query.data != "expr":
+            return False
+        assert isinstance(query.children[0], Tree)
+        expr = query.children[0]
+        assert isinstance(expr, Tree)
+        if expr.data == "term":
+            term = expr.children[1]
+            assert isinstance(term, Tree)
+            if term.data == "keywordterm":
+                keywordterm = term.children[0]
+                assert isinstance(keywordterm, str)
+                return keywordterm
+            return False
+        if expr.data != "query" or len(expr.children) != 1:
+            return False
+        query = expr.children[0]
+        assert isinstance(query, Tree)
+        if query.data != "expr":
+            return False
+        assert isinstance(query.children[0], Tree)
+        expr = query.children[0]
+    elif tree.data == "expr":
+        assert isinstance(tree.children[0], Tree)
+        expr = tree.children[0]
+    else:
+        return False
+
+    if expr.data == "term":
+        assert len(expr.children) == 2
+        term = expr.children[1]
+        assert isinstance(term, Tree)
+        if term.data == "keywordterm":
+            keywordterm = term.children[0]
+            assert isinstance(keywordterm, str)
+            return keywordterm
+        return False
+
+    return False
+
+
+class MergeKeywords(Transformer[Token, ParseTree]):
+    """
+    This transformer merges lucene queries into a single query string.
+    And optionally merges keyword terms into a single keyword term.
+    When on the same level.
+    """
+
+    def __init__(self, merge: bool = True):
+        self.merge = merge
+
+    def field_prefix(self, items: list[Token]) -> str:
+        """Process a field prefix into the format field:"""
+        return f"{items[0].value}:"
+
+    def lucene_clause(self, items: list[Token | str | None]) -> str:
+        """Process a single Lucene clause including optional required operator and field prefix."""
+        result = ""
+
+        for item in items:
+            if isinstance(item, Token):
+                result += item.value
+            elif isinstance(item, str):
+                result += item
+
+        return result.strip()
+
+    def lucene_query(self, items: list[str]) -> str:
+        """Merge Lucene query clauses into a single query string."""
+
+        return "(" + " ".join(items).strip() + ")"
+
+    def query(self, items: list[ParseTree | Token]) -> ParseTree:
+        if not self.merge:
+            return Tree(Token("RULE", "query"), items)
+
+        if len(items) == 1:
+            return Tree(Token("RULE", "query"), items)
+
+        left: Tree = items[0]  # type: ignore
+        operator: str = items[1].value.strip()  # type: ignore
+        right: Tree = items[2]  # type: ignore
+
+        logger.trace("left", left)
+        logger.trace("right", right)
+
+        # if the left and right are lucene queries, merge them
+        keyword_left = get_keyword_term(left)
+        keyword_right = get_keyword_term(right)
+
+        if keyword_left and keyword_right:
+            combined = f"{keyword_left} {operator} {keyword_right}"
+            return Tree(
+                Token("RULE", "query"),
+                [
+                    Tree(
+                        Token("RULE", "expr"),
+                        [
+                            Tree(
+                                Token("RULE", "term"),
+                                [
+                                    Token("KEYWORD_OP", "kw"),
+                                    Tree(Token("RULE", "keywordterm"), [combined]),
+                                ],
+                            )
+                        ],
+                    )
+                ],
+            )  # type: ignore
+
+        return Tree(Token("RULE", "query"), items)
 
 
 class QueryAnnotator(Visitor[Token]):
@@ -311,30 +444,6 @@ class QueryExecutor(Transformer[Token, tuple[set[int], Highlights]]):
         self.last_result_cols = col_ids
 
         return col_ids
-
-    def field_prefix(self, items: list[Token]) -> str:
-        """Process a field prefix into the format field:"""
-        logger.trace(f"Processing field prefix: {items}")
-        return f"{items[0].value}:"
-
-    def lucene_clause(self, items: list[Token | str | None]) -> str:
-        """Process a single Lucene clause including optional required operator and field prefix."""
-        logger.trace(f"Processing Lucene clause: {items}")
-        result = ""
-
-        for item in items:
-            if isinstance(item, Token):
-                result += item.value
-            elif isinstance(item, str):
-                result += item
-
-        return result.strip()
-
-    def lucene_query(self, items: list[str]) -> str:
-        """Merge Lucene query clauses into a single query string."""
-        logger.trace(f"Merging Lucene query clauses: {items}")
-
-        return "(" + " ".join(items).strip() + ")"
 
     def keywordterm(self, items: list[Token]) -> tuple[set[int], Highlights]:
         """Evaluate keyword term using merged Lucene query."""

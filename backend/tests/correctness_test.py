@@ -162,15 +162,27 @@ def test_correctness(
 
     # sequential execution
     start_time = time.time()
-    result_sequential, _ = evaluator.execute(query)
+    result_sequential, _ = evaluator.execute(query, enable_filtering=False, enable_kw_merge=False)
     end_time = time.time()
     time_sequential = end_time - start_time
 
     # filter execution
     start_time = time.time()
-    result_filtered, _ = evaluator.execute(query, enable_filtering=True)
+    result_filtered, _ = evaluator.execute(query, enable_filtering=True, enable_kw_merge=False)
     end_time = time.time()
     time_filtered = end_time - start_time
+
+    # kw merge
+    start_time = time.time()
+    result_kw_merge, _ = evaluator.execute(query, enable_filtering=False, enable_kw_merge=True)
+    end_time = time.time()
+
+    # kw merge with filtering
+    start_time = time.time()
+    result_kw_merge_filtered, _ = evaluator.execute(
+        query, enable_filtering=True, enable_kw_merge=True
+    )
+    end_time = time.time()
 
     # Log cache statistics
     cache_info = evaluator.cache_info()
@@ -196,4 +208,6 @@ def test_correctness(
 
     # Verify results are consistent
     assert set(result_sequential) == set(result_filtered)
+    assert set(result_sequential) == set(result_kw_merge)
+    assert set(result_sequential) == set(result_kw_merge_filtered)
     assert set(expected_result) == set(result_sequential)

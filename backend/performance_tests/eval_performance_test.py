@@ -53,7 +53,7 @@ def log_performance_csv(
     cache_info: Any,
     is_consistent: bool,
     ids: list[dict[str, str]],
-    id_str: str
+    id_str: str,
 ) -> None:
     """Log performance data to CSV file with one row per scenario."""
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
@@ -73,11 +73,11 @@ def log_performance_csv(
                     cache_info.misses,
                     cache_info.curr_size,
                     is_consistent,
-                    len(results[scenario]), 
+                    len(results[scenario]),
                     results[scenario],
                     ids,
                     len(ids),
-                    id_str
+                    id_str,
                 ]
             )
 
@@ -95,19 +95,36 @@ def test_performance(
 ) -> None:
     query = test_case["query"]
     ids = test_case.get("ids", [])
-    keyword_id = test_case.get("keyword_id", None)
-    percentile_id = test_case.get("percentile_id", None)
+    keyword_id = test_case.get("keyword_id")
+    percentile_id = test_case.get("percentile_id")
     id_str = ""
     if keyword_id:
-        id_str = keyword_id 
+        id_str = keyword_id
     elif percentile_id:
         id_str = percentile_id
-    
 
     # Define different evaluation scenarios
     evaluation_scenarios = {
-        "sequential": {"enable_filtering": False, "enable_highlighting": False},
-        "filtered": {"enable_filtering": True, "enable_highlighting": False},
+        "sequential": {
+            "enable_filtering": False,
+            "enable_highlighting": False,
+            "enable_kw_merge": False,
+        },
+        "filtered": {
+            "enable_filtering": True,
+            "enable_highlighting": False,
+            "enable_kw_merge": False,
+        },
+        "kw_merge": {
+            "enable_filtering": False,
+            "enable_highlighting": False,
+            "enable_kw_merge": True,
+        },
+        "filtered_kw_merge": {
+            "enable_filtering": True,
+            "enable_highlighting": False,
+            "enable_kw_merge": True,
+        },
     }
 
     # Run all scenarios
@@ -130,7 +147,7 @@ def test_performance(
         cache_info,
         is_consistent,
         ids,
-        id_str
+        id_str,
     )
 
     # Create detailed performance log for console/file
