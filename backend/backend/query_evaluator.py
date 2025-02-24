@@ -138,7 +138,7 @@ def get_keyword_term(tree: ParseTree) -> str | bool:
     # expr -> term -> keywordterm or
     # query -> expr -> term -> keywordterm
     logger.trace("get_keyword_term: ", tree)
-    expr: Tree
+    expr: Tree[Token]
     if tree.data == "query" and len(tree.children) == 1:
         query = tree.children[0]
         assert isinstance(query, Tree)
@@ -217,9 +217,9 @@ class MergeKeywords(Transformer[Token, ParseTree]):
         if len(items) == 1:
             return Tree(Token("RULE", "query"), items)
 
-        left: Tree = items[0]  # type: ignore
+        left: ParseTree = items[0]  # type: ignore
         operator: str = items[1].value.strip()  # type: ignore
-        right: Tree = items[2]  # type: ignore
+        right: ParseTree = items[2]  # type: ignore
 
         logger.trace("left", left)
         logger.trace("right", right)

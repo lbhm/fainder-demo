@@ -221,10 +221,6 @@ def generate_all_test_cases() -> dict[str, Any]:
     keyword_combinations_queries = keyword_combinations(DEFAULT_KEYWORDS)
     percentile_combinations_queries = percentile_term_combinations(percentile_terms)
 
-    keyword_combinations_queries_internal = keyword_combinations(
-        DEFAULT_KEYWORDS, internal_combinations=True
-    )
-
     return {
         "base_keyword_queries": {"queries": keywordsqueries},
         "base_percentile_queries": {
@@ -232,7 +228,6 @@ def generate_all_test_cases() -> dict[str, Any]:
         },
         "keyword_combinations": {"queries": keyword_combinations_queries},
         "percentile_combinations": {"queries": percentile_combinations_queries},
-        "keyword_combinations_internal": {"queries": keyword_combinations_queries_internal},
     }
 
 
