@@ -41,18 +41,19 @@ dependencies = [
     "torch~=2.0",
 ]
 
-[project.optional-dependencies]
+[project.urls]
+Repository = "https://github.com/lbhm/fainder-demo"
+
+[dependency-groups]
 dev = [
     "grpc-stubs~=1.53",
     "mypy~=1.13",
     "pre-commit~=4.0",
     "pytest~=8.3",
     "pytest-cov~=6.0.0",
+    "types-hnswlib~=0.8.0",
     "types-protobuf~=5.29",
 ]
-
-[project.urls]
-Repository = "https://github.com/lbhm/fainder-demo"
 
 [tool.hatch.version]
 path = "backend/__init__.py"

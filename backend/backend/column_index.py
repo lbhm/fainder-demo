@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import hnswlib  # type: ignore
+import hnswlib
 from loguru import logger
 from numpy import uint32
 from sentence_transformers import SentenceTransformer
@@ -85,7 +85,7 @@ class ColumnIndex:
             if column_name in self.name_to_vector:
                 # If the column name exists in the index, it will be returned as the first result
                 k += 1
-            vector_ids, distances = self.index.knn_query(embedding, k=k)
+            vector_ids, distances = self.index.knn_query(embedding, k=k)  # pyright: ignore[reportUnknownMemberType]
             result |= {
                 uint32(col_id)
                 for vector_id in vector_ids[0]

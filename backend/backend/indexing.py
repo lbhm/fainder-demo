@@ -207,7 +207,7 @@ def generate_embedding_index(
         M=n_bidirectional_links,
         random_seed=seed,
     )
-    index.add_items(embeddings, ids)
+    index.add_items(embeddings, ids)  # pyright: ignore[reportUnknownMemberType]
 
     logger.info("Saving HNSW index")
     index.save_index((output_path / "index.bin").as_posix())
