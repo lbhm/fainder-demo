@@ -13,7 +13,7 @@ from backend.fainder_index import FainderIndex
 from backend.lucene_connector import LuceneConnector
 
 GRAMMAR = """
-    query:          expr (BOOLEAN_OP query)?
+    query:          query BOOLEAN_OP expr | expr
     expr:           not_expr | term | "(" query ")"
     not_expr:       "NOT" term | "NOT" "(" query ")"
     term:           KEYWORD_OP "(" keywordterm ")" | COLUMN_OP "(" column_query ")"
@@ -23,7 +23,7 @@ GRAMMAR = """
     lucene_clause:  [LUCENE_OP] [field_prefix] (LUCENE_TERM | "(" lucene_query ")")
     field_prefix:   IDENTIFIER ":"
 
-    column_query:   col_expr (BOOLEAN_OP column_query)?
+    column_query:   column_query BOOLEAN_OP col_expr | col_expr
     col_expr:       not_col_expr | columnterm | "(" column_query ")"
     not_col_expr:   "NOT" columnterm | "NOT" "(" column_query ")"
 
@@ -111,8 +111,7 @@ class QueryEvaluator:
 
         # Annotate parse tree
         if enable_filtering:
-            # TODO: Do we need visit_topdown here?
-            self.annotator.visit(parse_tree)
+            self.annotator.visit_topdown(parse_tree)
         logger.trace(f"Parse tree: {parse_tree.pretty()}")
 
         # Execute query
@@ -270,75 +269,41 @@ class QueryAnnotator(Visitor[Token]):
         self.current_side_cols = None
 
     def query(self, tree: ParseTree):
-        # TODO: We need to investigate this class because nodes are annotated too often
-        # NOTE: Calling visit again in this method will annotate the tree nodes multiple times
         if len(tree.children) == 3:  # Has operator
             if not isinstance(tree.children[1], Token):
                 logger.error(f"Expected operator, got: {tree.children[1]}. Aborting annotation.")
                 return
-            old_parent = self.parent_operator_docs
-            old_side = self.current_side_cols
 
             self.parent_operator_docs = tree.children[1].value
-
-            if isinstance(tree.children[0], Tree):
-                logger.trace(f"Visiting left side of query: {tree.children[0]}")
-                self.current_side_docs = "left"
-                self.visit(tree.children[0])
-
-            # Visit right side
-            if isinstance(tree.children[2], Tree):
-                logger.trace(f"Visiting right side of query: {tree.children[2]}")
-                self.current_side_docs = "right"
-                self.visit(tree.children[2])
-
-            self.parent_operator_docs = old_parent
-            self.current_side_docs = old_side
-        else:
-            if isinstance(tree.children[0], Tree):
-                self.visit(tree.children[0])
+            self.current_side_docs = "left"
 
     def column_query(self, tree: ParseTree):
-        # TODO: We need to investigate this class because nodes are annotated too often
-        # NOTE: Calling visit again in this method will annotate the tree nodes multiple times
+        logger.trace(f"Current tree: {tree.pretty()}")
         if len(tree.children) == 3:  # Has operator
             if not isinstance(tree.children[1], Token):
                 logger.error(f"Expected operator, got: {tree.children[1]}. Aborting annotation.")
                 return
-            old_parent = self.parent_operator_cols
-            old_side = self.current_side_cols
 
-            self.parent_operator_docs = tree.children[1].value
-
-            if isinstance(tree.children[0], Tree):
-                self.current_side_cols = "left"
-                self.visit(tree.children[0])
-
-            # Visit right side
-            if isinstance(tree.children[2], Tree):
-                self.current_side_cols = "right"
-                self.visit(tree.children[2])
-
-            self.parent_operator_cols = old_parent
-            self.current_side_cols = old_side
-        else:
-            if isinstance(tree.children[0], Tree):
-                self.visit(tree.children[0])
+            self.parent_operator_cols = tree.children[1].value
+            self.current_side_cols = "left"
 
     def percentileterm(self, tree: ParseTree) -> None:
         if self.parent_operator_cols:
             tree.children.append(Token("parent_op", self.parent_operator_cols))
             tree.children.append(Token("side", self.current_side_cols))
+            self.current_side_cols = "right"
 
     def keywordterm(self, tree: ParseTree) -> None:
         if self.parent_operator_docs:
             tree.children.append(Token("parent_op", self.parent_operator_docs))
             tree.children.append(Token("side", self.current_side_docs))
+            self.current_side_docs = "right"
 
     def columnterm(self, tree: ParseTree) -> None:
         if self.parent_operator_cols:
             tree.children.append(Token("parent_op", self.parent_operator_cols))
             tree.children.append(Token("side", self.current_side_docs))
+            self.current_side_cols = "right"
 
 
 class QueryExecutor(Transformer[Token, tuple[set[int], Highlights]]):
@@ -419,7 +384,6 @@ class QueryExecutor(Transformer[Token, tuple[set[int], Highlights]]):
             self.scores[doc_id] += scores[i]
 
     def percentileterm(self, items: list[Token]) -> set[uint32]:
-        # TODO: Investigate length of items and annotations
         logger.trace(f"Evaluating percentile term: {items}")
         percentile = float(items[0].value)
         comparison = items[1].value
@@ -476,7 +440,7 @@ class QueryExecutor(Transformer[Token, tuple[set[int], Highlights]]):
             column_filter = self._get_col_filter(operator, side)
 
         result = self.hnsw_index.search(column, k, column_filter)
-        logger.trace(f"Result of column search with column:{column} k:{k}r: {result}")
+        # logger.trace(f"Result of column search with column:{column} k:{k}r: {result}")
         self.last_result_cols = result
 
         return result
@@ -519,7 +483,7 @@ class QueryExecutor(Transformer[Token, tuple[set[int], Highlights]]):
         return result_cols
 
     def columnterm(self, items: tuple[Token, set[uint32]]) -> set[uint32]:
-        logger.trace(f"Evaluating column term with {items} items")
+        # logger.trace(f"Evaluating column term with {items} items")
         return items[1]
 
     def term(

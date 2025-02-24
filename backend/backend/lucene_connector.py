@@ -51,7 +51,7 @@ class LuceneConnector:
             self.connect()
 
         try:
-            logger.debug(f"Executing query: '{query}' with filter: {doc_ids}")
+            logger.trace(f"Executing query: '{query}' with filter length: {len(doc_ids or [])}")
             # Clear any previous state by creating a fresh request
             request = QueryRequest(
                 query=query, doc_ids=doc_ids or [], enable_highlighting=enable_highlighting
