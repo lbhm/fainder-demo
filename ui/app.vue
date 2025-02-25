@@ -145,7 +145,7 @@ const { query, fainder_mode, currentPage, selectedResultIndex } =
   useSearchState();
 const colorMode = useColorMode();
 const highlightEnabled = useCookie("fainder_highlight_enabled", {
-  default: () => true,
+  default: () => false,
 });
 
 const internalSearchQuery = computed(() => route.query.query);

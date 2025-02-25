@@ -271,8 +271,8 @@ const emit = defineEmits(["searchData"]);
 const route = useRoute();
 const temp_fainder_mode = ref(route.query.fainder_mode || "low_memory");
 const temp_enable_highlighting = ref(
-  route.query.enable_highlighting !== "false",
-); // Default to true
+  route.query.enable_highlighting === "true",
+); // Default to false
 const current_rows = ref(1);
 
 const searchTerms = ref<Term[]>([]);
@@ -283,15 +283,15 @@ const { fainder_mode, enable_highlighting } = useSearchState();
 if (!fainder_mode.value) {
   fainder_mode.value = String(route.query.fainder_mode) || "low_memory";
 }
-if (!enable_highlighting.value) {
-  enable_highlighting.value = route.query.enable_highlighting !== "false"; // Default to true
+if (enable_highlighting.value === undefined) {
+  enable_highlighting.value = route.query.enable_highlighting === "true"; // Default to false
 }
 
 const searchQuery = ref(props.searchQuery);
 const syntaxError = ref("");
 const highlightedQuery = ref("");
 const highlightEnabled = useCookie("fainder_highlight_enabled", {
-  default: () => true,
+  default: () => false,
 });
 const isValid = ref(true);
 const isSearchFocused = ref(false);
