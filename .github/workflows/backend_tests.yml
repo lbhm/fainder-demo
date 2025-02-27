@@ -52,7 +52,7 @@ jobs:
           enable-cache: true
       - name: Install Python dependencies
         working-directory: backend
-        run: uv sync --frozen --extra dev
+        run: uv sync --frozen
       - name: Start Lucene server
         working-directory: lucene
         run: |
