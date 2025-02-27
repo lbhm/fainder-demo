@@ -65,7 +65,7 @@ class QueryEvaluator:
         hnsw_index: ColumnIndex,
         metadata: Metadata,
         cache_size: int = 128,
-    ):
+    ) -> None:
         self.lucene_connector = lucene_connector
         self.grammar = Lark(GRAMMAR, start="query")
         self.annotator = QueryAnnotator()
@@ -134,7 +134,7 @@ class QueryAnnotator(Visitor[Token]):
         self.parent_operator = None
         self.current_side = None
 
-    def query(self, tree: ParseTree):
+    def query(self, tree: ParseTree) -> None:
         # TODO: We need to investigate this class because nodes are annotated too often
         # NOTE: Calling visit again in this method will annotate the tree nodes multiple times
         if len(tree.children) == 3:  # Has operator
@@ -195,7 +195,7 @@ class QueryExecutor(Transformer[Token, tuple[set[int], Highlights]]):
         fainder_mode: FainderMode = "low_memory",
         enable_highlighting: bool = False,
         enable_filtering: bool = False,
-    ):
+    ) -> None:
         self.lucene_connector = lucene_connector
         self.fainder_index = fainder_index
         self.hnsw_index = hnsw_index

@@ -78,14 +78,14 @@ class ColumnIndex:
                 raise ColumnSearchError("Embedding model is not available for approximate search")
 
             # Nearest neighbor search
-            embedding: NDArray[np.float32] = self.embedder.encode(  # pyright: ignore[reportUnknownMemberType]
+            embedding: NDArray[np.float32] = self.embedder.encode(  # pyright: ignore
                 column_name, convert_to_numpy=True, normalize_embeddings=True
             )
 
             if column_name in self.name_to_vector:
                 # If the column name exists in the index, it will be returned as the first result
                 k += 1
-            vector_ids, distances = self.index.knn_query(embedding, k=k)  # pyright: ignore[reportUnknownMemberType]
+            vector_ids, distances = self.index.knn_query(embedding, k=k)
             result |= {
                 uint32(col_id)
                 for vector_id in vector_ids[0]

@@ -68,33 +68,43 @@ exclude = ["proto"]
 
 [tool.ruff.lint]
 select = [
-    "A",    # flake8-builtins
-    "B",    # flake8-bugbear
-    "C4",   # flake8-comprehensions
-    "C90",  # mccabe
-    "E",    # pycodestyle errors
-    "F",    # pyflakes
-    "FAST", # FastAPI rules
-    "I",    # isort
-    "ISC",  # flake8-implicit-str-concat
-    "N",    # pep8-naming
-    "NPY",  # Numpy checks
-    "PL",   # pylint
-    "PT",   # flake8-pytest-style
-    "PTH",  # flake8-use-pathlib
-    "Q",    # flake8-quotes
-    "RET",  # flake8-return
-    "RUF",  # ruff-specific rules
-    "S",    # flake8-bandit
-    "SIM",  # flake8-simplify
-    "TC",   # flake8-typing-checking
-    "UP",   # pyupgrade
-    "W",    # pycodestyle warnings
+    "A",     # flake8-builtins
+    "ANN",   # flake8-annotations
+    "ASYNC", # flake8-async
+    "B",     # flake8-bugbear
+    "COM",   # flake8-commas
+    "C4",    # flake8-comprehensions
+    "C90",   # mccabe
+    "E",     # pycodestyle errors
+    # "EM",    # flake8-errmsg
+    "F",     # pyflakes
+    "FAST",  # FastAPI rules
+    "FURB",  # refurb
+    "I",     # isort
+    "ICN",   # flake8-import-conventions
+    "ISC",   # flake8-implicit-str-concat
+    "N",     # pep8-naming
+    "NPY",   # Numpy checks
+    "PERF",  # perflint
+    "PIE",   # flake8-pie
+    "PL",    # pylint
+    "PT",    # flake8-pytest-style
+    "PTH",   # flake8-use-pathlib
+    "PYI",   # flake8-pyi
+    "Q",     # flake8-quotes
+    "RET",   # flake8-return
+    "RUF",   # ruff-specific rules
+    "S",     # flake8-bandit
+    "SIM",   # flake8-simplify
+    "TC",    # flake8-typing-checking
+    "UP",    # pyupgrade
+    "W",     # pycodestyle warnings
 ]
 ignore = [
-    "D",    # pydocstyle
-    "PLR",  # pylint refactoring
-    "S101", # assert (needed for pytest)
+    "COM812", # missing-trailing-comma
+    "D",      # pydocstyle
+    "PLR",    # pylint refactoring
+    "S101",   # assert (needed for pytest)
 ]
 
 [[tool.uv.index]]

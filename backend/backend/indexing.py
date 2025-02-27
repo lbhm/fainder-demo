@@ -190,7 +190,7 @@ def generate_embedding_index(
     )
     # Maybe remove the module compilation if it does not help with performance
     embedder.compile()  # pyright: ignore[reportUnknownMemberType]
-    embeddings: NDArray[np.float32] = embedder.encode(  # pyright: ignore[reportUnknownMemberType]
+    embeddings: NDArray[np.float32] = embedder.encode(  # pyright: ignore
         sentences=strings,
         batch_size=batch_size,
         show_progress_bar=show_progress_bar,
@@ -207,13 +207,13 @@ def generate_embedding_index(
         M=n_bidirectional_links,
         random_seed=seed,
     )
-    index.add_items(embeddings, ids)  # pyright: ignore[reportUnknownMemberType]
+    index.add_items(embeddings, ids)
 
     logger.info("Saving HNSW index")
     index.save_index((output_path / "index.bin").as_posix())
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Generate metadata and indices for a collection of dataset profiles"
     )

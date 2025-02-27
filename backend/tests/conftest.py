@@ -43,7 +43,7 @@ def _setup_and_teardown() -> Generator[None, Any, None]:  # pyright: ignore[repo
     yield
 
     # Teardown code
-    pass
+    pass  # noqa: PIE790
 
 
 @pytest.fixture(scope="module")
