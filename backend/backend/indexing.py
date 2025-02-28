@@ -3,10 +3,11 @@ import json
 import os
 import sys
 from collections import defaultdict
+from collections.abc import Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
-import hnswlib  # type: ignore
+import hnswlib
 import numpy as np
 from fainder.preprocessing.clustering import cluster_histograms
 from fainder.preprocessing.percentile_index import create_index
@@ -115,7 +116,7 @@ def generate_metadata(
 
 
 def generate_fainder_indices(
-    hists: list[tuple[np.uint32, Histogram]],
+    hists: Sequence[tuple[int | np.integer[Any], Histogram]],
     output_path: Path,
     n_clusters: int = 27,
     bin_budget: int = 270,
@@ -130,7 +131,7 @@ def generate_fainder_indices(
     logger.info(f"Clustering {len(hists)} histograms")
     clustered_hists, cluster_bins, _ = cluster_histograms(
         hists=hists,
-        transform=transform,  # type: ignore
+        transform=transform,
         quantile_range=(0.25, 0.75),
         algorithm=algorithm,
         n_cluster_range=(n_clusters, n_clusters),
@@ -166,6 +167,11 @@ def generate_fainder_indices(
         output_path / "conversion.zst",
         (conversion_index, cluster_bins),
         name="conversion index",
+    )
+    save_output(
+        output_path / "histograms.zst",
+        hists,
+        name="histograms",
     )
 
 
@@ -229,7 +235,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--log-level",
-        default="INFO",
+        default=None,
         type=str,
         choices=["DEBUG", "INFO", "WARNING"],
         help="Set the logging level",
@@ -240,10 +246,13 @@ def parse_args() -> argparse.Namespace:
 
 if __name__ == "__main__":
     args = parse_args()
-    configure_run(args.log_level)
 
     try:
         settings = Settings()  # type: ignore
+        if args.log_level is None:
+            configure_run(settings.log_level)
+        else:
+            configure_run(args.log_level)
         logger.debug(settings.model_dump())
     except Exception as e:
         logger.error(f"Error loading settings: {e}")

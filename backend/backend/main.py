@@ -58,6 +58,7 @@ fainder_index = FainderIndex(
     metadata=metadata,
     rebinning_path=settings.rebinning_index_path,
     conversion_path=settings.conversion_index_path,
+    histogram_path=settings.histogram_path,
 )
 column_index = ColumnIndex(
     settings.hnsw_index_path,
@@ -187,7 +188,10 @@ async def query(request: QueryRequest) -> QueryResponse:
             total_pages=total_pages,
         )
     except UnexpectedInput as e:
-        logger.info(f"Bad user query: {e.get_context(request.query)}")
+        logger.info(
+            f"Bad user query:\n{e.get_context(request.query).strip()}\n"
+            f"(line {e.line}, column {e.column})"
+        )
         raise HTTPException(
             status_code=400, detail=f"Invalid query: {e.get_context(request.query)}"
         ) from e
@@ -259,10 +263,16 @@ async def update_indices() -> MessageResponse:
 
         # Update global variables
         croissant_store.replace_documents(documents)
+        # Delete metadata variables before we load the entire metadata again to save memory
+        del hists, name_to_vector, documents
+
+        with settings.metadata_path.open() as file:
+            metadata = Metadata(**json.load(file))
         fainder_index.update(
             metadata=metadata,
             rebinning_path=settings.rebinning_index_path,
             conversion_path=settings.conversion_index_path,
+            histogram_path=settings.histogram_path,
         )
         column_index.update(path=settings.hnsw_index_path, metadata=metadata)
         query_evaluator.update_indices(
@@ -272,7 +282,7 @@ async def update_indices() -> MessageResponse:
         # Recreate Lucene index
         await lucene_connector.recreate_index()
 
-        logger.info("Indices update successfully")
+        logger.info("Indices updated successfully")
         return MessageResponse(message="Indices updated successfully")
     except IndexingError as e:
         logger.error(f"Indexing error: {e}")

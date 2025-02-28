@@ -99,6 +99,11 @@ class Settings(BaseSettings):
 
     @computed_field  # type: ignore[misc]
     @property
+    def histogram_path(self) -> Path:
+        return self.fainder_path / "histograms.zst"
+
+    @computed_field  # type: ignore[misc]
+    @property
     def metadata_path(self) -> Path:
         return self.data_dir / self.collection_name / self.metadata_file
 

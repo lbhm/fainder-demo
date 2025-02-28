@@ -2,13 +2,14 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
-from fainder.execution.runner import run
+from fainder.execution.new_runner import run_approx, run_exact
 from fainder.utils import load_input
 from loguru import logger
 
 from backend.config import FainderError, FainderMode, Metadata
 
 if TYPE_CHECKING:
+    from fainder.typing import Histogram
     from fainder.typing import PercentileIndex as PctlIndex
     from fainder.typing import PercentileQuery as PctlQuery
     from numpy.typing import NDArray
@@ -16,7 +17,11 @@ if TYPE_CHECKING:
 
 class FainderIndex:
     def __init__(
-        self, metadata: Metadata, rebinning_path: Path | None, conversion_path: Path | None
+        self,
+        metadata: Metadata,
+        rebinning_path: Path | None,
+        conversion_path: Path | None,
+        histogram_path: Path | None,
     ) -> None:
         self.doc_to_cols = metadata.doc_to_cols
         self.col_to_doc = metadata.col_to_doc
@@ -29,9 +34,16 @@ class FainderIndex:
         self.conversion_index: tuple[list[PctlIndex], list[NDArray[np.float64]]] | None = (
             load_input(conversion_path, "conversion index") if conversion_path else None
         )
+        self.hists: list[tuple[np.uint32, Histogram]] | None = (
+            load_input(histogram_path, "histograms") if histogram_path else None
+        )
 
     def update(
-        self, metadata: Metadata, rebinning_path: Path | None, conversion_path: Path | None
+        self,
+        metadata: Metadata,
+        rebinning_path: Path | None,
+        conversion_path: Path | None,
+        histogram_path: Path | None,
     ) -> None:
         self.doc_to_cols = metadata.doc_to_cols
         self.col_to_doc = metadata.col_to_doc
@@ -44,6 +56,7 @@ class FainderIndex:
         self.conversion_index = (
             load_input(conversion_path, "conversion index") if conversion_path else None
         )
+        self.hists = load_input(histogram_path, "histograms") if histogram_path else None
 
     def search(
         self,
@@ -59,7 +72,7 @@ class FainderIndex:
                 f"Invalid percentile predicate: {percentile};{comparison};{reference}"
             )
 
-        filter_array = np.array(list(hist_filter), dtype=np.uint32) if hist_filter else None
+        id_filter = np.array(list(hist_filter), dtype=np.uint32) if hist_filter else None
 
         # Predicate evaluation
         query: PctlQuery = (percentile, comparison, reference)  # type: ignore
@@ -67,42 +80,48 @@ class FainderIndex:
             case "low_memory":
                 if self.rebinning_index is None:
                     raise FainderError("Rebinning index must be loaded for low_memory mode.")
-                results, runtime = run(
-                    self.rebinning_index,
-                    queries=[query],
-                    input_type="index",
+                result, runtime = run_approx(
+                    fainder_index=self.rebinning_index,
+                    query=query,
                     index_mode="recall",
-                    hist_filter=filter_array,
+                    id_filter=id_filter,
                 )
             case "full_precision":
                 if self.conversion_index is None:
                     raise FainderError("Conversion index must be loaded for full_precision mode.")
-                results, runtime = run(
-                    self.conversion_index,
-                    queries=[query],
-                    input_type="index",
+                result, runtime = run_approx(
+                    fainder_index=self.conversion_index,
+                    query=query,
                     index_mode="precision",
-                    hist_filter=filter_array,
+                    id_filter=id_filter,
                 )
             case "full_recall":
                 if self.conversion_index is None:
                     raise FainderError("Conversion index must be loaded for full_recall mode.")
-                results, runtime = run(
-                    self.conversion_index,
-                    queries=[query],
-                    input_type="index",
+                result, runtime = run_approx(
+                    fainder_index=self.conversion_index,
+                    query=query,
                     index_mode="recall",
-                    hist_filter=filter_array,
+                    id_filter=id_filter,
                 )
             case "exact":
-                if self.conversion_index is None:
-                    raise FainderError("Conversion index must be loaded for exact mode.")
-                raise NotImplementedError("Exact mode not implemented yet.")
+                if self.conversion_index is None or self.hists is None:
+                    raise FainderError(
+                        "Conversion index and histograms must be loaded for exact mode."
+                    )
+                result, runtime = run_exact(
+                    fainder_index=self.conversion_index,
+                    hists=self.hists,
+                    query=query,
+                    id_filter=id_filter,
+                )
             case _:
                 raise FainderError(f"Invalid Fainder Mode: {fainder_mode}")
 
-        result = results[0]
         logger.trace(f"Results: {result}")
-        logger.info(f"Query '{query}' returned {len(result)} histograms in {runtime:.2f} seconds.")
+        logger.info(
+            f"Query '{query}' ({fainder_mode} mode) returned {len(result)} histograms in "
+            f"{runtime:.2f} seconds."
+        )
 
         return result

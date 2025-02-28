@@ -63,6 +63,7 @@ def evaluator() -> QueryEvaluator:
         metadata=metadata,
         rebinning_path=settings.rebinning_index_path,
         conversion_path=settings.conversion_index_path,
+        histogram_path=settings.histogram_path,
     )
     column_index = ColumnIndex(
         path=settings.hnsw_index_path, metadata=metadata, use_embeddings=False
