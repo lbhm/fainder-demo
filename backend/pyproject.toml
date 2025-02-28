@@ -76,7 +76,6 @@ select = [
     "C4",    # flake8-comprehensions
     "C90",   # mccabe
     "E",     # pycodestyle errors
-    # "EM",    # flake8-errmsg
     "F",     # pyflakes
     "FAST",  # FastAPI rules
     "FURB",  # refurb
@@ -103,6 +102,7 @@ select = [
 ignore = [
     "COM812", # missing-trailing-comma
     "D",      # pydocstyle
+    "EM",     # flake8-errmsg
     "PLR",    # pylint refactoring
     "S101",   # assert (needed for pytest)
 ]
