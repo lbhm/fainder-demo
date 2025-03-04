@@ -547,14 +547,21 @@ const highlightSyntax = (value: string) => {
     '<span class="function">$1</span>(',
   );
 
+  // Highlight quoted strings in kw() and name()
+  highlighted = highlighted.replace(
+    /(kw|keyword|name)\s*\(\s*'([^']+)'/gi,
+    (match, func, content) =>
+      `<span class="function">${func}</span>(<span class="string">'${content}'</span>`,
+  );
+
   // Highlight content inside function calls
   highlighted = highlighted
     // Highlight comparison operators
     .replace(/;\s*(ge|gt|le|lt)\s*;/gi, ';<span class="comparison">$1</span>;')
     // Highlight numbers
     .replace(/\b(\d+(?:\.\d+)?)\b/g, '<span class="number">$1</span>')
-    // Highlight field names (text between parentheses and semicolon)
-    .replace(/\(([^;)]+)(?=;)/g, '(<span class="field">$1</span>');
+    // Don't highlight field names if they're already highlighted as strings
+    .replace(/\(([^;']+)(?=;)/g, '(<span class="field">$1</span>');
 
   // Highlight operators
   highlighted = highlighted
@@ -578,7 +585,6 @@ const highlightSyntax = (value: string) => {
   highlightedQuery.value = highlighted;
 };
 
-// Remove a column term
 const removeSearchTerm = (index: number) => {
   searchTerms.value.splice(index, 1);
 };
@@ -826,6 +832,13 @@ function saveSettings() {
 .syntax-highlight :deep(.bracket-3) {
   color: #ffc107; /* Amber */
   background-color: transparent;
+}
+
+/* Add style for quoted strings */
+.syntax-highlight :deep(.string) {
+  color: #ff9800; /* Orange */
+  background-color: transparent;
+  padding: 0;
 }
 
 .query-builder {
