@@ -44,7 +44,7 @@ public class LuceneSearch {
     private final Boolean BOOL_FILTER;
 
     public LuceneSearch(Path indexPath) throws IOException {
-        this(indexPath, false);
+        this(indexPath, true);
     }
 
     public LuceneSearch(Path indexPath, boolean useBoolFilter) throws IOException {
