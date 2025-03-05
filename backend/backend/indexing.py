@@ -195,7 +195,7 @@ def generate_embedding_index(
         model_name, cache_folder=(output_path / "model_cache").as_posix()
     )
     # Maybe remove the module compilation if it does not help with performance
-    embedder.compile()  # pyright: ignore[reportUnknownMemberType]
+    embedder.compile()  # type: ignore
     embeddings: NDArray[np.float32] = embedder.encode(  # pyright: ignore
         sentences=strings,
         batch_size=batch_size,

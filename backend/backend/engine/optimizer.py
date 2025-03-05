@@ -6,6 +6,6 @@ class ParentAnnotator(Visitor[Token]):
         for subtree in tree.children:
             if isinstance(subtree, Tree):
                 assert not hasattr(subtree, "parent")
-                subtree.parent = tree.data  # pyright: ignore
+                subtree.parent = tree.data  # type: ignore
 
         return tree

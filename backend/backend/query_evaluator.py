@@ -327,7 +327,7 @@ class QueryExecutor(Transformer[Token, tuple[set[int], Highlights]]):
             return reduce(operator, [item[0] for item in items]), ({}, set())
 
         # Items contains column results (i.e., set[uint32])
-        return reduce(operator, items)
+        return reduce(operator, items)  #  type: ignore
 
     def _is_table_result(self, val: list[Any]) -> TypeGuard[list[tuple[set[int], Highlights]]]:
         return all(isinstance(item, tuple) for item in val)
