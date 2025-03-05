@@ -9,6 +9,8 @@ from sentence_transformers import SentenceTransformer
 from backend.config import ColumnSearchError, Metadata
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     import numpy as np
     from numpy.typing import NDArray
 
@@ -85,14 +87,17 @@ class ColumnIndex:
             if column_name in self.name_to_vector:
                 # If the column name exists in the index, it will be returned as the first result
                 k += 1
-            vector_ids, distances = self.index.knn_query(embedding, k=k)
+            filter_fn: Callable[[int], bool] | None = (
+                (lambda id_: id_ in column_filter) if column_filter else None
+            )
+            vector_ids, distances = self.index.knn_query(embedding, k=k, filter=filter_fn)
             result |= {
                 uint32(col_id)
                 for vector_id in vector_ids[0]
                 for col_id in self.vector_to_cols[vector_id]
             }
             logger.debug(
-                f"Column search '{column_name}' returned neighbors "
+                f"Column search '{column_name}' with k={k} returned neighbors "
                 f"{[self.vector_to_name[vector_id] for vector_id in vector_ids[0]]} with "
                 f"distances {distances[0]}"
             )

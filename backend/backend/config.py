@@ -1,6 +1,7 @@
 import logging
 import sys
 from collections.abc import Sequence
+from enum import Enum
 from itertools import chain
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
@@ -11,8 +12,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 if TYPE_CHECKING:
     from types import FrameType
-
-FainderMode = Literal["low_memory", "full_precision", "full_recall", "exact"]
 
 
 class Metadata(BaseModel):
@@ -108,11 +107,18 @@ class Settings(BaseSettings):
         return self.data_dir / self.collection_name / self.metadata_file
 
 
+class FainderMode(str, Enum):
+    low_memory = "low_memory"
+    full_precision = "full_precision"
+    full_recall = "full_recall"
+    exact = "exact"
+
+
 class QueryRequest(BaseModel):
     query: str
     page: int = 1
     per_page: int = 10
-    fainder_mode: FainderMode = "low_memory"
+    fainder_mode: FainderMode = FainderMode.low_memory
     enable_highlighting: bool = False
 
 

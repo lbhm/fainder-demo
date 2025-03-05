@@ -1,66 +1,25 @@
 import re
 from collections import defaultdict
-from collections.abc import Sequence
-from functools import lru_cache
+from collections.abc import Callable, Sequence
+from functools import lru_cache, reduce
+from operator import and_, or_
+from typing import Any, TypeGuard, TypeVar
 
-from lark import Lark, ParseTree, Token, Transformer, Tree, Visitor
+from lark import ParseTree, Token, Transformer, Tree, Visitor
 from loguru import logger
 from numpy import uint32
 
 from backend.column_index import ColumnIndex
 from backend.config import CacheInfo, FainderMode, Metadata
+from backend.engine.parser import DQLParser
 from backend.fainder_index import FainderIndex
 from backend.lucene_connector import LuceneConnector
 
-GRAMMAR = """
-    query:          tbl_expr
-
-    ?tbl_expr:      tbl_term
-                    | tbl_term ("OR" tbl_term)+ -> disjunction
-    ?tbl_term:      tbl_factor
-                    | tbl_factor ("AND" tbl_factor)+ -> conjunction
-    ?tbl_factor:    tbl_operator
-                    | "NOT" tbl_factor -> negation
-                    | "(" tbl_expr ")"
-    ?tbl_operator:  _KEYWORD_KW "(" keyword_op ")"
-                    | _COLUMN_KW "(" col_op ")"
-
-    ?col_expr:      col_term
-                    | col_term ("OR" col_term)+ -> disjunction
-    ?col_term:      col_factor
-                    | col_factor ("AND" col_factor)+ -> conjunction
-    ?col_factor:    col_operator
-                    | "NOT" col_factor -> negation
-                    | "(" col_expr ")"
-    ?col_operator:  _NAME_KW "(" name_op ")"
-                    | _PERCENTILE_KW "(" percentile_op ")"
-
-    col_op:         col_expr
-    keyword_op:     STRING
-    percentile_op:  FLOAT ";" COMPARISON ";" SIGNED_NUMBER
-    name_op:        STRING ";" INT
-
-    _KEYWORD_KW:    "kw"i | "keyword"i
-    _COLUMN_KW:     "col"i | "column"i
-    _NAME_KW:       "name"i
-    _PERCENTILE_KW: "pp"i | "percentile"i
-    COMPARISON:     "ge" | "gt" | "le" | "lt"
-
-    %import common.FLOAT
-    %import common.INT
-    %import common.SIGNED_NUMBER
-    %import common.WS
-    %import common.SH_COMMENT
-    %import python.STRING
-
-    %ignore WS
-    %ignore SH_COMMENT
-"""
-
-# Type alias for highlights
 DocumentHighlights = dict[int, dict[str, str]]
-ColumnHighlights = set[uint32]  # set of column ids that should be highlighted
+ColumnHighlights = set[uint32]
 Highlights = tuple[DocumentHighlights, ColumnHighlights]
+
+T = TypeVar("T", tuple[set[int], Highlights], set[uint32])
 
 
 class QueryEvaluator:
@@ -73,7 +32,7 @@ class QueryEvaluator:
         cache_size: int = 128,
     ) -> None:
         self.lucene_connector = lucene_connector
-        self.grammar = Lark(GRAMMAR, parser="lalr", lexer="contextual", start="query", strict=True)
+        self.parser = DQLParser()
         self.annotator = QueryAnnotator()
         self.executor = QueryExecutor(self.lucene_connector, fainder_index, hnsw_index, metadata)
 
@@ -91,12 +50,12 @@ class QueryEvaluator:
         self.clear_cache()
 
     def parse(self, query: str) -> ParseTree:
-        return self.grammar.parse(query)
+        return self.parser.parse(query)
 
     def _execute(
         self,
         query: str,
-        fainder_mode: FainderMode = "low_memory",
+        fainder_mode: FainderMode = FainderMode.low_memory,
         enable_highlighting: bool = False,
         enable_filtering: bool = False,
     ) -> tuple[list[int], Highlights]:
@@ -106,10 +65,13 @@ class QueryEvaluator:
 
         # Parse query
         parse_tree = self.parse(query)
-        logger.trace(f"Parse tree: {parse_tree.pretty()}")
-        logger.trace(f"Parse tree data: {parse_tree}")
+        logger.trace(f"Parsed query: {parse_tree}")
+
+        # Optimze query
+        # TODO: Add optimizer class
         # TODO: Do we need visit_topdown here?
         self.annotator.visit(parse_tree)
+        logger.trace(f"Optimized query: {parse_tree}")
 
         # Execute query
         result, highlights = self.executor.transform(parse_tree)
@@ -131,6 +93,8 @@ class QueryAnnotator(Visitor[Token]):
     """
     This visitor goes top-down through the parse tree and annotates each percentile and keyword
     term with its parent operator and side (i.e., evaluation order) in the parent expression.
+
+    TODO: This class needs to be completely reworked. It is currently not used in query execution.
     """
 
     def __init__(self) -> None:
@@ -151,7 +115,7 @@ class QueryAnnotator(Visitor[Token]):
 
             old_parent = self.parent_operator
             old_side = self.current_side
-            self.parent_operator = tree.children[1].value
+            self.parent_operator = tree.children[1]
 
             # Visit left side
             if isinstance(tree.children[0], Tree):
@@ -190,7 +154,7 @@ class QueryExecutor(Transformer[Token, tuple[set[int], Highlights]]):
 
     fainder_mode: FainderMode
     scores: dict[int, float]
-    last_result: set[int] | set[uint32] | None
+    last_result: set[int] | set[uint32] | None  # Maybe rename this to intermediate_result
     current_side: str | None
 
     def __init__(
@@ -199,7 +163,7 @@ class QueryExecutor(Transformer[Token, tuple[set[int], Highlights]]):
         fainder_index: FainderIndex,
         hnsw_index: ColumnIndex,
         metadata: Metadata,
-        fainder_mode: FainderMode = "low_memory",
+        fainder_mode: FainderMode = FainderMode.low_memory,
         enable_highlighting: bool = False,
         enable_filtering: bool = False,
     ) -> None:
@@ -209,26 +173,6 @@ class QueryExecutor(Transformer[Token, tuple[set[int], Highlights]]):
         self.metadata = metadata
 
         self.reset(fainder_mode, enable_highlighting, enable_filtering)
-
-    def _get_column_filter(
-        self, operator: str | None, side: str | None
-    ) -> set[int] | set[uint32] | None:
-        """Create a document filter for AND operators based on previous results."""
-        if (
-            not self.enable_filtering
-            or not self.last_result
-            or operator != "AND"
-            or side != "right"
-        ):
-            return None
-
-        # Only apply filters to the right side of AND operations
-        logger.trace(f"Applying filter from previous result: {self.last_result}")
-        return self.last_result
-
-    def _has_keyword_result(self, items: list[tuple[set[int], Highlights] | set[uint32]]) -> bool:
-        """Check if any of the items is a keyword result."""
-        return any(isinstance(item, tuple) for item in items)
 
     def reset(
         self,
@@ -246,39 +190,25 @@ class QueryExecutor(Transformer[Token, tuple[set[int], Highlights]]):
 
     def updates_scores(self, doc_ids: Sequence[int], scores: Sequence[float]) -> None:
         logger.trace(f"Updating scores for {len(doc_ids)} documents")
+
         for doc_id, score in zip(doc_ids, scores, strict=True):
             self.scores[doc_id] += score
 
         for i, doc_id in enumerate(doc_ids):
             self.scores[doc_id] += scores[i]
 
-    def percentile_op(self, items: list[Token]) -> set[uint32]:
-        # TODO: Investigate length of items and annotations
-        logger.trace(f"Evaluating percentile term: {items}")
-        percentile = float(items[0].value)
-        comparison: str = items[1].value
-        reference = float(items[2].value)
-        # operator = None
-        # side = None
-        # if len(items) >= 5:
-        # operator = items[-2]
-        # side = items[-1]
-
-        # TODO: add filter
-        hist_filter = None
-
-        result_hists = self.fainder_index.search(
-            percentile, comparison, reference, self.fainder_mode, hist_filter
-        )
-        # TODO: update last_result
-        return hist_to_col_ids(result_hists, self.metadata.hist_to_col)
+    ### Operator implementations ###
 
     def keyword_op(self, items: list[Token]) -> tuple[set[int], Highlights]:
         """Evaluate keyword term using merged Lucene query."""
         logger.trace(f"Evaluating keyword term: {items}")
-        # Extract the lucene query from items
-        query = str(items[0]).strip() if items else ""
-        query = query[1:-1] if query[0] == "'" and query[-1] == "'" else query
+
+        # Extract the Lucene query and remove quotes
+        # NOTE: Our grammar ensures that the string is always quoted so it should not remove
+        # legitimate quotes from the query
+        query = str(items[0])[1:-1]
+
+        # NOTE: Currently unused
         doc_filter = None
 
         result_docs, scores, highlights = self.lucene_connector.evaluate_query(
@@ -286,170 +216,146 @@ class QueryExecutor(Transformer[Token, tuple[set[int], Highlights]]):
         )
         self.updates_scores(result_docs, scores)
 
+        # TODO: update last_result
         return set(result_docs), (highlights, set())  # Return empty set for column highlights
-
-    def name_op(self, items: list[Token]) -> set[uint32]:
-        logger.trace(f"Evaluating column term: {items}")
-        column = items[0].value.strip()
-        # remove ' ' from the first and last character
-        column = column[1:-1] if column[0] == "'" and column[-1] == "'" else column
-        k = int(items[1].value.strip())
-        # operator = items[-2] if len(items) > 2 else None
-        # side = items[-1] if len(items) > 2 else None
-
-        # TODO: fix this
-        column_filter = None
-
-        result = self.hnsw_index.search(column, k, column_filter)
-        logger.trace(f"Result of column search with column: {column} k: {k} r: {result}")
-        # TODO: update results
-
-        return result
 
     def col_op(self, items: list[set[uint32]]) -> tuple[set[int], Highlights]:
         logger.trace(f"Evaluating column term: {items}")
+
         if len(items) != 1:
             raise ValueError("Column term must have exactly one item")
         col_ids = items[0]
         doc_ids = col_to_doc_ids(col_ids, self.metadata.col_to_doc)
-        return doc_ids, ({}, col_ids)
+        if self.enable_highlighting:
+            return doc_ids, ({}, col_ids)
+
+        return doc_ids, ({}, set())
+
+    def name_op(self, items: list[Token]) -> set[uint32]:
+        logger.trace(f"Evaluating column term: {items}")
+
+        # Remove quotes (see keyword_op for reference)
+        column = str(items[0])[1:-1]
+        k = int(items[1])
+
+        # NOTE: Currently unused
+        column_filter = None
+
+        result = self.hnsw_index.search(column, k, column_filter)
+
+        # TODO: update last_result
+        return result  # noqa: RET504
+
+    def percentile_op(self, items: list[Token]) -> set[uint32]:
+        logger.trace(f"Evaluating percentile term: {items}")
+
+        percentile = float(items[0])
+        comparison: str = items[1]
+        reference = float(items[2])
+
+        # NOTE: Currently unused
+        hist_filter = None
+
+        result_hists = self.fainder_index.search(
+            percentile, comparison, reference, self.fainder_mode, hist_filter
+        )
+
+        # TODO: update last_result
+        return hist_to_col_ids(result_hists, self.metadata.hist_to_col)
 
     def conjunction(
-        self, items: list[tuple[set[int], Highlights] | set[uint32]]
+        self, items: list[tuple[set[int], Highlights]] | list[set[uint32]]
     ) -> tuple[set[int], Highlights] | set[uint32]:
         logger.trace(f"Evaluating conjunction with items: {items}")
-        if len(items) < 2:
-            raise ValueError("Conjunction must have at least two items")
-        terms = items
-        has_keyword_result = self._has_keyword_result(terms)
-        if has_keyword_result:
-            # initialize kw_result with first keyword result
-            kw_result: tuple[set[int], Highlights] | None = None
-            for item in terms:
-                if isinstance(item, tuple):
-                    kw_result = item
-                    terms.remove(item)
-                    break
-            if kw_result is None:
-                raise ValueError("No keyword result found in conjunction")
-            # merge all other keyword results
-            result_doc_ids: set[int] = kw_result[0]
-            highlights: Highlights = kw_result[1]
-            for item in terms:
-                if isinstance(item, tuple):
-                    # merge keyword results
-                    result_doc_ids &= item[0]
-                    highlights = self._merge_highlights(highlights, item[1], result_doc_ids)
-                else:
-                    # column result
-                    col_ids: set[uint32] = item
-                    doc_ids = col_to_doc_ids(col_ids, self.metadata.col_to_doc)
-                    helper_highlights: Highlights = ({}, col_ids)
-                    highlights = self._merge_highlights(highlights, helper_highlights, doc_ids)
 
-            return result_doc_ids, highlights
-        # all items are column results
-        logger.trace(f"Conjunction column terms: {terms}")
-        result_col_items = terms[0]
-        assert isinstance(result_col_items, set)
-        for item in terms[1:]:
-            logger.trace(f"Anding column terms: {item} with {result_col_items}")
-            if isinstance(item, tuple):
-                raise ValueError("Keyword result found in conjunction")
-            result_col_items &= item
-        return result_col_items
+        return self._junction(items, and_)
 
     def disjunction(
-        self, items: list[tuple[set[int], Highlights] | set[uint32]]
+        self, items: list[tuple[set[int], Highlights]] | list[set[uint32]]
     ) -> tuple[set[int], Highlights] | set[uint32]:
         logger.trace(f"Evaluating disjunction with items: {items}")
-        if len(items) < 2:
-            raise ValueError("Disjunction must have at least two items")
-        has_keyword_result = self._has_keyword_result(items)
-        if has_keyword_result:
-            # initialize kw_result with first keyword result
-            kw_result: tuple[set[int], Highlights] | None = None
-            for item in items:
-                if isinstance(item, tuple):
-                    kw_result = item
-                    items.remove(item)
-                    break
-            if kw_result is None:
-                raise ValueError("No keyword result found in disjunction")
-            # merge all other keyword results
-            result_doc_ids: set[int] = kw_result[0]
-            highlights: Highlights = kw_result[1]
-            for item in items:
-                if isinstance(item, tuple):
-                    # merge keyword results
-                    result_doc_ids |= item[0]
-                    highlights = self._merge_highlights(highlights, item[1], result_doc_ids)
-                else:
-                    # column result
-                    col_ids: set[uint32] = item
-                    doc_ids = col_to_doc_ids(col_ids, self.metadata.col_to_doc)
-                    helper_highlights: Highlights = ({}, col_ids)
-                    highlights = self._merge_highlights(highlights, helper_highlights, doc_ids)
 
-            return result_doc_ids, highlights
-        # all items are column results
-        result_col_items = items[0]
-        assert isinstance(result_col_items, set)
-        for item in items[1:]:
-            if isinstance(item, tuple):
-                raise ValueError("Keyword result found in disjunction")
-            result_col_items |= item
-        return result_col_items
+        return self._junction(items, or_)
 
-    def negation(
-        self, items: list[tuple[set[int], Highlights] | set[uint32]]
-    ) -> tuple[set[int], Highlights] | set[uint32]:
+    def negation(self, items: list[T]) -> T:
         logger.trace(f"Evaluating negation with {len(items)} items")
+
+        if len(items) != 1:
+            raise ValueError("Negation term must have exactly one item")
         if isinstance(items[0], tuple):
             to_negate, _ = items[0]
             all_docs = set(self.metadata.doc_to_cols.keys())
-            return all_docs - to_negate, ({}, set())  # Negate all documents
+            # Result highlights are reset for negated results
+            doc_highlights: DocumentHighlights = {}
+            col_highlights: ColumnHighlights = set()
+            return all_docs - to_negate, (doc_highlights, col_highlights)
+
         to_negate_cols = items[0]
         # For column expressions, we negate using the set of all column IDs
         all_columns = {uint32(col_id) for col_id in self.metadata.col_to_doc}
         return all_columns - to_negate_cols
 
-    def query(
-        self, items: list[tuple[set[int], Highlights] | set[uint32]]
-    ) -> tuple[set[int], Highlights]:
+    def query(self, items: list[tuple[set[int], Highlights]]) -> tuple[set[int], Highlights]:
         logger.trace(f"Evaluating query with {len(items)} items")
+
         if len(items) != 1:
             raise ValueError("Query must have exactly one item")
-        if isinstance(items[0], tuple):
-            return items[0]
-        col_ids = items[0]
-        doc_ids = col_to_doc_ids(col_ids, self.metadata.col_to_doc)
-        return doc_ids, ({}, col_ids)
+        return items[0]
+
+    def _junction(
+        self,
+        items: list[tuple[set[int], Highlights]] | list[set[uint32]],
+        operator: Callable[[Any, Any], Any],
+    ) -> tuple[set[int], Highlights] | set[uint32]:
+        if len(items) < 2:
+            raise ValueError("Junction must have at least two items")
+
+        # Items contains table results (i.e., tuple[set[int], Highlights])
+        if self._is_table_result(items):
+            if self.enable_highlighting:
+                # Initialize result with first item
+                doc_ids: set[int] = items[0][0]
+                highlights: Highlights = items[0][1]
+
+                # Merge all other items
+                for item in items[1:]:
+                    doc_ids = operator(doc_ids, item[0])
+                    highlights = self._merge_highlights(highlights, item[1], doc_ids)
+
+                return doc_ids, highlights
+
+            return reduce(operator, [item[0] for item in items]), ({}, set())
+
+        # Items contains column results (i.e., set[uint32])
+        return reduce(operator, items)
+
+    def _is_table_result(self, val: list[Any]) -> TypeGuard[list[tuple[set[int], Highlights]]]:
+        return all(isinstance(item, tuple) for item in val)
 
     def _merge_highlights(
-        self, left_highlights: Highlights, right_highlights: Highlights, doc_ids: set[int]
+        self, left: Highlights, right: Highlights, doc_ids: set[int]
     ) -> Highlights:
         """Merge highlights for documents that are in the result set."""
         pattern = r"<mark>(.*?)</mark>"
         regex = re.compile(pattern, re.DOTALL)
 
-        result_document_highlights: DocumentHighlights = {}
-
-        left_document_highlights = left_highlights[0]
-        right_document_highlights = right_highlights[0]
+        # Merge document highlights
+        doc_highlights: DocumentHighlights = {}
+        left_doc_highlights = left[0]
+        right_doc_highlights = right[0]
         for doc_id in doc_ids:
-            left_doc_highlights = left_document_highlights.get(doc_id, {})
-            right_doc_highlights = right_document_highlights.get(doc_id, {})
+            left_highlights = left_doc_highlights.get(doc_id, {})
+            right_highlights = right_doc_highlights.get(doc_id, {})
 
             # Only process if either side has highlights
-            if left_doc_highlights or right_doc_highlights:
+            if left_highlights or right_highlights:
                 merged_highlights = {}
 
                 # Process each field that appears in either highlight set
-                all_keys = set(left_doc_highlights.keys()) | set(right_doc_highlights.keys())
+                all_keys = set(left_highlights.keys()) | set(right_highlights.keys())
                 for key in all_keys:
-                    left_text = left_doc_highlights.get(key, "")
-                    right_text = right_doc_highlights.get(key, "")
+                    left_text = left_highlights.get(key, "")
+                    right_text = right_highlights.get(key, "")
 
                     # If either text is empty, use the non-empty one
                     if not left_text:
@@ -460,32 +366,42 @@ class QueryExecutor(Transformer[Token, tuple[set[int], Highlights]]):
                         continue
 
                     # Both texts have content, merge their marks
-                    base_text = left_text
-                    other_text = right_text
+                    # Extract all marked words from right text
+                    right_marks = set(regex.findall(right_text))
 
-                    # Extract all marked words from other text
-                    other_marks = set(regex.findall(other_text))
+                    # Add marks from right text to left text
+                    for word in right_marks:
+                        if f"<mark>{word}</mark>" not in left_text:
+                            # Word isn't marked yet
+                            left_text = left_text.replace(word, f"<mark>{word}</mark>")
 
-                    # Add marks from other text to base text
-                    for word in other_marks:
-                        if word not in base_text:
-                            # Word doesn't exist in base text at all
-                            base_text += f" <mark>{word}</mark>"
-                        elif f"<mark>{word}</mark>" not in base_text:
-                            # Word exists but isn't marked
-                            base_text = base_text.replace(word, f"<mark>{word}</mark>")
+                    merged_highlights[key] = left_text
 
-                    merged_highlights[key] = base_text
-
-                result_document_highlights[doc_id] = merged_highlights
+                doc_highlights[doc_id] = merged_highlights
 
         # Merge column highlights
-        result_columns = left_highlights[1] | right_highlights[1]
-        filtered_col_highlights = col_ids_in_docs(
-            result_columns, doc_ids, self.metadata.doc_to_cols
-        )
+        col_highlights = left[1] | right[1]
+        col_highlights &= doc_to_col_ids(doc_ids, self.metadata.doc_to_cols)
 
-        return result_document_highlights, filtered_col_highlights
+        return doc_highlights, col_highlights
+
+    def _get_column_filter(
+        self, operator: str | None, side: str | None
+    ) -> set[int] | set[uint32] | None:
+        """Create a document filter for AND operators based on previous results.
+        NOTE: Currently unused
+        """
+        if (
+            not self.enable_filtering
+            or not self.last_result
+            or operator != "AND"
+            or side != "right"
+        ):
+            return None
+
+        # Only apply filters to the right side of AND operations
+        logger.trace(f"Applying filter from previous result: {self.last_result}")
+        return self.last_result
 
 
 def col_ids_in_docs(

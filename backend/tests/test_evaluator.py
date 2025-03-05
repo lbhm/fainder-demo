@@ -1,41 +1,31 @@
 import time
-from typing import Any
 
 import pytest
 from loguru import logger
 
 from backend.query_evaluator import QueryEvaluator
-from tests.testing_data import TEST_CASES
+
+from .assets.test_cases import TEST_CASES, Case
 
 
 @pytest.mark.parametrize(
     ("category", "test_name", "test_case"),
-    [
-        (cat, name, case)
-        for cat, data in TEST_CASES.items()
-        for name, case in data["queries"].items()
-    ],
+    [(cat, name, case) for cat, cases in TEST_CASES.items() for name, case in cases.items()],
 )
 def test_grammar_correctness(
-    category: str, test_name: str, test_case: dict[str, Any], evaluator: QueryEvaluator
+    category: str, test_name: str, test_case: Case, evaluator: QueryEvaluator
 ) -> None:
     query = test_case["query"]
     expected_result = test_case["expected"]
 
-    # First run with caching enabled (default)
-    parse_start = time.perf_counter()
-    _ = evaluator.parse(query)
-    parse_end = time.perf_counter()
-    parse_time = parse_end - parse_start
-
-    # Execute twice with caching to measure cache hit
+    # Execute twice with caching to measure impact of cache hits
     exec_start = time.perf_counter()
     result1, _ = evaluator.execute(query)
-    first_exec_time = time.perf_counter() - exec_start
+    cold_exec_time = time.perf_counter() - exec_start
 
     exec_start = time.perf_counter()
     result1_cached, _ = evaluator.execute(query)
-    cached_exec_time = time.perf_counter() - exec_start
+    warm_exec_time = time.perf_counter() - exec_start
 
     # Execute without caching
     no_cache_evaluator = QueryEvaluator(
@@ -54,15 +44,15 @@ def test_grammar_correctness(
     cache_info = evaluator.cache_info()
     # Log timing information in a structured format
     performance_log = {
+        "test_type": "executor",
         "category": category,
         "test_name": test_name,
         "query": query,
         "metrics": {
-            "parse_time": parse_time,
-            "first_exec_time": first_exec_time,
-            "cached_exec_time": cached_exec_time,
-            "non_cached_exec_time": no_cache_exec_time,
-            "cache_speedup": no_cache_exec_time / cached_exec_time,
+            "cold_exec_time": cold_exec_time,
+            "warm_exec_time": warm_exec_time,
+            "no_cache_exec_time": no_cache_exec_time,
+            "cache_speedup": no_cache_exec_time / warm_exec_time,
         },
         "cache_stats": {
             "hits": cache_info.hits,
@@ -71,9 +61,7 @@ def test_grammar_correctness(
             "curr_size": cache_info.curr_size,
         },
     }
-
-    # Log as JSON for easier parsing
-    logger.info("PERFORMANCE_DATA: " + str(performance_log))
+    logger.info(performance_log)
 
     # Verify results are consistent
     assert set(result1) == set(result2)
