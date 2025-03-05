@@ -26,7 +26,10 @@ import java.util.*;
 
 public class LuceneSearch {
     private static final Logger logger = LoggerFactory.getLogger(LuceneSearch.class);
-    private final IndexSearcher searcher;
+    private final Object searchLock = new Object();
+    private volatile IndexReader reader;
+    private volatile IndexSearcher searcher;
+    private final Directory indexDir;
     private final Map<String, Float> searchFields = Map.of(
             "name", 5.0f,           // Boost name matches
             "description", 2.0f,    // Normal weight for description
@@ -41,10 +44,16 @@ public class LuceneSearch {
     private final Boolean BOOL_FILTER;
 
     public LuceneSearch(Path indexPath) throws IOException {
-        Directory indexDir = FSDirectory.open(indexPath);
-        IndexReader reader = DirectoryReader.open(indexDir);
-        BOOL_FILTER = false;
+        this(indexPath, false);
+    }
+
+    public LuceneSearch(Path indexPath, boolean useBoolFilter) throws IOException {
+        indexDir = FSDirectory.open(indexPath);
+        reader = DirectoryReader.open(indexDir);
+        BOOL_FILTER = useBoolFilter;
         searcher = new IndexSearcher(reader);
+
+
         // Configure analyzer to keep stop words
         analyzer = new StandardAnalyzer(CharArraySet.EMPTY_SET);
 
@@ -55,7 +64,22 @@ public class LuceneSearch {
         config.set(StandardQueryConfigHandler.ConfigurationKeys.FIELD_BOOST_MAP, searchFields);
         config.set(StandardQueryConfigHandler.ConfigurationKeys.MULTI_FIELDS, searchFields.keySet().toArray(new String[0]));
         config.set(StandardQueryConfigHandler.ConfigurationKeys.DEFAULT_OPERATOR, StandardQueryConfigHandler.Operator.AND);
-        config.set(StandardQueryConfigHandler.ConfigurationKeys.MULTI_TERM_REWRITE_METHOD, MultiTermQuery.SCORING_BOOLEAN_REWRITE);
+
+        IndexSearcher.setMaxClauseCount(Integer.MAX_VALUE);
+
+        // Use constant score rewrite for wildcard queries to improve performance
+        config.set(StandardQueryConfigHandler.ConfigurationKeys.MULTI_TERM_REWRITE_METHOD,
+                  MultiTermQuery.CONSTANT_SCORE_REWRITE);
+    }
+
+    public void refresh() throws IOException {
+        synchronized (searchLock) {
+            if (reader != null) {
+                reader.close();
+            }
+            reader = DirectoryReader.open(indexDir);
+            searcher = new IndexSearcher(reader);
+        }
     }
 
     /**
@@ -66,104 +90,127 @@ public class LuceneSearch {
      * @param enableHighlighting Flag to enable or disable highlighting
      * @return A pair of lists: document IDs and their scores
      */
-    public SearchResult search(String query, Set<Integer> docIds, Float minScore, int maxResults, boolean enableHighlighting) {
-        if (query == null || query.isEmpty()) {
-            return new SearchResult(List.of(), List.of(), Map.of());
-        }
-
-        try {
-            Query boostedQuery = new BoostQuery(parser.parse(query, null), 5.0f);
-            Highlighter highlighter = null;
-
-            if (enableHighlighting) {
-                QueryScorer scorer = new QueryScorer(boostedQuery);
-                SimpleHTMLFormatter htmlFormatter = new SimpleHTMLFormatter("<mark>", "</mark>");
-                highlighter = new Highlighter(htmlFormatter, scorer);
-                highlighter.setMaxDocCharsToAnalyze(Integer.MAX_VALUE);
+    public SearchResult search(String query, Set<Integer> docIds, Float minScore, int maxResults, boolean enableHighlighting) throws IOException {
+        synchronized (searchLock) {
+            if (!reader.tryIncRef()) {
+                throw new IOException("IndexReader is closed");
             }
 
-            logger.info("Input query {}. Executing query {}. With filter: {} ", query, boostedQuery, docIds);
-
-            ScoreDoc[] hits;
-            if (docIds != null && !docIds.isEmpty()) {
-                // Create filter for allowed document IDs
-                // TODO: Does the docFilter actually help to reduce query execution time?
-                if (BOOL_FILTER) {
-                    Query docFilter = createDocFilter(docIds);
-                    BooleanQuery.Builder queryBuilder = new BooleanQuery.Builder();
-                    queryBuilder.add(boostedQuery, BooleanClause.Occur.MUST);
-                    queryBuilder.add(docFilter, BooleanClause.Occur.FILTER);
-                    Query filteredQuery = queryBuilder.build();
-                    hits = searcher.search(filteredQuery, maxResults).scoreDocs;
-                } else {
-                    CustomCollectorManager collectorManager = new CustomCollectorManager(maxResults, docIds);
-                    hits = searcher.search(boostedQuery, collectorManager).scoreDocs;
+            try {
+                if (query == null || query.isEmpty()) {
+                    return new SearchResult(List.of(), List.of(), Map.of());
                 }
-            } else {
-                hits = searcher.search(boostedQuery, maxResults).scoreDocs;
-            }
 
-            StoredFields storedFields = searcher.storedFields();
-            List<Integer> results = new ArrayList<>();
-            List<Float> scores = new ArrayList<>();
-            Map<Integer, Map<String, String>> highlights = new HashMap<>();
+                try {
+                    Query boostedQuery = new BoostQuery(parser.parse(query, null), 5.0f);
+                    Highlighter highlighter = null;
 
-            logger.info("Found {} hits", hits.length);
+                    if (enableHighlighting) {
+                        QueryScorer scorer = new QueryScorer(boostedQuery);
+                        SimpleHTMLFormatter htmlFormatter = new SimpleHTMLFormatter("<mark>", "</mark>");
+                        highlighter = new Highlighter(htmlFormatter, scorer);
+                        highlighter.setMaxDocCharsToAnalyze(Integer.MAX_VALUE);
+                    }
 
-            for (ScoreDoc scoreDoc : hits) {
-                Document doc = storedFields.document(scoreDoc.doc);
-                int resultId = Integer.parseInt(doc.get("id"));
-                // logger.info("Hit {}: {} (Score: {})", resultId, doc.get("name"), scoreDoc.score);
-                if (minScore != null && scoreDoc.score < minScore) continue;
+                    logger.info("Input query {}. Executing query {}. With filter: {} ", query, boostedQuery, docIds);
 
-                Map<String, String> docHighlights = new HashMap<>();
-
-                if (enableHighlighting) {
-                    // Only process highlights if enabled
-                    for (String fieldName : searchFields.keySet()) {
-                        String fieldContent = doc.get(fieldName);
-                        if (fieldContent != null && !fieldContent.isEmpty()) {
-                            try {
-                                String[] fragments = highlighter.getBestFragments(analyzer, fieldName, fieldContent, 1000);
-                                String highlighted = String.join(" ... ", fragments);
-                                if (!highlighted.isEmpty()) {
-                                    docHighlights.put(fieldName, highlighted);
+                    ScoreDoc[] hits;
+                    try {
+                        if (docIds != null && !docIds.isEmpty()) {
+                            // Create filter for allowed document IDs
+                            // TODO: Does the docFilter actually help to reduce query execution time?
+                            if (BOOL_FILTER) {
+                                Query docFilter = createDocFilter(docIds);
+                                BooleanQuery.Builder queryBuilder = new BooleanQuery.Builder();
+                                queryBuilder.add(boostedQuery, BooleanClause.Occur.MUST);
+                                queryBuilder.add(docFilter, BooleanClause.Occur.FILTER);
+                                Query filteredQuery = queryBuilder.build();
+                                hits = searcher.search(filteredQuery, maxResults).scoreDocs;
+                            } else {
+                                BitSet filterBitSet = new BitSet();
+                                for (int docId : docIds) {
+                                    filterBitSet.set(docId);
                                 }
-                            } catch (InvalidTokenOffsetsException e) {
-                                logger.warn("Failed to highlight field {}: {}", fieldName, e.getMessage());
+                                CustomCollectorManager collectorManager = new CustomCollectorManager(maxResults, filterBitSet);
+                                hits = searcher.search(boostedQuery, collectorManager).scoreDocs;
+                            }
+                        } else {
+                            hits = searcher.search(boostedQuery, maxResults).scoreDocs;
+                        }
+                    } catch (IOException e) {
+                        logger.error("Search failed: {}", e.getMessage());
+                        return new SearchResult(List.of(), List.of(), Map.of());
+                    }
+
+                    StoredFields storedFields = searcher.storedFields();
+                    List<Integer> results = new ArrayList<>();
+                    List<Float> scores = new ArrayList<>();
+                    Map<Integer, Map<String, String>> highlights = new HashMap<>();
+
+                    logger.info("Found {} hits", hits.length);
+
+                    for (ScoreDoc scoreDoc : hits) {
+                        Document doc = storedFields.document(scoreDoc.doc);
+                        int resultId = Integer.parseInt(doc.get("id"));
+                        // logger.info("Hit {}: {} (Score: {})", resultId, doc.get("name"), scoreDoc.score);
+                        if (minScore != null && scoreDoc.score < minScore) continue;
+
+                        Map<String, String> docHighlights = new HashMap<>();
+
+                        if (enableHighlighting) {
+                            // Only process highlights if enabled
+                            for (String fieldName : searchFields.keySet()) {
+                                String fieldContent = doc.get(fieldName);
+                                if (fieldContent != null && !fieldContent.isEmpty()) {
+                                    try {
+                                        String[] fragments = highlighter.getBestFragments(analyzer, fieldName, fieldContent, 1000);
+                                        String highlighted = String.join(" ... ", fragments);
+                                        if (!highlighted.isEmpty()) {
+                                            docHighlights.put(fieldName, highlighted);
+                                        }
+                                    } catch (InvalidTokenOffsetsException e) {
+                                        logger.warn("Failed to highlight field {}: {}", fieldName, e.getMessage());
+                                    }
+                                }
                             }
                         }
+                        results.add(resultId);
+                        scores.add(scoreDoc.score);
+                        if (!docHighlights.isEmpty()) {
+                            highlights.put(resultId, docHighlights);
+                        }
                     }
-                }
-                results.add(resultId);
-                scores.add(scoreDoc.score);
-                if (!docHighlights.isEmpty()) {
-                    highlights.put(resultId, docHighlights);
-                }
-            }
-            logger.info("Returning {} results with score over {}", results.size(), minScore);
+                    logger.info("Returning {} results with score over {}", results.size(), minScore);
 
-            return new SearchResult(results, scores, highlights);
-        } catch (IOException | QueryNodeException e) {
-            logger.error("Query IO error: {}", e.getMessage());
-            return new SearchResult(List.of(), List.of(), Map.of());
+                    return new SearchResult(results, scores, highlights);
+                } catch (IOException | QueryNodeException e) {
+                    logger.error("Query IO error: {}", e.getMessage());
+                    return new SearchResult(List.of(), List.of(), Map.of());
+                }
+            } finally {
+                reader.decRef();
+            }
         }
     }
 
     private Query createDocFilter(Set<Integer> docIds) {
-        // TODO: Improve efficiency off this
-        // just or TermQueries for id in filter
         BooleanQuery.Builder builder = new BooleanQuery.Builder();
         for (int docId : docIds) {
-            builder.add(new TermQuery(new Term("id", String.valueOf(docId))), BooleanClause.Occur.SHOULD);
+            builder.add(new TermQuery(new Term("id", Integer.toString(docId))), BooleanClause.Occur.SHOULD);
         }
-        BooleanQuery.Builder filterQuery = new BooleanQuery.Builder();
-        filterQuery.add(builder.build(), BooleanClause.Occur.MUST);
         return builder.build();
     }
 
     public void close() throws IOException {
-        searcher.getIndexReader().close();
+        synchronized (searchLock) {
+            if (reader != null) {
+                reader.close();
+                reader = null;
+            }
+            if (indexDir != null) {
+                indexDir.close();
+            }
+        }
     }
 
     public static class SearchResult {

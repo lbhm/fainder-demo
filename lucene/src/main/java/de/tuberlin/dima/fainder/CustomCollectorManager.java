@@ -6,22 +6,22 @@ import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.search.TotalHits;
 
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.Collection;
 import java.util.List;
-import java.util.Set;
 
 public class CustomCollectorManager implements CollectorManager<CustomCollector, TopDocs> {
-    private final Set<Integer> filterDocIds;
+    private final BitSet filterBitSet;
     private final int numHits;
 
-    public CustomCollectorManager(int numHits, Set<Integer> filterDocIds) {
-        this.filterDocIds = filterDocIds;
+    public CustomCollectorManager(int numHits, BitSet filterBitSet) {
+        this.filterBitSet = filterBitSet;
         this.numHits = numHits;
     }
 
     @Override
     public CustomCollector newCollector() {
-        return new CustomCollector(filterDocIds, numHits);
+        return new CustomCollector(filterBitSet, numHits);
     }
 
     @Override
