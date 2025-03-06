@@ -58,7 +58,7 @@ def engine() -> Engine:
         metadata = Metadata(**json.load(file))
 
     # Fainder indices for testing are generated with the following parameters:
-    # n_clusters = 27, bin_budget = 270, alpha = 1, transform = None,
+    # n_clusters = 23, bin_budget = 230, alpha = 1, transform = None,
     fainder_index = FainderIndex(
         metadata=metadata,
         rebinning_path=settings.rebinning_index_path,

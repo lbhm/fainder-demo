@@ -60,8 +60,8 @@ class Settings(BaseSettings):
     query_cache_size: int = 128
 
     # Fainder settings
-    fainder_n_clusters: int = 50
-    fainder_bin_budget: int = 1000
+    fainder_n_clusters: int = 23
+    fainder_bin_budget: int = 230
     fainder_alpha: float = 1.0
     fainder_transform: Literal["standard", "robust", "quantile", "power"] | None = None
     fainder_cluster_algorithm: Literal["agglomerative", "hdbscan", "kmeans"] = "kmeans"
