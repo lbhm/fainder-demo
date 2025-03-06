@@ -11,7 +11,7 @@ from numpy import uint32
 
 from backend.column_index import ColumnIndex
 from backend.config import CacheInfo, FainderMode, Metadata
-from backend.engine.optimizer import MergeKeywords
+from backend.engine.optimizer import CostSorter, MergeKeywords
 from backend.engine.parser import DQLParser
 from backend.fainder_index import FainderIndex
 from backend.lucene_connector import LuceneConnector
@@ -37,6 +37,7 @@ class QueryEvaluator:
         self.annotator = QueryAnnotator()
         self.executor = QueryExecutor(self.lucene_connector, fainder_index, hnsw_index, metadata)
         self.merge_keywords = MergeKeywords()
+        self.cost_sorter = CostSorter()
 
         # NOTE: Don't use lru_cache on methods
         # See https://docs.astral.sh/ruff/rules/cached-instance-method/ for details
@@ -61,6 +62,7 @@ class QueryEvaluator:
         enable_highlighting: bool = False,
         enable_filtering: bool = False,
         enable_kw_merge: bool = True,
+        enable_cost_sorting: bool = True,
     ) -> tuple[list[int], Highlights]:
         # Reset state for new query
         self.annotator.reset()
@@ -72,6 +74,11 @@ class QueryEvaluator:
 
         # Optimze query
         # TODO: Add optimizer class
+        if enable_cost_sorting:
+            parse_tree = self.cost_sorter.visit(parse_tree)
+            logger.trace(f"sorted tree: {parse_tree.pretty()}")
+            logger.trace(f"sorted query: {parse_tree}")
+
         if enable_kw_merge:
             parse_tree = self.merge_keywords.transform(parse_tree)
             logger.trace(f"Optimized tree: {parse_tree.pretty()}")
