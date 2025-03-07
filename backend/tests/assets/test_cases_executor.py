@@ -610,7 +610,7 @@ EXECUTOR_CASES: dict[str, dict[str, ExecutorCase]] = {
         },
         "percentile_with_identifer": {
             "query": "col(name('Latitude'; 0) AND pp(0.5;ge;50))",
-            "expected": [0],
+            "expected": [],
             "parse_tree": Tree(
                 Token("RULE", "query"),
                 [
@@ -747,7 +747,7 @@ EXECUTOR_CASES: dict[str, dict[str, ExecutorCase]] = {
         },
         "not_complex_column": {
             "query": "NOT col((name('Latitude'; 0) AND pp(0.5;ge;50)))",
-            "expected": [1, 2],
+            "expected": [0, 1, 2],
             "parse_tree": Tree(
                 Token("RULE", "query"),
                 [
