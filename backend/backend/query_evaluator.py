@@ -73,7 +73,7 @@ class QueryEvaluator:
         logger.trace(f"Parsed query: {parse_tree}")
 
         # Optimze query
-        # TODO: Add optimizer class
+        # TODO: Better way for enabling/disabling optimizations?
         if enable_cost_sorting:
             parse_tree = self.cost_sorter.visit(parse_tree)
             logger.trace(f"sorted tree: {parse_tree.pretty()}")

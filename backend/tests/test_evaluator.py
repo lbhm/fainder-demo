@@ -21,15 +21,33 @@ def test_grammar_correctness(
     # Execute with all configurations
     exec_start = time.perf_counter()
     result1, _ = evaluator.execute(
-        query, enable_highlighting=False, enable_filtering=False, enable_kw_merge=False
+        query,
+        enable_highlighting=False,
+        enable_filtering=False,
+        enable_kw_merge=False,
+        enable_cost_sorting=False,
     )
     exec_time = time.perf_counter() - exec_start
 
     exec_start = time.perf_counter()
     result_kw_merge, _ = evaluator.execute(
-        query, enable_highlighting=False, enable_filtering=False, enable_kw_merge=True
+        query,
+        enable_highlighting=False,
+        enable_filtering=False,
+        enable_kw_merge=True,
+        enable_cost_sorting=False,
     )
     exec_time_kw_merge = time.perf_counter() - exec_start
+
+    exec_start = time.perf_counter()
+    result_kw_merge_cost_sorting, _ = evaluator.execute(
+        query,
+        enable_highlighting=False,
+        enable_filtering=False,
+        enable_kw_merge=True,
+        enable_cost_sorting=True,
+    )
+    exec_time_cost_sorting = time.perf_counter() - exec_start
 
     # Log timing information in a structured format
     performance_log = {
@@ -39,8 +57,14 @@ def test_grammar_correctness(
         "query": query,
         "execution_time": exec_time,
         "execution_time_kw_merge": exec_time_kw_merge,
+        "execution_time_kw_merge_sort": exec_time_cost_sorting,
     }
     logger.info(performance_log)
 
     # Verify results are consistent
-    assert set(result1) == set(result_kw_merge) == set(expected_result)
+    assert (
+        set(result1)
+        == set(result_kw_merge)
+        == set(expected_result)
+        == set(result_kw_merge_cost_sorting)
+    )
