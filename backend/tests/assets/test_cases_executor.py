@@ -608,6 +608,7 @@ EXECUTOR_CASES: dict[str, dict[str, ExecutorCase]] = {
                 ],
             ),
         },
+        # TODO
         "percentile_with_identifer": {
             "query": "col(name('Latitude'; 0) AND pp(0.5;ge;50))",
             "expected": [],
@@ -639,6 +640,7 @@ EXECUTOR_CASES: dict[str, dict[str, ExecutorCase]] = {
                 ],
             ),
         },
+        # TODO
         "keyword_filter": {
             "query": "col(name('Latitude'; 0) AND pp(0.5;ge;50)) AND kw('data')",
             "expected": [0],
@@ -702,6 +704,7 @@ EXECUTOR_CASES: dict[str, dict[str, ExecutorCase]] = {
                 ],
             ),
         },
+        # TODO
         "complex_column": {
             "query": "col((name('Latitude'; 0) AND pp(0.5;ge;50)) OR name('Longitude'; 0))",
             "expected": [0],
@@ -745,6 +748,7 @@ EXECUTOR_CASES: dict[str, dict[str, ExecutorCase]] = {
                 ],
             ),
         },
+        # TODO
         "not_complex_column": {
             "query": "NOT col((name('Latitude'; 0) AND pp(0.5;ge;50)))",
             "expected": [0, 1, 2],
