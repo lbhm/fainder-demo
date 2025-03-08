@@ -18,14 +18,15 @@ from sentence_transformers import SentenceTransformer
 
 from backend.config import Settings
 from backend.croissant_store import Document
+from backend.tantivy_index import TantivyIndex
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
 
 
 def generate_metadata(
-    croissant_path: Path, metadata_path: Path
-) -> tuple[list[tuple[np.uint32, Histogram]], dict[str, int], dict[int, Document]]:
+    croissant_path: Path, metadata_path: Path, tantivy_path: Path
+) -> tuple[list[tuple[np.uint32, Histogram]], dict[str, int], dict[int, Document], TantivyIndex]:
     """Load Croissant files and generate metadata.
 
     While loading the files, assign unique IDs to documents and columns. The function also creates
@@ -42,6 +43,10 @@ def generate_metadata(
     vector_to_cols: dict[int, set[int]] = defaultdict(set)
 
     documents: dict[int, Document] = {}
+
+    # Initialize Tantivy index
+    tantivy_path.mkdir(parents=True, exist_ok=True)
+    tantivy_index = TantivyIndex(str(tantivy_path), recreate=True)
 
     # Ingest Croissant files and assign unique ids to datasets and columns
     hists: list[tuple[np.uint32, Histogram]] = []
@@ -88,6 +93,8 @@ def generate_metadata(
             except KeyError as e:
                 logger.error(f"KeyError {e} reading file {path}")
 
+            tantivy_index.add_document(tantivy_index.index, metadata)
+
             # Replace the file with the updated metadata
             with path.open("w") as file:
                 json.dump(metadata, file)
@@ -112,7 +119,7 @@ def generate_metadata(
             file,
         )
 
-    return hists, name_to_vector, documents
+    return hists, name_to_vector, documents, tantivy_index
 
 
 def generate_fainder_indices(
@@ -258,7 +265,9 @@ if __name__ == "__main__":
         logger.error(f"Error loading settings: {e}")
         sys.exit(1)
 
-    hists, name_to_vector, _ = generate_metadata(settings.croissant_path, settings.metadata_path)
+    hists, name_to_vector, _, _ = generate_metadata(
+        settings.croissant_path, settings.metadata_path, settings.tantivy_path
+    )
 
     if not args.no_fainder:
         generate_fainder_indices(

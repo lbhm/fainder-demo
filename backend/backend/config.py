@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     croissant_dir: Path = Path("croissant")
     embedding_dir: Path = Path("embeddings")
     fainder_dir: Path = Path("fainder")
+    tantivy_dir: Path = Path("tantivy")
     metadata_file: Path = Path("metadata.json")
     dataset_slug: str = "kaggleRef"
 
@@ -75,6 +76,11 @@ class Settings(BaseSettings):
     @property
     def embedding_path(self) -> DirectoryPath:
         return self.data_dir / self.collection_name / self.embedding_dir
+
+    @computed_field  # type: ignore[misc]
+    @property
+    def tantivy_path(self) -> DirectoryPath:
+        return self.data_dir / self.collection_name / self.tantivy_dir
 
     @computed_field  # type: ignore[misc]
     @property

@@ -188,40 +188,32 @@ EXECUTOR_CASES: dict[str, dict[str, ExecutorCase]] = {
             ),
         },
         "field_specific_keyword_or": {
-            "query": "kw('alternateName:(Weather) OR *a*')",
+            "query": "kw('alternateName:(Weather) OR data')",
             "expected": [0, 2, 1],
             "parse_tree": Tree(
                 Token("RULE", "query"),
                 [
                     Tree(
                         Token("RULE", "keyword_op"),
-                        [Token("STRING", "'alternateName:(Weather) OR *a*'")],
+                        [Token("STRING", "'alternateName:(Weather) OR data'")],
                     )
                 ],
             ),
         },
         "wildcard_search": {
-            "query": "kw('Germa?y')",
-            "expected": [0],
-            "parse_tree": Tree(
-                Token("RULE", "query"),
-                [Tree(Token("RULE", "keyword_op"), [Token("STRING", "'Germa?y'")])],
-            ),
-        },
-        "double_wildcard_searches": {
-            "query": "kw('*a*')",
+            "query": "kw('data')",
             "expected": [2, 1, 0],
             "parse_tree": Tree(
                 Token("RULE", "query"),
-                [Tree(Token("RULE", "keyword_op"), [Token("STRING", "'*a*'")])],
+                [Tree(Token("RULE", "keyword_op"), [Token("STRING", "'data'")])],
             ),
         },
         "advanced_query": {
-            "query": "kw('*a* AND weather')",
+            "query": "kw('data AND weather')",
             "expected": [0],
             "parse_tree": Tree(
                 Token("RULE", "query"),
-                [Tree(Token("RULE", "keyword_op"), [Token("STRING", "'*a* AND weather'")])],
+                [Tree(Token("RULE", "keyword_op"), [Token("STRING", "'data AND weather'")])],
             ),
         },
         "advanced_query_2": {
@@ -254,40 +246,40 @@ EXECUTOR_CASES: dict[str, dict[str, ExecutorCase]] = {
             ),
         },
         "nested_query": {
-            "query": "kw('*a* AND (weather OR Avocado)')",
+            "query": "kw('data AND (weather OR Avocado)')",
             "expected": [0, 1],
             "parse_tree": Tree(
                 Token("RULE", "query"),
                 [
                     Tree(
                         Token("RULE", "keyword_op"),
-                        [Token("STRING", "'*a* AND (weather OR Avocado)'")],
+                        [Token("STRING", "'data AND (weather OR Avocado)'")],
                     )
                 ],
             ),
         },
         "nested_query_2": {
-            "query": "kw('(*a* AND weather) OR Avocado')",
+            "query": "kw('(data AND weather) OR Avocado')",
             "expected": [0, 1],
             "parse_tree": Tree(
                 Token("RULE", "query"),
                 [
                     Tree(
                         Token("RULE", "keyword_op"),
-                        [Token("STRING", "'(*a* AND weather) OR Avocado'")],
+                        [Token("STRING", "'(data AND weather) OR Avocado'")],
                     )
                 ],
             ),
         },
         "double_nested_query": {
-            "query": "kw('(*a* AND weather) OR (Avocado AND *a*)')",
+            "query": "kw('(data AND weather) OR (Avocado AND data)')",
             "expected": [0, 1],
             "parse_tree": Tree(
                 Token("RULE", "query"),
                 [
                     Tree(
                         Token("RULE", "keyword_op"),
-                        [Token("STRING", "'(*a* AND weather) OR (Avocado AND *a*)'")],
+                        [Token("STRING", "'(data AND weather) OR (Avocado AND data)'")],
                     )
                 ],
             ),
@@ -513,7 +505,7 @@ EXECUTOR_CASES: dict[str, dict[str, ExecutorCase]] = {
     },
     "syntax_variations": {
         "optional_whitespaces": {
-            "query": "kw('*a*') AND col(pp (0.9;ge;1000000))",
+            "query": "kw('data') AND col(pp (0.9;ge;1000000))",
             "expected": [2, 1],
             "parse_tree": Tree(
                 Token("RULE", "query"),
@@ -521,7 +513,7 @@ EXECUTOR_CASES: dict[str, dict[str, ExecutorCase]] = {
                     Tree(
                         "conjunction",
                         [
-                            Tree(Token("RULE", "keyword_op"), [Token("STRING", "'*a*'")]),
+                            Tree(Token("RULE", "keyword_op"), [Token("STRING", "'data'")]),
                             Tree(
                                 Token("RULE", "col_op"),
                                 [
@@ -541,7 +533,7 @@ EXECUTOR_CASES: dict[str, dict[str, ExecutorCase]] = {
             ),
         },
         "no_whitespaces": {
-            "query": "kw('*a*')ANDcol(pp(0.9;ge;1000000))",
+            "query": "kw('data')ANDcol(pp(0.9;ge;1000000))",
             "expected": [2, 1],
             "parse_tree": Tree(
                 Token("RULE", "query"),
@@ -549,7 +541,7 @@ EXECUTOR_CASES: dict[str, dict[str, ExecutorCase]] = {
                     Tree(
                         "conjunction",
                         [
-                            Tree(Token("RULE", "keyword_op"), [Token("STRING", "'*a*'")]),
+                            Tree(Token("RULE", "keyword_op"), [Token("STRING", "'data'")]),
                             Tree(
                                 Token("RULE", "col_op"),
                                 [
@@ -569,7 +561,7 @@ EXECUTOR_CASES: dict[str, dict[str, ExecutorCase]] = {
             ),
         },
         "case_insensitive": {
-            "query": "kw('*a*')AND col(Pp(0.9;ge;1000000))",
+            "query": "kw('data')AND col(Pp(0.9;ge;1000000))",
             "expected": [2, 1],
             "parse_tree": Tree(
                 Token("RULE", "query"),
@@ -577,7 +569,7 @@ EXECUTOR_CASES: dict[str, dict[str, ExecutorCase]] = {
                     Tree(
                         "conjunction",
                         [
-                            Tree(Token("RULE", "keyword_op"), [Token("STRING", "'*a*'")]),
+                            Tree(Token("RULE", "keyword_op"), [Token("STRING", "'data'")]),
                             Tree(
                                 Token("RULE", "col_op"),
                                 [
@@ -648,7 +640,7 @@ EXECUTOR_CASES: dict[str, dict[str, ExecutorCase]] = {
             ),
         },
         "keyword_filter": {
-            "query": "col(name('Latitude'; 0) AND pp(0.5;ge;50)) AND kw('*a*')",
+            "query": "col(name('Latitude'; 0) AND pp(0.5;ge;50)) AND kw('data')",
             "expected": [0],
             "parse_tree": Tree(
                 Token("RULE", "query"),
@@ -681,7 +673,7 @@ EXECUTOR_CASES: dict[str, dict[str, ExecutorCase]] = {
                                     )
                                 ],
                             ),
-                            Tree(Token("RULE", "keyword_op"), [Token("STRING", "'*a*'")]),
+                            Tree(Token("RULE", "keyword_op"), [Token("STRING", "'data'")]),
                         ],
                     )
                 ],

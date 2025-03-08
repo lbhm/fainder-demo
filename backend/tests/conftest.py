@@ -11,7 +11,7 @@ from backend.column_index import ColumnIndex
 from backend.config import Metadata, Settings
 from backend.engine import Engine, Parser
 from backend.fainder_index import FainderIndex
-from backend.lucene_connector import LuceneConnector
+from backend.tantivy_index import TantivyIndex
 
 
 @pytest.fixture(autouse=True, scope="module")
@@ -56,7 +56,6 @@ def engine() -> Engine:
     with settings.metadata_path.open() as file:
         metadata = Metadata(**json.load(file))
 
-    lucene_connector = LuceneConnector(settings.lucene_host, settings.lucene_port)
     # Fainder indices for testing are generated with the following parameters:
     # n_clusters = 27, bin_budget = 270, alpha = 1, transform = None,
     fainder_index = FainderIndex(
@@ -69,7 +68,7 @@ def engine() -> Engine:
         path=settings.hnsw_index_path, metadata=metadata, use_embeddings=False
     )
     return Engine(
-        lucene_connector=lucene_connector,
+        tantivy_index = TantivyIndex(index_path=str(settings.tantivy_path), recreate=False),
         fainder_index=fainder_index,
         hnsw_index=column_index,
         metadata=metadata,

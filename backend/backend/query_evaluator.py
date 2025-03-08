@@ -14,7 +14,7 @@ from backend.config import CacheInfo, FainderMode, Metadata
 from backend.engine.optimizer import CostSorter, MergeKeywords
 from backend.engine.parser import DQLParser
 from backend.fainder_index import FainderIndex
-from backend.lucene_connector import LuceneConnector
+from backend.tantivy_index import TantivyIndex
 
 DocumentHighlights = dict[int, dict[str, str]]
 ColumnHighlights = set[uint32]
@@ -26,16 +26,15 @@ T = TypeVar("T", tuple[set[int], Highlights], set[uint32])
 class QueryEvaluator:
     def __init__(
         self,
-        lucene_connector: LuceneConnector,
         fainder_index: FainderIndex,
+        tantivy_index: TantivyIndex,
         hnsw_index: ColumnIndex,
         metadata: Metadata,
         cache_size: int = 128,
     ) -> None:
-        self.lucene_connector = lucene_connector
         self.parser = DQLParser()
         self.annotator = QueryAnnotator()
-        self.executor = QueryExecutor(self.lucene_connector, fainder_index, hnsw_index, metadata)
+        self.executor = QueryExecutor(fainder_index, tantivy_index, hnsw_index, metadata)
         self.merge_keywords = MergeKeywords()
         self.cost_sorter = CostSorter()
 
@@ -46,10 +45,11 @@ class QueryEvaluator:
     def update_indices(
         self,
         fainder_index: FainderIndex,
+        tantivy_index: TantivyIndex,
         hnsw_index: ColumnIndex,
         metadata: Metadata,
     ) -> None:
-        self.executor = QueryExecutor(self.lucene_connector, fainder_index, hnsw_index, metadata)
+        self.executor = QueryExecutor(fainder_index, tantivy_index, hnsw_index, metadata)
         self.clear_cache()
 
     def parse(self, query: str) -> ParseTree:
@@ -176,18 +176,18 @@ class QueryExecutor(Transformer[Token, tuple[set[int], Highlights]]):
 
     def __init__(
         self,
-        lucene_connector: LuceneConnector,
         fainder_index: FainderIndex,
+        tantivy_index: TantivyIndex,
         hnsw_index: ColumnIndex,
         metadata: Metadata,
         fainder_mode: FainderMode = FainderMode.low_memory,
         enable_highlighting: bool = False,
         enable_filtering: bool = False,
     ) -> None:
-        self.lucene_connector = lucene_connector
         self.fainder_index = fainder_index
         self.hnsw_index = hnsw_index
         self.metadata = metadata
+        self.tantivy_index = tantivy_index
 
         self.reset(fainder_mode, enable_highlighting, enable_filtering)
 
@@ -217,19 +217,19 @@ class QueryExecutor(Transformer[Token, tuple[set[int], Highlights]]):
     ### Operator implementations ###
 
     def keyword_op(self, items: list[Token]) -> tuple[set[int], Highlights]:
-        """Evaluate keyword term using merged Lucene query."""
+        """Evaluate keyword term using merged keyword query."""
         logger.trace(f"Evaluating keyword term: {items}")
 
-        # Extract the Lucene query and remove quotes
+        # Extract the keyword query and remove quotes
         # NOTE: Our grammar ensures that the string is always quoted so it should not remove
         # legitimate quotes from the query
         query = str(items[0])[1:-1]
 
         # NOTE: Currently unused
-        doc_filter = None
+        # doc_filter = None
 
-        result_docs, scores, highlights = self.lucene_connector.evaluate_query(
-            query, doc_filter, self.enable_highlighting
+        result_docs, scores, highlights = self.tantivy_index.search(
+            query, self.enable_highlighting
         )
         self.updates_scores(result_docs, scores)
 
