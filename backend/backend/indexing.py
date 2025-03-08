@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
 
 def generate_metadata(
-    croissant_path: Path, metadata_path: Path, tantivy_path: Path
+    croissant_path: Path, metadata_path: Path, tantivy_path: Path, load_documents: bool = True
 ) -> tuple[list[tuple[np.uint32, Histogram]], dict[str, int], dict[int, Document], TantivyIndex]:
     """Load Croissant files and generate metadata.
 
@@ -45,7 +45,6 @@ def generate_metadata(
     documents: dict[int, Document] = {}
 
     # Initialize Tantivy index
-    tantivy_path.mkdir(parents=True, exist_ok=True)
     tantivy_index = TantivyIndex(str(tantivy_path), recreate=True)
 
     # Ingest Croissant files and assign unique ids to datasets and columns
@@ -63,7 +62,8 @@ def generate_metadata(
                 metadata = json.load(file)
 
             metadata["id"] = doc_id
-            documents[doc_id] = metadata
+            if load_documents:
+                documents[doc_id] = metadata
 
             # Ingest histograms and assign unique ids to columns
             try:
@@ -266,7 +266,10 @@ if __name__ == "__main__":
         sys.exit(1)
 
     hists, name_to_vector, _, _ = generate_metadata(
-        settings.croissant_path, settings.metadata_path, settings.tantivy_path
+        settings.croissant_path,
+        settings.metadata_path,
+        settings.tantivy_path,
+        load_documents=False,
     )
 
     if not args.no_fainder:

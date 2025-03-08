@@ -214,7 +214,7 @@ page
                         <span class="metadata-label">Keywords</span>
                         <span
                           class="metadata-value keywords-value"
-                          v-html="selectedResult?.creator?.name || '-'"
+                          v-html="selectedResult?.keywords || '-'"
                         />
                       </div>
                     </div>
@@ -389,6 +389,12 @@ page
                       <tr>
                         <td><strong>Creator</strong></td>
                         <td
+                          v-if="selectedResult?.creator - name"
+                          class="highlight-text"
+                          v-html="selectedResult?.creator - name"
+                        />
+                        <td
+                          v-else
                           class="highlight-text"
                           v-html="selectedResult?.creator?.name || '-'"
                         />
@@ -396,6 +402,12 @@ page
                       <tr>
                         <td><strong>Publisher</strong></td>
                         <td
+                          v-if="selectedResult?.publisher - name"
+                          class="highlight-text"
+                          v-html="selectedResult?.publisher - name"
+                        />
+                        <td
+                          v-else
                           class="highlight-text"
                           v-html="selectedResult?.publisher?.name || '-'"
                         />

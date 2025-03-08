@@ -1,8 +1,14 @@
+import shutil
+import time
+from pathlib import Path
 from typing import Any
 
 import tantivy
+from loguru import logger
 
 DOCS_MAX = 1000000
+
+FIELDS: list[str] = ["name", "description", "keywords", "creator", "publisher", "alternateName"]
 
 
 class TantivyIndex:
@@ -19,19 +25,26 @@ class TantivyIndex:
         schema_builder.add_text_field("alternateName", stored=True)
         schema_builder.add_integer_field("id", stored=True)
         schema_builder.add_text_field("keywords", stored=True)
-        schema_builder.add_text_field("creator.name", stored=True)  # nested field
-        schema_builder.add_text_field("publisher.name", stored=True)  # nested field
+        schema_builder.add_text_field("creator", stored=True)
+        schema_builder.add_text_field("publisher", stored=True)
         return schema_builder.build()
 
     def load_index(self, schema: tantivy.Schema, recreate: bool = False) -> tantivy.Index:
         """
         Load the index from the index path. If the index does not exist, create a new index.
         """
+        if recreate:
+            # delete the index if it already exists to make sure we start from scratch
+            tantivy_path = Path(self.index_path)
+            if tantivy_path.exists():
+                shutil.rmtree(tantivy_path, ignore_errors=True)
+                tantivy_path.mkdir(parents=True, exist_ok=True)
         return tantivy.Index(schema, self.index_path, not recreate)
 
     def add_document(self, index: tantivy.Index, doc: dict[str, Any]) -> None:
         writer = index.writer()
         # Add document to index
+        keywords = "; ".join(doc["keywords"])
         writer.add_document(
             tantivy.Document(
                 dateModified=doc["dateModified"],
@@ -39,9 +52,9 @@ class TantivyIndex:
                 name=doc["name"],
                 alternateName=doc["alternateName"],
                 id=doc["id"],
-                keywords=doc["keywords"],
-                creator={"name": doc["creator"]["name"]},
-                publisher={"name": doc["publisher"]["name"]},
+                keywords=keywords,
+                creator=doc["creator"]["name"],
+                publisher=doc["publisher"]["name"],
             )
         )
         writer.commit()
@@ -50,17 +63,17 @@ class TantivyIndex:
     def search(
         self, query: str, enable_highlighting: bool = False
     ) -> tuple[list[int], list[float], dict[int, dict[str, str]]]:
-        parsered_query = self.index.parse_query(
-            query,
-            ["name", "description", "keywords", "creator.name", "publisher.name", "alternateName"],
-        )
+        parsered_query = self.index.parse_query(query, FIELDS)
         searcher = self.index.searcher()
+        start_time = time.perf_counter()
         top_docs = searcher.search(parsered_query, DOCS_MAX).hits
+        logger.info(f"Search took {time.perf_counter() - start_time} seconds")
 
         results: list[int] = []
         scores: list[float] = []
         highlights: dict[int, dict[str, str]] = {}
 
+        start_time = time.perf_counter()
         for doc_results in top_docs:
             best_score, doc_address = doc_results
             doc = searcher.doc(doc_address)
@@ -70,6 +83,37 @@ class TantivyIndex:
 
             scores.append(best_score)
             if enable_highlighting:
-                pass
+                for field in FIELDS:
+                    snippet_generator = tantivy.SnippetGenerator.create(
+                        searcher, parsered_query, self.schema, field
+                    )
+                    snippet = snippet_generator.snippet_from_doc(doc)
+                    highlighted = snippet.highlighted()
+                    if len(highlighted) == 0:
+                        continue
+
+                    html_snippet: str = str(doc[field][0]) if doc[field] and doc[field][0] else ""  # type: ignore
+
+                    offset = 0
+                    for fragment in highlighted:
+                        start = fragment.start
+                        end = fragment.end
+                        html_snippet = (
+                            html_snippet[: start + offset]
+                            + "<mark>"
+                            + html_snippet[start + offset : end + offset]
+                            + "</mark>"
+                            + html_snippet[end + offset :]
+                        )
+                        offset += len("<mark></mark>")
+
+                    if doc_id not in highlights:
+                        highlights[doc_id] = {}
+                    field_name = field
+                    if field in ["creator", "publisher"]:
+                        field_name += "-name"
+                    highlights[doc_id][field_name] = html_snippet
+
+        logger.info(f"Processing results took {time.perf_counter() - start_time} seconds")
 
         return results, scores, highlights

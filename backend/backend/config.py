@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     hnsw_ef: int = 50
 
     # Misc
-    log_level: Literal["TRACE", "DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
+    log_level: Literal["TRACE", "DEBUG", "INFO", "WARNING", "ERROR"] = "TRACE"
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     @classmethod
