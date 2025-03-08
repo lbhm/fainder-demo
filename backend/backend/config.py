@@ -37,10 +37,6 @@ class Settings(BaseSettings):
     # QueryEvaluator settings
     query_cache_size: int = 128
 
-    # Lucene settings
-    lucene_host: str = "127.0.0.1"
-    lucene_port: str = "8001"
-
     # Fainder settings
     fainder_n_clusters: int = 50
     fainder_bin_budget: int = 1000

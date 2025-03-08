@@ -5,7 +5,6 @@
 Run tests for the grammar:
 
 ```bash
-# NOTE: You have to start a Lucene instance first
 uv run pytest tests
 ```
 
