@@ -5,17 +5,17 @@
   },
   "segments": [
     {
-      "segment_id": "233ff68f-fd75-46a8-bf5a-00cf67903543",
+      "segment_id": "fa02ba71-0029-457f-843e-ea7ac7e0a47c",
       "max_doc": 1,
       "deletes": null
     },
     {
-      "segment_id": "d7a00dc6-04fa-4170-bd4e-c157764e6165",
+      "segment_id": "335616c3-a5ad-4057-b0f5-3148f1b4810f",
       "max_doc": 1,
       "deletes": null
     },
     {
-      "segment_id": "f61c0a18-9d8c-4260-8404-b52a91b0075f",
+      "segment_id": "895f9653-920e-4f6b-bdfe-c20b05ac6214",
       "max_doc": 1,
       "deletes": null
     }
@@ -39,7 +39,7 @@
         "indexing": {
           "record": "position",
           "fieldnorms": true,
-          "tokenizer": "default"
+          "tokenizer": "en_stem"
         },
         "stored": true,
         "fast": false
@@ -52,7 +52,7 @@
         "indexing": {
           "record": "position",
           "fieldnorms": true,
-          "tokenizer": "default"
+          "tokenizer": "en_stem"
         },
         "stored": true,
         "fast": false
@@ -65,7 +65,7 @@
         "indexing": {
           "record": "position",
           "fieldnorms": true,
-          "tokenizer": "default"
+          "tokenizer": "en_stem"
         },
         "stored": true,
         "fast": false
@@ -88,7 +88,7 @@
         "indexing": {
           "record": "position",
           "fieldnorms": true,
-          "tokenizer": "default"
+          "tokenizer": "en_stem"
         },
         "stored": true,
         "fast": false
@@ -101,7 +101,7 @@
         "indexing": {
           "record": "position",
           "fieldnorms": true,
-          "tokenizer": "default"
+          "tokenizer": "en_stem"
         },
         "stored": true,
         "fast": false
@@ -114,7 +114,7 @@
         "indexing": {
           "record": "position",
           "fieldnorms": true,
-          "tokenizer": "default"
+          "tokenizer": "en_stem"
         },
         "stored": true,
         "fast": false

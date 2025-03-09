@@ -20,13 +20,13 @@ class TantivyIndex:
     def _schema(self) -> tantivy.Schema:
         schema_builder = tantivy.SchemaBuilder()
         schema_builder.add_date_field("dateModified", stored=True)
-        schema_builder.add_text_field("description", stored=True)
-        schema_builder.add_text_field("name", stored=True)
-        schema_builder.add_text_field("alternateName", stored=True)
+        schema_builder.add_text_field("description", stored=True, tokenizer_name="en_stem")
+        schema_builder.add_text_field("name", stored=True, tokenizer_name="en_stem")
+        schema_builder.add_text_field("alternateName", stored=True, tokenizer_name="en_stem")
         schema_builder.add_integer_field("id", stored=True)
-        schema_builder.add_text_field("keywords", stored=True)
-        schema_builder.add_text_field("creator", stored=True)
-        schema_builder.add_text_field("publisher", stored=True)
+        schema_builder.add_text_field("keywords", stored=True, tokenizer_name="en_stem")
+        schema_builder.add_text_field("creator", stored=True, tokenizer_name="en_stem")
+        schema_builder.add_text_field("publisher", stored=True, tokenizer_name="en_stem")
         return schema_builder.build()
 
     def load_index(self, schema: tantivy.Schema, recreate: bool = False) -> tantivy.Index:
@@ -63,7 +63,7 @@ class TantivyIndex:
     def search(
         self, query: str, enable_highlighting: bool = False
     ) -> tuple[list[int], list[float], dict[int, dict[str, str]]]:
-        parsered_query = self.index.parse_query(query, FIELDS)
+        parsered_query = self.index.parse_query(query)
         searcher = self.index.searcher()
         start_time = time.perf_counter()
         top_docs = searcher.search(parsered_query, DOCS_MAX).hits
