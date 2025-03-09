@@ -9,9 +9,9 @@ from loguru import logger
 
 from backend.column_index import ColumnIndex
 from backend.config import Metadata, Settings
+from backend.engine import Engine, Parser
 from backend.fainder_index import FainderIndex
 from backend.lucene_connector import LuceneConnector
-from backend.query_evaluator import QueryEvaluator
 
 
 @pytest.fixture(autouse=True, scope="module")
@@ -47,7 +47,7 @@ def _setup_and_teardown() -> Generator[None, Any, None]:  # pyright: ignore[repo
 
 
 @pytest.fixture(scope="module")
-def evaluator() -> QueryEvaluator:
+def engine() -> Engine:
     settings = Settings(
         data_dir=Path(__file__).parent / "assets",
         collection_name="toy_collection",
@@ -68,10 +68,15 @@ def evaluator() -> QueryEvaluator:
     column_index = ColumnIndex(
         path=settings.hnsw_index_path, metadata=metadata, use_embeddings=False
     )
-    return QueryEvaluator(
+    return Engine(
         lucene_connector=lucene_connector,
         fainder_index=fainder_index,
         hnsw_index=column_index,
         metadata=metadata,
         cache_size=-1,
     )
+
+
+@pytest.fixture(scope="module")
+def parser() -> Parser:
+    return Parser()

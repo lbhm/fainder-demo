@@ -1,189 +1,228 @@
-from typing import Any, TypeGuard
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
 
-from lark import ParseTree, Token, Transformer, Tree, Visitor
+from lark import ParseTree, Token, Tree, Visitor
 from loguru import logger
 
+if TYPE_CHECKING:
+    from lark.tree import Branch
 
-class ParentAnnotator(Visitor[Token]):
-    def __default__(self, tree: ParseTree) -> ParseTree:
-        for subtree in tree.children:
-            if isinstance(subtree, Tree):
-                assert not hasattr(subtree, "parent")
-                subtree.parent = tree.data  # type: ignore
-
-        return tree
-
-
+"""
+Costs for each operator in the query tree. Currently, we define operator costs as a hand-picked
+magic number. In the future, we may want to use a more sophisticated cost model.
+"""
 LEAF_COSTS = {
     "keyword_op": 1,
     "percentile_op": 2,
     "name_op": 1,
 }
-
-EXTRA_COSTS = {
-    "col_op": 1,  # extra cost for column
-    "negation": 0,  # extra cost for negation
+NODE_COSTS = {
+    "col_op": 1,
+    "negation": 0,
 }
 
 
-class CostSorter(Visitor[Token]):
+class OptimizationRule(ABC):
     """
-    This visitor annotates each node with a cost value as a tree attribute.
-    It should only be used bottom-up so using .visit().
-    It also sorts the children of each node by cost.
+    An optimization rule that can be applied to a ParseTree.
     """
 
-    def __default__(self, tree: ParseTree | Token) -> ParseTree | Token:
-        if isinstance(tree, Token):
-            return tree
+    @abstractmethod
+    def apply(self, tree: ParseTree) -> None:
+        """
+        Optimizes the given ParseTree in-place using this rule.
+        """
 
+
+class Optimizer:
+    """
+    This class is a wrapper around individual optimization techniques that operate on a ParseTree.
+
+    Currently, we support the following optimization techniques:
+    - Cost-based sorting of sibling operators
+    - Keyword merging
+
+    Planned optimizations include:
+    - Pre-filtering for conjuctions based on intermediate results
+    """
+
+    def __init__(
+        self,
+        cost_sorting: bool = True,
+        keyword_merging: bool = True,
+        intermediate_filtering: bool = False,
+    ) -> None:
+        self.opt_rules: list[OptimizationRule] = [QuoteRemover()]
+        if cost_sorting:
+            self.opt_rules.append(CostSorter())
+        if keyword_merging:
+            if cost_sorting is False:
+                logger.warning(
+                    "Using keyword merging without cost sorting may lead to suboptimal results"
+                )
+            self.opt_rules.append(MergeKeywords())
+        if intermediate_filtering:
+            logger.warning("Intermediate filtering not yet implemented")
+            self.opt_rules.append(ParentAnnotator())
+
+    def optimize(self, tree: ParseTree) -> ParseTree:
+        """
+        Optimizes the given ParseTree in-place using a sequence of optimization techniques.
+        """
+        for rule in self.opt_rules:
+            rule.apply(tree)
+        return tree
+
+
+class QuoteRemover(Visitor[Token], OptimizationRule):
+    """
+    This visitor removes quotes from all string tokens in the tree.
+
+    This is a hack and should be removed once we optimize our DQL grammar.
+    """
+
+    def __default__(self, tree: ParseTree) -> ParseTree:
+        children: list[Branch[Token]] = []
+        for subtree in tree.children:
+            if isinstance(subtree, Token) and subtree.type == "STRING":
+                children.append(Token("STRING", subtree.value[1:-1]))
+            else:
+                children.append(subtree)
+        tree.children = children
+        return tree
+
+    def apply(self, tree: ParseTree) -> None:
+        self.visit(tree)
+
+
+class ParentAnnotator(Visitor[Token], OptimizationRule):
+    """
+    This visitor annotates each node with its parent node's operator type.
+    """
+
+    def __default__(self, tree: ParseTree) -> ParseTree:
+        for subtree in tree.children:
+            if isinstance(subtree, Tree):
+                if not hasattr(subtree, "parent"):
+                    subtree.parent = tree.data  # type: ignore
+                else:
+                    raise ValueError(f"Parent of node {subtree} already set")
+
+        return tree
+
+    def apply(self, tree: ParseTree) -> None:
+        self.visit(tree)
+
+
+class CostSorter(Visitor[Token], OptimizationRule):
+    """
+    This visitor annotates each node with a cost value and sorts the children of each node by cost.
+    """
+
+    def __default__(self, tree: ParseTree) -> ParseTree:
         if tree.data in LEAF_COSTS:
-            # If the node is a leaf node, set its cost
+            # If the node is a leaf node, set its cost and return
             tree.cost = LEAF_COSTS[tree.data]  # type: ignore
             return tree
 
-        # Calculate costs from children
-        total_cost = 0
-        for child in tree.children:
-            if isinstance(child, Tree):
-                # Get cost from child if it exists
-                total_cost += getattr(child, "cost", 0)
+        # Compute the cost of the current node
+        cost = NODE_COSTS.get(tree.data, 0)
+        cost += sum(
+            getattr(child, "cost", 0) for child in tree.children if isinstance(child, Tree)
+        )
 
         # Sort children by cost
         logger.trace(f"Before sorting: {tree.children}")
         tree.children.sort(key=lambda x: getattr(x, "cost", 0))
         logger.trace(f"After sorting: {tree.children}")
 
-        # Add any additional cost for the current node
-        if tree.data in EXTRA_COSTS:
-            total_cost += EXTRA_COSTS[tree.data]
-
         # Store the cost on the tree node
-        tree.cost = total_cost  # type: ignore
+        tree.cost = cost  # type: ignore
 
         return tree
 
-
-def check_all_keyword_terms(items: list[ParseTree | Token]) -> bool:
-    if not _are_parse_trees(items):
-        return False
-    for tree in items:
-        if tree.data == "keyword_op":
-            continue
-        if tree.data == "negation":
-            subtree = tree.children[0]
-            if not isinstance(subtree, Tree) or subtree.data != "keyword_op":
-                return False
-        else:
-            return False
-    return True
+    def apply(self, tree: ParseTree) -> None:
+        self.visit(tree)
 
 
-def get_keyword_string(tree: ParseTree) -> str:
-    if tree.data == "negation":
-        subtree = tree.children[0]
-        assert isinstance(subtree, Tree)
-        return "-: (" + get_keyword_string(subtree) + ")"
-    assert tree.data == "keyword_op"
-    assert len(tree.children) == 1
-    assert isinstance(tree.children[0], Token)
-    return str(tree.children[0].value)[1:-1]
+class MergeKeywords(Visitor[Token], OptimizationRule):
+    """
+    This transformer merges sibling keyword queries into a single query string.
+    """
 
+    def __init__(self) -> None:
+        super().__init__()
 
-def _are_parse_trees(items: list[Any]) -> TypeGuard[list[ParseTree]]:
-    return all(isinstance(item, Tree) for item in items)
+    def apply(self, tree: ParseTree) -> None:
+        self.visit(tree)
 
+    def conjunction(self, tree: ParseTree) -> None:
+        self._merge_terms(tree, "AND")
 
-def _create_merged_keyword(keyword_strings: list[str], operator: str) -> ParseTree:
-    """Creates a merged keyword ParseTree from a list of keyword strings."""
-    if len(keyword_strings) == 1:
-        merged_query = f"'({keyword_strings[0]})'"
-    else:
-        first_keyword = keyword_strings[0]
-        rest_keywords = [f"{operator} {kw}" for kw in keyword_strings[1:]]
-        merged_parts = [first_keyword, *rest_keywords]
-        merged_query = f"'({' '.join(merged_parts)})'"
+    def disjunction(self, tree: ParseTree) -> None:
+        self._merge_terms(tree, "OR")
 
-    return Tree("keyword_op", [Token("STRING", merged_query)])
+    def _merge_terms(self, tree: ParseTree, operator: str) -> None:
+        """Merges consecutive keyword terms in a list of parse trees."""
+        if len(tree.children) < 2:
+            raise ValueError("Junction must have at least two items")
 
+        keyword_ops: list[ParseTree] = []
+        other_ops: list[ParseTree] = []
 
-def _is_keyword_or_negated_keyword(item: ParseTree) -> bool:
-    """Check if a ParseTree is a keyword or negated keyword."""
-    if item.data == "keyword_op":
-        return True
-    return (
-        item.data == "negation"
-        and isinstance(item.children[0], Tree)
-        and item.children[0].data == "keyword_op"
-    )
-
-
-def merge_consecutive_keywords(items: list[ParseTree], operator: str) -> list[ParseTree]:
-    """Merges consecutive keyword terms in a list of parse trees."""
-    if len(items) <= 1:
-        return items
-
-    result: list[ParseTree] = []
-    current_keywords: list[ParseTree] = []
-    pending_negation: ParseTree | None = None
-
-    def flush_keywords() -> None:
-        nonlocal pending_negation
-        if current_keywords:
-            if pending_negation:
-                current_keywords.insert(0, pending_negation)
-                pending_negation = None
-
-            keyword_strings = [get_keyword_string(kw) for kw in current_keywords]
-            merged = _create_merged_keyword(keyword_strings, operator)
-            result.append(merged)
-            current_keywords.clear()
-        elif pending_negation:
-            result.append(pending_negation)
-            pending_negation = None
-
-    for item in items:
-        if item.data == "keyword_op":
-            current_keywords.append(item)
-        elif _is_keyword_or_negated_keyword(item):
-            if current_keywords:
-                current_keywords.append(item)
+        one_positive_kw_op = False
+        for child in tree.children:
+            if isinstance(child, Token):
+                raise ValueError("Junction children must be trees")
+            if child.data == "keyword_op":
+                keyword_ops.append(child)
+                one_positive_kw_op = True
+            elif child.data == "negation":
+                # We can only negate keywords if they appear together with other keywords as
+                # Lucene/tantivy do not support stand-alone negation queries
+                negation_child = child.children[0]
+                if isinstance(negation_child, Tree) and negation_child.data == "keyword_op":
+                    keyword_ops.append(self._negate_keyword(negation_child))
+                else:
+                    other_ops.append(child)
             else:
-                flush_keywords()
-                pending_negation = item
+                other_ops.append(child)
+
+        # Nothing to merge for less than two keyword operators
+        if len(keyword_ops) < 2 or one_positive_kw_op is False:
+            return
+
+        merged_string = self._merge_keyword_string(keyword_ops, operator)
+
+        if len(other_ops) == 0:
+            tree.data = Token("RULE", "keyword_op")
+            tree.children = [Token("STRING", merged_string)]
         else:
-            flush_keywords()
-            result.append(item)
+            merged_op = Tree(Token("RULE", "keyword_op"), [Token("STRING", merged_string)])
 
-    flush_keywords()
-    return result
+            # NOTE: We assume that keyword ops are cheaper than other ops and always put them first
+            tree.children = [merged_op, *other_ops]
 
+    def _negate_keyword(self, tree: ParseTree) -> ParseTree:
+        """Negates a keyword operator."""
+        if len(tree.children) != 1:
+            raise ValueError("Negation must have exactly one child")
 
-class MergeKeywords(Transformer[Token, ParseTree]):
-    """
-    This transformer merges lucene queries into a single query string.
-    And optionally merges keyword terms into a single keyword term.
-    When on the same level.
-    """
+        child = tree.children[0]
+        if not isinstance(child, Token):
+            raise ValueError("Negation must have a token child")
 
-    def _merge_terms(
-        self, items: list[ParseTree | Token], operator: str, rule_name: str
-    ) -> ParseTree:
-        if not _are_parse_trees(items):
-            return Tree(Token("RULE", rule_name), items)
+        return Tree(Token("RULE", "keyword_op"), [Token("STRING", f"-({child})")])
 
-        # Merge consecutive keyword terms
-        merged_items = merge_consecutive_keywords(items, operator)
-        if len(merged_items) == 1:
-            return merged_items[0]
-        return Tree(Token("RULE", rule_name), merged_items)  # type: ignore
-
-    def conjunction(self, items: list[ParseTree | Token]) -> ParseTree:
-        logger.trace(f"Conjunction items: {items}")
-        return self._merge_terms(items, "AND", "conjunction")
-
-    def disjunction(self, items: list[ParseTree | Token]) -> ParseTree:
-        return self._merge_terms(items, "OR", "disjunction")
-
-    def query(self, items: list[ParseTree | Token]) -> ParseTree:
-        return Tree(Token("RULE", "query"), items)
+    def _merge_keyword_string(self, keyword_ops: list[ParseTree], operator: str) -> str:
+        """Merges a list of keyword operators into a single string."""
+        keyword_strings: list[str] = []
+        for keyword_op in keyword_ops:
+            child = keyword_op.children[0]
+            if isinstance(child, Token):
+                if child.startswith("-"):
+                    # Negations must not be wrapped in parentheses again
+                    keyword_strings.append(child)
+                else:
+                    keyword_strings.append(f"({child})")
+        return f" {operator} ".join(keyword_strings)

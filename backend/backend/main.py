@@ -25,6 +25,8 @@ from backend.config import (
     configure_logging,
 )
 from backend.croissant_store import CroissantStore, Document
+from backend.engine import Engine
+from backend.engine.executor import ColumnHighlights, DocumentHighlights
 from backend.fainder_index import FainderIndex
 from backend.indexing import (
     generate_embedding_index,
@@ -32,7 +34,6 @@ from backend.indexing import (
     generate_metadata,
 )
 from backend.lucene_connector import LuceneConnector
-from backend.query_evaluator import ColumnHighlights, DocumentHighlights, QueryEvaluator
 
 # Global variables to store persistent objects
 settings = Settings()  # type: ignore
@@ -67,7 +68,7 @@ column_index = ColumnIndex(
     use_embeddings=settings.use_embeddings,
     ef=settings.hnsw_ef,
 )
-query_evaluator = QueryEvaluator(
+engine = Engine(
     lucene_connector=lucene_connector,
     fainder_index=fainder_index,
     hnsw_index=column_index,
@@ -85,12 +86,12 @@ cors_origins = [
 async def lifespan(app: FastAPI) -> AsyncGenerator[Any, Any]:
     # Startup
     croissant_store.load_documents()
-    query_evaluator.lucene_connector.connect()
+    engine.lucene_connector.connect()
 
     yield
 
     # Shutdown
-    query_evaluator.lucene_connector.close()
+    engine.lucene_connector.close()
 
 
 app = FastAPI(lifespan=lifespan)
@@ -155,7 +156,7 @@ async def query(request: QueryRequest) -> QueryResponse:
 
     try:
         start_time = time.perf_counter()
-        doc_ids, (doc_highlights, col_highlights) = query_evaluator.execute(
+        doc_ids, (doc_highlights, col_highlights) = engine.execute(
             query=request.query,
             fainder_mode=request.fainder_mode,
             enable_highlighting=request.enable_highlighting,
@@ -275,7 +276,7 @@ async def update_indices() -> MessageResponse:
             histogram_path=settings.histogram_path,
         )
         column_index.update(path=settings.hnsw_index_path, metadata=metadata)
-        query_evaluator.update_indices(
+        engine.update_indices(
             fainder_index=fainder_index, hnsw_index=column_index, metadata=metadata
         )
 
@@ -295,13 +296,13 @@ async def update_indices() -> MessageResponse:
 @app.get("/cache_statistics")
 async def cache_statistics() -> CacheInfo:
     """Return statistics about the query result cache."""
-    return query_evaluator.cache_info()
+    return engine.cache_info()
 
 
 @app.get("/clear_cache")
 async def clear_cache() -> MessageResponse:
     """Clear the query result cache."""
-    query_evaluator.clear_cache()
+    engine.clear_cache()
     logger.info("Cache cleared successfully")
     return MessageResponse(message="Cache cleared successfully")
 

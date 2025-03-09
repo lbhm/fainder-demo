@@ -1,27 +1,40 @@
+from copy import deepcopy
+
 import pytest
 
-from backend.engine.optimizer import CostSorter, MergeKeywords
+from backend.engine import Optimizer
 
-from .assets.test_cases_optimizer import TEST_CASES_OPTIMIZER, CaseOpt
+from .assets.test_cases_optimizer import OPTIMIZER_CASES, OptimizerCase
 
 
 @pytest.mark.parametrize(
     ("test_name", "test_case"),
-    [(name, case) for name, case in TEST_CASES_OPTIMIZER.items()],
+    [(name, case) for name, case in OPTIMIZER_CASES.items()],
 )
-def test_optimizer(test_name: str, test_case: CaseOpt) -> None:
-    cost_sorter = CostSorter()
-    merge_keywords = MergeKeywords()
+def test_cost_sorting(test_name: str, test_case: OptimizerCase) -> None:
+    optimizer = Optimizer(cost_sorting=True, keyword_merging=False, intermediate_filtering=False)
+    plan = deepcopy(test_case["input_tree"])
 
-    # Execute with all configurations
-    result_kw_merge_without_sorting = merge_keywords.transform(test_case["input_parse_tree"])
+    assert test_case["cost_sorting"] == optimizer.optimize(plan)
 
-    assert result_kw_merge_without_sorting == test_case["expected_kw_merge_without_sorting"]
 
-    sorted_tree = cost_sorter.visit(test_case["input_parse_tree"])
+@pytest.mark.parametrize(
+    ("test_name", "test_case"),
+    [(name, case) for name, case in OPTIMIZER_CASES.items()],
+)
+def test_kw_merging(test_name: str, test_case: OptimizerCase) -> None:
+    optimizer = Optimizer(cost_sorting=False, keyword_merging=True, intermediate_filtering=False)
+    plan = deepcopy(test_case["input_tree"])
 
-    assert sorted_tree == test_case["expected_with_sorting"]
+    assert test_case["kw_merging"] == optimizer.optimize(plan)
 
-    result_kw_merge_with_sorting = merge_keywords.transform(sorted_tree)
 
-    assert result_kw_merge_with_sorting == test_case["expected_kw_merge_with_sorting"]
+@pytest.mark.parametrize(
+    ("test_name", "test_case"),
+    [(name, case) for name, case in OPTIMIZER_CASES.items()],
+)
+def test_all_rules(test_name: str, test_case: OptimizerCase) -> None:
+    optimizer = Optimizer(cost_sorting=True, keyword_merging=True, intermediate_filtering=False)
+    plan = deepcopy(test_case["input_tree"])
+
+    assert test_case["all_rules"] == optimizer.optimize(plan)

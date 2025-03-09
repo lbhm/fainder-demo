@@ -44,6 +44,9 @@ dependencies = [
 [project.urls]
 Repository = "https://github.com/lbhm/fainder-demo"
 
+[project.scripts]
+parse-dql = "backend.engine.parser:main"
+
 [dependency-groups]
 dev = [
     "grpc-stubs~=1.53",

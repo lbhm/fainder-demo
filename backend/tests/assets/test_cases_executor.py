@@ -3,13 +3,13 @@ from typing import TypedDict
 from lark import ParseTree, Token, Tree
 
 
-class Case(TypedDict):
+class ExecutorCase(TypedDict):
     query: str
     expected: list[int]
     parse_tree: ParseTree
 
 
-TEST_CASES: dict[str, dict[str, Case]] = {
+EXECUTOR_CASES: dict[str, dict[str, ExecutorCase]] = {
     "basic_keyword": {
         "simple_keyword": {
             "query": "kw('germany')",
@@ -381,7 +381,7 @@ TEST_CASES: dict[str, dict[str, Case]] = {
         },
     },
     "mutliple_operations": {  # test for correct order of operations
-        "multiple_operations_1": {
+        "1": {
             "query": "NOT kw('germany') AND col(pp(0.99;ge;10000000)) OR kw('germany')",
             "expected": [0, 2],
             "parse_tree": Tree(
@@ -423,7 +423,7 @@ TEST_CASES: dict[str, dict[str, Case]] = {
                 ],
             ),
         },
-        "multiple_operations_2": {
+        "2": {
             "query": "NOT kw('germany') AND (col(pp(0.99;ge;10000000)) OR kw('germany'))",
             "expected": [2],
             "parse_tree": Tree(
@@ -468,7 +468,7 @@ TEST_CASES: dict[str, dict[str, Case]] = {
                 ],
             ),
         },
-        "multiple_operations_3": {
+        "3": {
             "query": "(NOT kw('germany') AND col(pp(0.99;ge;10000000))) OR kw('germany')",
             "expected": [0, 2],
             "parse_tree": Tree(
@@ -854,7 +854,7 @@ TEST_CASES: dict[str, dict[str, Case]] = {
     },
 }
 
-INVALID_TEST_CASES: dict[str, dict[str, list[str]]] = {
+INVALID_QUERIES: dict[str, dict[str, list[str]]] = {
     "invalid_syntax": {
         "queries": [
             "keyword()",

@@ -3,34 +3,34 @@ from typing import TypedDict
 from lark import ParseTree, Token, Tree
 
 
-class CaseOpt(TypedDict):
-    input_parse_tree: ParseTree
-    expected_kw_merge_without_sorting: ParseTree
-    expected_kw_merge_with_sorting: ParseTree
-    expected_with_sorting: ParseTree
+class OptimizerCase(TypedDict):
+    input_tree: ParseTree
+    kw_merging: ParseTree
+    cost_sorting: ParseTree
+    all_rules: ParseTree
 
 
-TEST_CASES_OPTIMIZER: dict[str, CaseOpt] = {
-    "test_only_one_kw": {
-        "input_parse_tree": Tree(
+OPTIMIZER_CASES: dict[str, OptimizerCase] = {
+    "only_one_kw": {
+        "input_tree": Tree(
             Token("RULE", "query"),
             [Tree(Token("RULE", "keyword_op"), [Token("STRING", "'germany'")])],
         ),
-        "expected_kw_merge_without_sorting": Tree(
+        "kw_merging": Tree(
             Token("RULE", "query"),
-            [Tree(Token("RULE", "keyword_op"), [Token("STRING", "'germany'")])],
+            [Tree(Token("RULE", "keyword_op"), [Token("STRING", "germany")])],
         ),
-        "expected_kw_merge_with_sorting": Tree(
+        "all_rules": Tree(
             Token("RULE", "query"),
-            [Tree(Token("RULE", "keyword_op"), [Token("STRING", "'germany'")])],
+            [Tree(Token("RULE", "keyword_op"), [Token("STRING", "germany")])],
         ),
-        "expected_with_sorting": Tree(
+        "cost_sorting": Tree(
             Token("RULE", "query"),
-            [Tree(Token("RULE", "keyword_op"), [Token("STRING", "'germany'")])],
+            [Tree(Token("RULE", "keyword_op"), [Token("STRING", "germany")])],
         ),
     },
-    "test_multiple_kws_with_and": {
-        "input_parse_tree": Tree(
+    "multiple_kws_with_and": {
+        "input_tree": Tree(
             Token("RULE", "query"),
             [
                 Tree(
@@ -42,29 +42,29 @@ TEST_CASES_OPTIMIZER: dict[str, CaseOpt] = {
                 )
             ],
         ),
-        "expected_kw_merge_without_sorting": Tree(
+        "kw_merging": Tree(
             Token("RULE", "query"),
-            [Tree(Token("RULE", "keyword_op"), [Token("STRING", "'(germany AND france)'")])],
+            [Tree(Token("RULE", "keyword_op"), [Token("STRING", "(germany) AND (france)")])],
         ),
-        "expected_kw_merge_with_sorting": Tree(
+        "all_rules": Tree(
             Token("RULE", "query"),
-            [Tree(Token("RULE", "keyword_op"), [Token("STRING", "'(germany AND france)'")])],
+            [Tree(Token("RULE", "keyword_op"), [Token("STRING", "(germany) AND (france)")])],
         ),
-        "expected_with_sorting": Tree(
+        "cost_sorting": Tree(
             Token("RULE", "query"),
             [
                 Tree(
                     Token("RULE", "conjunction"),
                     [
-                        Tree(Token("RULE", "keyword_op"), [Token("STRING", "'germany'")]),
-                        Tree(Token("RULE", "keyword_op"), [Token("STRING", "'france'")]),
+                        Tree(Token("RULE", "keyword_op"), [Token("STRING", "germany")]),
+                        Tree(Token("RULE", "keyword_op"), [Token("STRING", "france")]),
                     ],
                 )
             ],
         ),
     },
-    "test_multiple_kws_with_or": {
-        "input_parse_tree": Tree(
+    "multiple_kws_with_or": {
+        "input_tree": Tree(
             Token("RULE", "query"),
             [
                 Tree(
@@ -76,29 +76,29 @@ TEST_CASES_OPTIMIZER: dict[str, CaseOpt] = {
                 )
             ],
         ),
-        "expected_kw_merge_without_sorting": Tree(
+        "kw_merging": Tree(
             Token("RULE", "query"),
-            [Tree(Token("RULE", "keyword_op"), [Token("STRING", "'(germany OR france)'")])],
+            [Tree(Token("RULE", "keyword_op"), [Token("STRING", "(germany) OR (france)")])],
         ),
-        "expected_kw_merge_with_sorting": Tree(
+        "all_rules": Tree(
             Token("RULE", "query"),
-            [Tree(Token("RULE", "keyword_op"), [Token("STRING", "'(germany OR france)'")])],
+            [Tree(Token("RULE", "keyword_op"), [Token("STRING", "(germany) OR (france)")])],
         ),
-        "expected_with_sorting": Tree(
+        "cost_sorting": Tree(
             Token("RULE", "query"),
             [
                 Tree(
                     Token("RULE", "disjunction"),
                     [
-                        Tree(Token("RULE", "keyword_op"), [Token("STRING", "'germany'")]),
-                        Tree(Token("RULE", "keyword_op"), [Token("STRING", "'france'")]),
+                        Tree(Token("RULE", "keyword_op"), [Token("STRING", "germany")]),
+                        Tree(Token("RULE", "keyword_op"), [Token("STRING", "france")]),
                     ],
                 )
             ],
         ),
     },
-    "test_multiple_kws_with_not_and": {
-        "input_parse_tree": Tree(
+    "multiple_kws_with_not_and": {
+        "input_tree": Tree(
             Token("RULE", "query"),
             [
                 Tree(
@@ -115,15 +115,15 @@ TEST_CASES_OPTIMIZER: dict[str, CaseOpt] = {
                 )
             ],
         ),
-        "expected_kw_merge_without_sorting": Tree(
+        "kw_merging": Tree(
             Token("RULE", "query"),
-            [Tree(Token("RULE", "keyword_op"), [Token("STRING", "'(-: (germany) AND france)'")])],
+            [Tree(Token("RULE", "keyword_op"), [Token("STRING", "-(germany) AND (france)")])],
         ),
-        "expected_kw_merge_with_sorting": Tree(
+        "all_rules": Tree(
             Token("RULE", "query"),
-            [Tree(Token("RULE", "keyword_op"), [Token("STRING", "'(-: (germany) AND france)'")])],
+            [Tree(Token("RULE", "keyword_op"), [Token("STRING", "-(germany) AND (france)")])],
         ),
-        "expected_with_sorting": Tree(
+        "cost_sorting": Tree(
             Token("RULE", "query"),
             [
                 Tree(
@@ -132,17 +132,17 @@ TEST_CASES_OPTIMIZER: dict[str, CaseOpt] = {
                         Tree(
                             Token("RULE", "negation"),
                             [
-                                Tree(Token("RULE", "keyword_op"), [Token("STRING", "'germany'")]),
+                                Tree(Token("RULE", "keyword_op"), [Token("STRING", "germany")]),
                             ],
                         ),
-                        Tree(Token("RULE", "keyword_op"), [Token("STRING", "'france'")]),
+                        Tree(Token("RULE", "keyword_op"), [Token("STRING", "france")]),
                     ],
                 )
             ],
         ),
     },
-    "test_multiple_kws_with_and_or": {
-        "input_parse_tree": Tree(
+    "multiple_kws_with_and_or": {
+        "input_tree": Tree(
             Token("RULE", "query"),
             [
                 Tree(
@@ -160,36 +160,36 @@ TEST_CASES_OPTIMIZER: dict[str, CaseOpt] = {
                 )
             ],
         ),
-        "expected_kw_merge_without_sorting": Tree(
+        "kw_merging": Tree(
             Token("RULE", "query"),
             [
                 Tree(
                     Token("RULE", "keyword_op"),
-                    [Token("STRING", "'((germany AND france) OR spain)'")],
+                    [Token("STRING", "((germany) AND (france)) OR (spain)")],
                 )
             ],
         ),
-        "expected_kw_merge_with_sorting": Tree(
+        "all_rules": Tree(
             Token("RULE", "query"),
             [
                 Tree(
                     Token("RULE", "keyword_op"),
-                    [Token("STRING", "'(spain OR (germany AND france))'")],
+                    [Token("STRING", "(spain) OR ((germany) AND (france))")],
                 )
             ],
         ),
-        "expected_with_sorting": Tree(
+        "cost_sorting": Tree(
             Token("RULE", "query"),
             [
                 Tree(
                     Token("RULE", "disjunction"),
                     [
-                        Tree(Token("RULE", "keyword_op"), [Token("STRING", "'spain'")]),
+                        Tree(Token("RULE", "keyword_op"), [Token("STRING", "spain")]),
                         Tree(
                             Token("RULE", "conjunction"),
                             [
-                                Tree(Token("RULE", "keyword_op"), [Token("STRING", "'germany'")]),
-                                Tree(Token("RULE", "keyword_op"), [Token("STRING", "'france'")]),
+                                Tree(Token("RULE", "keyword_op"), [Token("STRING", "germany")]),
+                                Tree(Token("RULE", "keyword_op"), [Token("STRING", "france")]),
                             ],
                         ),
                     ],
@@ -197,152 +197,321 @@ TEST_CASES_OPTIMIZER: dict[str, CaseOpt] = {
             ],
         ),
     },
-    "test_multiple_kws_with_col_in_between_and": {
-        "input_parse_tree": Tree(
+    "nested_and_or_not": {
+        # KW("a") OR KW("b") AND COL(NAME("x";0)) OR KW("c") OR NOT(KW("d")) AND
+        # NOT(COL(NAME("y";0))) AND NOT(NOT(KW("e"))) AND KW("f")
+        "input_tree": Tree(
             Token("RULE", "query"),
             [
                 Tree(
-                    "conjunction",
+                    "disjunction",
                     [
+                        Tree(Token("RULE", "keyword_op"), [Token("STRING", '"a"')]),
                         Tree(
-                            Token("RULE", "conjunction"),
+                            "conjunction",
                             [
-                                Tree(Token("RULE", "keyword_op"), [Token("STRING", "'germany'")]),
+                                Tree(Token("RULE", "keyword_op"), [Token("STRING", '"b"')]),
                                 Tree(
                                     Token("RULE", "col_op"),
                                     [
                                         Tree(
-                                            Token("RULE", "percentile_op"),
+                                            Token("RULE", "name_op"),
+                                            [Token("STRING", '"x"'), Token("INT", "0")],
+                                        )
+                                    ],
+                                ),
+                            ],
+                        ),
+                        Tree(Token("RULE", "keyword_op"), [Token("STRING", '"c"')]),
+                        Tree(
+                            "conjunction",
+                            [
+                                Tree(
+                                    "negation",
+                                    [
+                                        Tree(
+                                            Token("RULE", "keyword_op"),
+                                            [Token("STRING", '"d"')],
+                                        )
+                                    ],
+                                ),
+                                Tree(
+                                    "negation",
+                                    [
+                                        Tree(
+                                            Token("RULE", "col_op"),
                                             [
-                                                Token("FLOAT", "0.5"),
-                                                Token("COMPARISON", "ge"),
-                                                Token("SIGNED_NUMBER", "50"),
+                                                Tree(
+                                                    Token("RULE", "name_op"),
+                                                    [
+                                                        Token("STRING", '"y"'),
+                                                        Token("INT", "0"),
+                                                    ],
+                                                )
                                             ],
                                         )
                                     ],
                                 ),
-                                Tree(Token("RULE", "keyword_op"), [Token("STRING", "'france'")]),
-                            ],
-                        )
-                    ],
-                )
-            ],
-        ),
-        "expected_kw_merge_without_sorting": Tree(
-            Token("RULE", "query"),
-            [
-                Tree(
-                    Token("RULE", "conjunction"),
-                    [
-                        Tree(Token("RULE", "keyword_op"), [Token("STRING", "'(germany)'")]),
-                        Tree(
-                            Token("RULE", "col_op"),
-                            [
                                 Tree(
-                                    Token("RULE", "percentile_op"),
+                                    "negation",
                                     [
-                                        Token("FLOAT", "0.5"),
-                                        Token("COMPARISON", "ge"),
-                                        Token("SIGNED_NUMBER", "50"),
+                                        Tree(
+                                            "negation",
+                                            [
+                                                Tree(
+                                                    Token("RULE", "keyword_op"),
+                                                    [Token("STRING", '"e"')],
+                                                )
+                                            ],
+                                        )
                                     ],
-                                )
-                            ],
-                        ),
-                        Tree(Token("RULE", "keyword_op"), [Token("STRING", "'(france)'")]),
-                    ],
-                )
-            ],
-        ),
-        "expected_kw_merge_with_sorting": Tree(
-            Token("RULE", "query"),
-            [
-                Tree(
-                    Token("RULE", "conjunction"),
-                    [
-                        Tree(
-                            Token("RULE", "keyword_op"),
-                            [Token("STRING", "'(germany AND france)'")],
-                        ),
-                        Tree(
-                            Token("RULE", "col_op"),
-                            [
+                                ),
                                 Tree(
-                                    Token("RULE", "percentile_op"),
-                                    [
-                                        Token("FLOAT", "0.5"),
-                                        Token("COMPARISON", "ge"),
-                                        Token("SIGNED_NUMBER", "50"),
-                                    ],
-                                )
+                                    Token("RULE", "keyword_op"),
+                                    [Token("STRING", '"f"')],
+                                ),
                             ],
                         ),
                     ],
                 )
             ],
         ),
-        "expected_with_sorting": Tree(
+        "kw_merging": Tree(
             Token("RULE", "query"),
             [
                 Tree(
-                    "conjunction",
+                    "disjunction",
                     [
+                        Tree(Token("RULE", "keyword_op"), [Token("STRING", "(a) OR (c)")]),
                         Tree(
-                            Token("RULE", "conjunction"),
+                            "conjunction",
                             [
-                                Tree(Token("RULE", "keyword_op"), [Token("STRING", "'germany'")]),
-                                Tree(Token("RULE", "keyword_op"), [Token("STRING", "'france'")]),
+                                Tree(Token("RULE", "keyword_op"), [Token("STRING", "b")]),
                                 Tree(
                                     Token("RULE", "col_op"),
                                     [
                                         Tree(
-                                            Token("RULE", "percentile_op"),
+                                            Token("RULE", "name_op"),
+                                            [Token("STRING", "x"), Token("INT", "0")],
+                                        )
+                                    ],
+                                ),
+                            ],
+                        ),
+                        Tree(
+                            "conjunction",
+                            [
+                                Tree(
+                                    Token("RULE", "keyword_op"),
+                                    [Token("STRING", "-(d) AND (f)")],
+                                ),
+                                Tree(
+                                    "negation",
+                                    [
+                                        Tree(
+                                            Token("RULE", "col_op"),
                                             [
-                                                Token("FLOAT", "0.5"),
-                                                Token("COMPARISON", "ge"),
-                                                Token("SIGNED_NUMBER", "50"),
+                                                Tree(
+                                                    Token("RULE", "name_op"),
+                                                    [
+                                                        Token("STRING", "y"),
+                                                        Token("INT", "0"),
+                                                    ],
+                                                )
+                                            ],
+                                        )
+                                    ],
+                                ),
+                                Tree(
+                                    "negation",
+                                    [
+                                        Tree(
+                                            "negation",
+                                            [
+                                                Tree(
+                                                    Token("RULE", "keyword_op"),
+                                                    [Token("STRING", "e")],
+                                                )
                                             ],
                                         )
                                     ],
                                 ),
                             ],
-                        )
+                        ),
+                    ],
+                )
+            ],
+        ),
+        "all_rules": Tree(
+            Token("RULE", "query"),
+            [
+                Tree(
+                    "disjunction",
+                    [
+                        Tree(Token("RULE", "keyword_op"), [Token("STRING", "(a) OR (c)")]),
+                        Tree(
+                            "conjunction",
+                            [
+                                Tree(Token("RULE", "keyword_op"), [Token("STRING", "b")]),
+                                Tree(
+                                    Token("RULE", "col_op"),
+                                    [
+                                        Tree(
+                                            Token("RULE", "name_op"),
+                                            [Token("STRING", "x"), Token("INT", "0")],
+                                        )
+                                    ],
+                                ),
+                            ],
+                        ),
+                        Tree(
+                            "conjunction",
+                            [
+                                Tree(
+                                    Token("RULE", "keyword_op"),
+                                    [Token("STRING", "-(d) AND (f)")],
+                                ),
+                                Tree(
+                                    "negation",
+                                    [
+                                        Tree(
+                                            "negation",
+                                            [
+                                                Tree(
+                                                    Token("RULE", "keyword_op"),
+                                                    [Token("STRING", "e")],
+                                                )
+                                            ],
+                                        )
+                                    ],
+                                ),
+                                Tree(
+                                    "negation",
+                                    [
+                                        Tree(
+                                            Token("RULE", "col_op"),
+                                            [
+                                                Tree(
+                                                    Token("RULE", "name_op"),
+                                                    [
+                                                        Token("STRING", "y"),
+                                                        Token("INT", "0"),
+                                                    ],
+                                                )
+                                            ],
+                                        )
+                                    ],
+                                ),
+                            ],
+                        ),
+                    ],
+                )
+            ],
+        ),
+        "cost_sorting": Tree(
+            Token("RULE", "query"),
+            [
+                Tree(
+                    "disjunction",
+                    [
+                        Tree(Token("RULE", "keyword_op"), [Token("STRING", "a")]),
+                        Tree(Token("RULE", "keyword_op"), [Token("STRING", "c")]),
+                        Tree(
+                            "conjunction",
+                            [
+                                Tree(Token("RULE", "keyword_op"), [Token("STRING", "b")]),
+                                Tree(
+                                    Token("RULE", "col_op"),
+                                    [
+                                        Tree(
+                                            Token("RULE", "name_op"),
+                                            [Token("STRING", "x"), Token("INT", "0")],
+                                        )
+                                    ],
+                                ),
+                            ],
+                        ),
+                        Tree(
+                            "conjunction",
+                            [
+                                Tree(
+                                    "negation",
+                                    [
+                                        Tree(
+                                            Token("RULE", "keyword_op"),
+                                            [Token("STRING", "d")],
+                                        )
+                                    ],
+                                ),
+                                Tree(
+                                    "negation",
+                                    [
+                                        Tree(
+                                            "negation",
+                                            [
+                                                Tree(
+                                                    Token("RULE", "keyword_op"),
+                                                    [Token("STRING", "e")],
+                                                )
+                                            ],
+                                        )
+                                    ],
+                                ),
+                                Tree(
+                                    Token("RULE", "keyword_op"),
+                                    [Token("STRING", "f")],
+                                ),
+                                Tree(
+                                    "negation",
+                                    [
+                                        Tree(
+                                            Token("RULE", "col_op"),
+                                            [
+                                                Tree(
+                                                    Token("RULE", "name_op"),
+                                                    [
+                                                        Token("STRING", "y"),
+                                                        Token("INT", "0"),
+                                                    ],
+                                                )
+                                            ],
+                                        )
+                                    ],
+                                ),
+                            ],
+                        ),
                     ],
                 )
             ],
         ),
     },
-    "test_multiple_kws_with_col_at_the_end_and": {
-        "input_parse_tree": Tree(
+    "multiple_kws_with_col_in_between_and": {
+        "input_tree": Tree(
             Token("RULE", "query"),
             [
                 Tree(
                     "conjunction",
                     [
+                        Tree(Token("RULE", "keyword_op"), [Token("STRING", "'germany'")]),
                         Tree(
-                            Token("RULE", "conjunction"),
+                            Token("RULE", "col_op"),
                             [
-                                Tree(Token("RULE", "keyword_op"), [Token("STRING", "'germany'")]),
-                                Tree(Token("RULE", "keyword_op"), [Token("STRING", "'france'")]),
                                 Tree(
-                                    Token("RULE", "col_op"),
+                                    Token("RULE", "percentile_op"),
                                     [
-                                        Tree(
-                                            Token("RULE", "percentile_op"),
-                                            [
-                                                Token("FLOAT", "0.5"),
-                                                Token("COMPARISON", "ge"),
-                                                Token("SIGNED_NUMBER", "50"),
-                                            ],
-                                        )
+                                        Token("FLOAT", "0.5"),
+                                        Token("COMPARISON", "ge"),
+                                        Token("SIGNED_NUMBER", "50"),
                                     ],
-                                ),
+                                )
                             ],
-                        )
+                        ),
+                        Tree(Token("RULE", "keyword_op"), [Token("STRING", "'france'")]),
                     ],
                 )
             ],
         ),
-        "expected_kw_merge_without_sorting": Tree(
+        "kw_merging": Tree(
             Token("RULE", "query"),
             [
                 Tree(
@@ -350,7 +519,7 @@ TEST_CASES_OPTIMIZER: dict[str, CaseOpt] = {
                     [
                         Tree(
                             Token("RULE", "keyword_op"),
-                            [Token("STRING", "'(germany AND france)'")],
+                            [Token("STRING", "(germany) AND (france)")],
                         ),
                         Tree(
                             Token("RULE", "col_op"),
@@ -369,7 +538,7 @@ TEST_CASES_OPTIMIZER: dict[str, CaseOpt] = {
                 )
             ],
         ),
-        "expected_kw_merge_with_sorting": Tree(
+        "all_rules": Tree(
             Token("RULE", "query"),
             [
                 Tree(
@@ -377,7 +546,7 @@ TEST_CASES_OPTIMIZER: dict[str, CaseOpt] = {
                     [
                         Tree(
                             Token("RULE", "keyword_op"),
-                            [Token("STRING", "'(germany AND france)'")],
+                            [Token("STRING", "(germany) AND (france)")],
                         ),
                         Tree(
                             Token("RULE", "col_op"),
@@ -396,32 +565,133 @@ TEST_CASES_OPTIMIZER: dict[str, CaseOpt] = {
                 )
             ],
         ),
-        "expected_with_sorting": Tree(
+        "cost_sorting": Tree(
             Token("RULE", "query"),
             [
                 Tree(
                     "conjunction",
                     [
+                        Tree(Token("RULE", "keyword_op"), [Token("STRING", "germany")]),
+                        Tree(Token("RULE", "keyword_op"), [Token("STRING", "france")]),
                         Tree(
-                            Token("RULE", "conjunction"),
+                            Token("RULE", "col_op"),
                             [
-                                Tree(Token("RULE", "keyword_op"), [Token("STRING", "'germany'")]),
-                                Tree(Token("RULE", "keyword_op"), [Token("STRING", "'france'")]),
                                 Tree(
-                                    Token("RULE", "col_op"),
+                                    Token("RULE", "percentile_op"),
                                     [
-                                        Tree(
-                                            Token("RULE", "percentile_op"),
-                                            [
-                                                Token("FLOAT", "0.5"),
-                                                Token("COMPARISON", "ge"),
-                                                Token("SIGNED_NUMBER", "50"),
-                                            ],
-                                        )
+                                        Token("FLOAT", "0.5"),
+                                        Token("COMPARISON", "ge"),
+                                        Token("SIGNED_NUMBER", "50"),
                                     ],
-                                ),
+                                )
                             ],
-                        )
+                        ),
+                    ],
+                )
+            ],
+        ),
+    },
+    "multiple_kws_with_col_at_the_end_and": {
+        "input_tree": Tree(
+            Token("RULE", "query"),
+            [
+                Tree(
+                    "conjunction",
+                    [
+                        Tree(Token("RULE", "keyword_op"), [Token("STRING", "'germany'")]),
+                        Tree(Token("RULE", "keyword_op"), [Token("STRING", "'france'")]),
+                        Tree(
+                            Token("RULE", "col_op"),
+                            [
+                                Tree(
+                                    Token("RULE", "percentile_op"),
+                                    [
+                                        Token("FLOAT", "0.5"),
+                                        Token("COMPARISON", "ge"),
+                                        Token("SIGNED_NUMBER", "50"),
+                                    ],
+                                )
+                            ],
+                        ),
+                    ],
+                )
+            ],
+        ),
+        "kw_merging": Tree(
+            Token("RULE", "query"),
+            [
+                Tree(
+                    Token("RULE", "conjunction"),
+                    [
+                        Tree(
+                            Token("RULE", "keyword_op"),
+                            [Token("STRING", "(germany) AND (france)")],
+                        ),
+                        Tree(
+                            Token("RULE", "col_op"),
+                            [
+                                Tree(
+                                    Token("RULE", "percentile_op"),
+                                    [
+                                        Token("FLOAT", "0.5"),
+                                        Token("COMPARISON", "ge"),
+                                        Token("SIGNED_NUMBER", "50"),
+                                    ],
+                                )
+                            ],
+                        ),
+                    ],
+                )
+            ],
+        ),
+        "all_rules": Tree(
+            Token("RULE", "query"),
+            [
+                Tree(
+                    Token("RULE", "conjunction"),
+                    [
+                        Tree(
+                            Token("RULE", "keyword_op"),
+                            [Token("STRING", "(germany) AND (france)")],
+                        ),
+                        Tree(
+                            Token("RULE", "col_op"),
+                            [
+                                Tree(
+                                    Token("RULE", "percentile_op"),
+                                    [
+                                        Token("FLOAT", "0.5"),
+                                        Token("COMPARISON", "ge"),
+                                        Token("SIGNED_NUMBER", "50"),
+                                    ],
+                                )
+                            ],
+                        ),
+                    ],
+                )
+            ],
+        ),
+        "cost_sorting": Tree(
+            Token("RULE", "query"),
+            [
+                Tree(
+                    "conjunction",
+                    [
+                        Tree(Token("RULE", "keyword_op"), [Token("STRING", "germany")]),
+                        Tree(Token("RULE", "keyword_op"), [Token("STRING", "france")]),
+                        Tree(
+                            Token("RULE", "col_op"),
+                            [
+                                Tree(
+                                    Token("RULE", "percentile_op"),
+                                    [
+                                        Token("FLOAT", "0.5"),
+                                        Token("COMPARISON", "ge"),
+                                        Token("SIGNED_NUMBER", "50"),
+                                    ],
+                                )
+                            ],
+                        ),
                     ],
                 )
             ],

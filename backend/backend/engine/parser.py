@@ -1,10 +1,10 @@
-import sys
+import argparse
 from typing import Literal
 
 from lark import Lark
 
 
-class DQLParser(Lark):
+class Parser(Lark):
     GRAMMAR = """
     query:          tbl_expr
 
@@ -57,11 +57,14 @@ class DQLParser(Lark):
         strict: bool = True,
     ) -> None:
         super().__init__(  # pyright: ignore[reportUnknownMemberType]
-            DQLParser.GRAMMAR, start="query", parser=parser, lexer=lexer, strict=strict
+            Parser.GRAMMAR, start="query", parser=parser, lexer=lexer, strict=strict
         )
 
 
-if __name__ == "__main__":
-    parser = DQLParser()
+def main() -> None:
+    argparser = argparse.ArgumentParser("DQL Parser")
+    argparser.add_argument("query", type=str, help="DQL query")
+    args = argparser.parse_args()
 
-    print(parser.parse(sys.argv[1]).pretty(), end="")
+    parser = Parser()
+    print(parser.parse(args.query).pretty(), end="")
