@@ -17,7 +17,7 @@ index for distibution-aware dataset search. The demo consists of three component
 
 - **Frontend**: Web-based user interface for interacting with the search engine.
 - **Backend**: Responsible for query parsing and processing [percentile predicates](https://doi.org/10.14778/3681954.3681999).
-- **Lucene**: An extension of [Apache Lucene](https://lucene.apache.org/) for handling keyword predicates.
+- **Lucene**: An extension of [Apache Lucene](https://lucene.apache.org/) for handling keyword predicates. (deprecated)
 
 The repository is structured as follows:
 
@@ -49,13 +49,6 @@ LUCENE_DIR=lucene            # Subdirectory containing a Lucene index for keywor
 METADATA_FILE=metadata.json  # JSON file with metadata about a collection
 QUERY_CACHE_SIZE=128         # Maximum number of query resuls to cache
 DATASET_SLUG=kaggleRef       # Slug specific to the dataset collection
-
-# Lucene
-LUCENE_HOST=127.0.0.1               # Hostname of the Lucene service
-LUCENE_PORT=8001                    # Port of the Lucene service
-LUCENE_MAX_RESULTS=100000           # Maximum number of search results returned by Lucene
-LUCENE_MIN_SCORE=1.0                # Minimum score for a document to be returned
-LUCENE_CHUNK_SIZE=1024              # Maximum number of documents per chunk for streaming
 
 # Fainder
 FAINDER_N_CLUSTERS=50               # Number of index clusters
@@ -153,7 +146,7 @@ components in development mode:
 FASTAPI_MODE=dev NUXT_MODE=dev docker compose up --build --watch
 ```
 
-## Generating gRPC Code
+## Generating gRPC Code (Deprecated)
 
 The Fainder backend uses gRPC to communicate with the Lucene service. To generate the necessary
 code, install the development dependencies in `backend/`, activate your virtual environment, and

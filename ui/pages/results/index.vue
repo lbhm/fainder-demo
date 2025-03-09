@@ -200,6 +200,12 @@ page
                       <div class="metadata-item">
                         <span class="metadata-label">Creator</span>
                         <span
+                          v-if="selectedResult?.['creator-name']"
+                          class="metadata-value highlight-text"
+                          v-html="selectedResult?.['creator-name']"
+                        />
+                        <span
+                          v-else
                           class="metadata-value highlight-text"
                           v-html="selectedResult?.creator?.name || '-'"
                         />
@@ -389,9 +395,9 @@ page
                       <tr>
                         <td><strong>Creator</strong></td>
                         <td
-                          v-if="selectedResult?.creator - name"
+                          v-if="selectedResult?.['creator-name']"
                           class="highlight-text"
-                          v-html="selectedResult?.creator - name"
+                          v-html="selectedResult?.['creator-name']"
                         />
                         <td
                           v-else
@@ -402,9 +408,9 @@ page
                       <tr>
                         <td><strong>Publisher</strong></td>
                         <td
-                          v-if="selectedResult?.publisher - name"
+                          v-if="selectedResult?.['publisher-name']"
                           class="highlight-text"
-                          v-html="selectedResult?.publisher - name"
+                          v-html="selectedResult?.['publisher-name']"
                         />
                         <td
                           v-else
