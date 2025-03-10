@@ -1,5 +1,4 @@
 import argparse
-import json
 import os
 import sys
 from collections import defaultdict
@@ -9,6 +8,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 import hnswlib
 import numpy as np
+import orjson
 import tantivy
 from fainder.preprocessing.clustering import cluster_histograms
 from fainder.preprocessing.percentile_index import create_index
@@ -59,8 +59,8 @@ def generate_metadata(
     for doc_id, path in enumerate(sorted(croissant_path.iterdir())):
         if path.is_file():
             # Read the file and add a document ID to it
-            with path.open("r") as file:
-                json_doc: dict[str, Any] = json.load(file)
+            with path.open("rb") as file:
+                json_doc: dict[str, Any] = orjson.loads(file.read())
 
             json_doc["id"] = doc_id
             if return_documents:
@@ -95,8 +95,8 @@ def generate_metadata(
                 logger.error(f"KeyError {e} reading file {path}")
 
             # Replace the file with the updated metadata
-            with path.open("w") as file:
-                json.dump(json_doc, file)
+            with path.open("wb") as file:
+                file.write(orjson.dumps(json_doc))
 
             # Modify the document to be ingested by Tantivy
             json_doc["keywords"] = "; ".join(json_doc["keywords"])
@@ -116,17 +116,18 @@ def generate_metadata(
 
     # Save the mappings and indices
     logger.info("Saving metadata")
-    with metadata_path.open("w") as file:
-        json.dump(
-            {
-                "doc_to_cols": {k: list(v) for k, v in doc_to_cols.items()},
-                "col_to_doc": col_to_doc,
-                "col_to_hist": col_to_hist,
-                "hist_to_col": hist_to_col,
-                "name_to_vector": name_to_vector,
-                "vector_to_cols": {k: list(v) for k, v in vector_to_cols.items()},
-            },
-            file,
+    with metadata_path.open("wb") as file:
+        file.write(
+            orjson.dumps(
+                {
+                    "doc_to_cols": {str(k): list(v) for k, v in doc_to_cols.items()},
+                    "col_to_doc": {str(k): v for k, v in col_to_doc.items()},
+                    "col_to_hist": {str(k): v for k, v in col_to_hist.items()},
+                    "hist_to_col": {str(k): v for k, v in hist_to_col.items()},
+                    "name_to_vector": name_to_vector,
+                    "vector_to_cols": {str(k): list(v) for k, v in vector_to_cols.items()},
+                },
+            )
         )
 
     return hists, name_to_vector, json_docs, tantivy_index

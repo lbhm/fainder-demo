@@ -28,6 +28,11 @@ class Metadata(BaseModel):
     vector_to_cols: dict[int, set[int]]
 
 
+class CroissantStoreType(str, Enum):
+    memory = "memory"
+    disk = "disk"
+
+
 class Settings(BaseSettings):
     # Path settings
     data_dir: DirectoryPath
@@ -38,6 +43,9 @@ class Settings(BaseSettings):
     tantivy_dir: Path = Path("tantivy")
     metadata_file: Path = Path("metadata.json")
     dataset_slug: str = "kaggleRef"
+
+    # CroissantStore settings
+    croissant_store_type: CroissantStoreType = CroissantStoreType.memory
 
     # Engine settings
     query_cache_size: int = 128

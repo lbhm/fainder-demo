@@ -1,11 +1,11 @@
 import copy
-import json
 import time
 import traceback
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
 
+import orjson
 from fastapi import FastAPI, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from lark import UnexpectedInput
@@ -16,6 +16,7 @@ from backend.config import (
     CacheInfo,
     ColumnHighlights,
     ColumnSearchError,
+    CroissantStoreType,
     DocumentHighlights,
     FainderError,
     IndexingError,
@@ -26,7 +27,12 @@ from backend.config import (
     Settings,
     configure_logging,
 )
-from backend.croissant_store import CroissantStore, Document
+from backend.croissant_store import (
+    CroissantStore,
+    DiskCroissantStore,
+    Document,
+    MemoryCroissantStore,
+)
 from backend.engine import Engine
 from backend.fainder_index import FainderIndex
 from backend.indexing import (
@@ -51,10 +57,18 @@ configure_logging(
         "uvicorn.error",
     ],
 )
-with settings.metadata_path.open() as file:
-    metadata = Metadata(**json.load(file))
+with settings.metadata_path.open("rb") as file:
+    metadata = Metadata(**orjson.loads(file.read()))
 
-croissant_store = CroissantStore(settings.croissant_path, settings.dataset_slug)
+# Initialize the appropriate CroissantStore based on configuration
+if settings.croissant_store_type == CroissantStoreType.memory:
+    croissant_store: CroissantStore = MemoryCroissantStore(
+        settings.croissant_path, settings.dataset_slug
+    )
+else:
+    croissant_store = DiskCroissantStore(settings.croissant_path, settings.dataset_slug)
+
+
 tantivy_index = TantivyIndex(settings.tantivy_path)
 fainder_index = FainderIndex(
     metadata=metadata,
@@ -219,7 +233,7 @@ async def upload_files(files: list[UploadFile]) -> MessageResponse:
             if not file.filename.endswith(".json"):
                 raise HTTPException(status_code=400, detail="Only .json files are accepted")
             content = await file.read()
-            doc = json.loads(content.decode("utf-8"))
+            doc = orjson.loads(content.decode("utf-8"))
             croissant_store.add_document(doc)
             logger.debug(f"Uploaded file: {file.filename}")
 
@@ -268,7 +282,7 @@ async def update_indices() -> MessageResponse:
         del hists, name_to_vector, documents
 
         with settings.metadata_path.open() as file:
-            metadata = Metadata(**json.load(file))
+            metadata = Metadata(**orjson.loads(file.read()))
         fainder_index.update(
             metadata=metadata,
             rebinning_path=settings.rebinning_index_path,
