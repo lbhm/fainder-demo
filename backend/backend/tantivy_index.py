@@ -33,12 +33,11 @@ class TantivyIndex:
         """
         Load the index from the index path. If the index does not exist, create a new index.
         """
-        if recreate:
+        tantivy_path = Path(self.index_path)
+        if recreate and tantivy_path.exists():
             # delete the index if it already exists to make sure we start from scratch
-            tantivy_path = Path(self.index_path)
-            if tantivy_path.exists():
-                shutil.rmtree(tantivy_path, ignore_errors=True)
-                tantivy_path.mkdir(parents=True, exist_ok=True)
+            shutil.rmtree(tantivy_path, ignore_errors=True)
+        tantivy_path.mkdir(parents=True, exist_ok=True)
         return tantivy.Index(schema, self.index_path, not recreate)
 
     def add_document(self, index: tantivy.Index, doc: dict[str, Any]) -> None:
