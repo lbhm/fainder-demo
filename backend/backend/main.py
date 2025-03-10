@@ -233,7 +233,7 @@ async def upload_files(files: list[UploadFile]) -> MessageResponse:
             if not file.filename.endswith(".json"):
                 raise HTTPException(status_code=400, detail="Only .json files are accepted")
             content = await file.read()
-            doc = orjson.loads(content.decode("utf-8"))
+            doc = orjson.loads(content)
             croissant_store.add_document(doc)
             logger.debug(f"Uploaded file: {file.filename}")
 
