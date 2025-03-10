@@ -3,7 +3,7 @@ from functools import lru_cache
 from backend.column_index import ColumnIndex
 from backend.config import CacheInfo, FainderMode, Metadata
 from backend.fainder_index import FainderIndex
-from backend.lucene_connector import LuceneConnector
+from backend.tantivy_index import TantivyIndex
 
 from .executor import Executor, Highlights
 from .optimizer import Optimizer
@@ -13,16 +13,15 @@ from .parser import Parser
 class Engine:
     def __init__(
         self,
-        lucene_connector: LuceneConnector,
+        tantivy_index: TantivyIndex,
         fainder_index: FainderIndex,
         hnsw_index: ColumnIndex,
         metadata: Metadata,
         cache_size: int = 128,
     ) -> None:
-        self.lucene_connector = lucene_connector
         self.parser = Parser()
         self.optimizer = Optimizer()
-        self.executor = Executor(self.lucene_connector, fainder_index, hnsw_index, metadata)
+        self.executor = Executor(tantivy_index, fainder_index, hnsw_index, metadata)
 
         # NOTE: Don't use lru_cache on methods
         # See https://docs.astral.sh/ruff/rules/cached-instance-method/ for details
@@ -30,11 +29,12 @@ class Engine:
 
     def update_indices(
         self,
+        tantivy_index: TantivyIndex,
         fainder_index: FainderIndex,
         hnsw_index: ColumnIndex,
         metadata: Metadata,
     ) -> None:
-        self.executor = Executor(self.lucene_connector, fainder_index, hnsw_index, metadata)
+        self.executor = Executor(tantivy_index, fainder_index, hnsw_index, metadata)
         self.clear_cache()
 
     def clear_cache(self) -> None:

@@ -12,7 +12,7 @@ from numpy import uint32
 from backend.column_index import ColumnIndex
 from backend.config import FainderMode, Metadata
 from backend.fainder_index import FainderIndex
-from backend.lucene_connector import LuceneConnector
+from backend.tantivy_index import TantivyIndex
 
 DocumentHighlights = dict[int, dict[str, str]]
 ColumnHighlights = set[uint32]
@@ -31,7 +31,7 @@ class Executor(Transformer[Token, tuple[set[int], Highlights]]):
 
     def __init__(
         self,
-        lucene_connector: LuceneConnector,
+        tantivy_index: TantivyIndex,
         fainder_index: FainderIndex,
         hnsw_index: ColumnIndex,
         metadata: Metadata,
@@ -41,7 +41,7 @@ class Executor(Transformer[Token, tuple[set[int], Highlights]]):
     ) -> None:
         super().__init__(visit_tokens=False)
 
-        self.lucene_connector = lucene_connector
+        self.tantivy_index = tantivy_index
         self.fainder_index = fainder_index
         self.hnsw_index = hnsw_index
         self.metadata = metadata
@@ -78,10 +78,10 @@ class Executor(Transformer[Token, tuple[set[int], Highlights]]):
         logger.trace(f"Evaluating keyword term: {items}")
 
         # NOTE: Currently unused
-        doc_filter = None
+        # doc_filter = None
 
-        result_docs, scores, highlights = self.lucene_connector.evaluate_query(
-            items[0], doc_filter, self.enable_highlighting
+        result_docs, scores, highlights = self.tantivy_index.search(
+            items[0], self.enable_highlighting
         )
         self.updates_scores(result_docs, scores)
 

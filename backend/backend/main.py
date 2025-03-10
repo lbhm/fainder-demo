@@ -33,7 +33,6 @@ from backend.indexing import (
     generate_fainder_indices,
     generate_metadata,
 )
-from backend.query_evaluator import ColumnHighlights, DocumentHighlights, QueryEvaluator
 from backend.tantivy_index import TantivyIndex
 
 # Global variables to store persistent objects
@@ -73,7 +72,6 @@ column_index = ColumnIndex(
 engine = Engine(
     tantivy_index=tantivy_index,
     fainder_index=fainder_index,
-    tantivy_index=tantivy_index,
     hnsw_index=column_index,
     metadata=metadata,
     cache_size=settings.query_cache_size,
