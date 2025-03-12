@@ -26,6 +26,7 @@ class Metadata(BaseModel):
     hist_to_col: dict[int, int]
     name_to_vector: dict[str, int]
     vector_to_cols: dict[int, set[int]]
+    doc_to_path: dict[int, str]
 
 
 class CroissantStoreType(str, Enum):

@@ -40,12 +40,26 @@ def _save_metadata(
             file.write(orjson.dumps(metadata))
 
 
+def _load_metadata(metadata_path: Path, json_encoding: JsonEncoding) -> dict[str, Any]:
+    try:
+        if json_encoding == JsonEncoding.json:
+            with metadata_path.open("r") as file:
+                metadata = json.load(file)
+        else:
+            with metadata_path.open("rb") as file:
+                metadata = orjson.loads(file.read())
+        return metadata
+    except (orjson.JSONDecodeError, json.JSONDecodeError) as e:
+        logger.error(f"Error parsing JSON from {metadata_path}: {e}")
+        return {}
+
+
 def generate_metadata(
     croissant_path: Path,
     metadata_path: Path,
     tantivy_path: Path,
     return_documents: bool = True,
-    json_enconding: JsonEncoding = JsonEncoding.orjson,
+    json_encoding: JsonEncoding = JsonEncoding.orjson,
 ) -> tuple[
     list[tuple[np.uint32, Histogram]], dict[str, int], dict[int, dict[str, Any]], TantivyIndex
 ]:
@@ -63,6 +77,7 @@ def generate_metadata(
     hist_to_col: dict[int, int] = {}
     name_to_vector: dict[str, int] = {}
     vector_to_cols: dict[int, set[int]] = defaultdict(set)
+    doc_to_path: dict[int, str] = {}
 
     json_docs: dict[int, dict[str, Any]] = {}
     tantivy_docs: list[tantivy.Document] = []
@@ -79,8 +94,7 @@ def generate_metadata(
     for doc_id, path in enumerate(sorted(croissant_path.iterdir())):
         if path.is_file():
             # Read the file and add a document ID to it
-            with path.open("rb") as file:
-                json_doc: dict[str, Any] = orjson.loads(file.read())
+            json_doc = _load_metadata(path, json_encoding)
 
             json_doc["id"] = doc_id
             if return_documents:
@@ -114,8 +128,11 @@ def generate_metadata(
             except KeyError as e:
                 logger.error(f"KeyError {e} reading file {path}")
 
+            # Store the document path for disk based mode
+            doc_to_path[doc_id] = path.name
+
             # Replace the file with the updated metadata
-            if json_enconding == JsonEncoding.json:
+            if json_encoding == JsonEncoding.json:
                 with path.open("w") as file:
                     json.dump(json_doc, file)
             else:
@@ -147,9 +164,10 @@ def generate_metadata(
         "hist_to_col": {str(k): v for k, v in hist_to_col.items()},
         "name_to_vector": name_to_vector,
         "vector_to_cols": {str(k): list(v) for k, v in vector_to_cols.items()},
+        "doc_to_path": {str(k): v for k, v in doc_to_path.items()},
     }
 
-    _save_metadata(new_metadata, json_enconding, metadata_path / "metadata.json")
+    _save_metadata(new_metadata, json_encoding, metadata_path)
 
     return hists, name_to_vector, json_docs, tantivy_index
 
@@ -302,7 +320,7 @@ if __name__ == "__main__":
         settings.metadata_path,
         settings.tantivy_path,
         return_documents=False,
-        json_enconding=settings.json_encoding,
+        json_encoding=settings.json_encoding,
     )
 
     if not args.no_fainder:

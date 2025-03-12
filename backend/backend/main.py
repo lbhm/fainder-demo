@@ -65,6 +65,7 @@ if settings.metadata_path.exists():
     else:
         with settings.metadata_path.open("rb") as file:
             metadata = Metadata(**orjson.loads(file.read()))
+    logger.trace(f"Metadata loaded from {settings.metadata_path}")
 else:
     quit("Metadata file not found")
 
@@ -112,7 +113,7 @@ cors_origins = [
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[Any, Any]:
     # Startup
-    croissant_store.load_documents()
+    croissant_store.load_documents(metadata.doc_to_path)
 
     yield
 
@@ -268,6 +269,7 @@ async def update_indices() -> MessageResponse:
             croissant_path=settings.croissant_path,
             metadata_path=settings.metadata_path,
             tantivy_path=settings.tantivy_path,
+            load_documents=settings.croissant_store_type == CroissantStoreType.memory,
         )
         generate_embedding_index(
             name_to_vector=name_to_vector,
@@ -288,15 +290,16 @@ async def update_indices() -> MessageResponse:
         )
 
         # Update global variables
-        croissant_store.replace_documents(documents)
-        # Delete metadata variables before we load the entire metadata again to save memory
-        del hists, name_to_vector, documents
         if settings.json_encoding == "json":
             with settings.metadata_path.open("r") as file:
                 metadata = Metadata(**json.load(file))
         else:
             with settings.metadata_path.open() as file:
                 metadata = Metadata(**orjson.loads(file.read()))
+        croissant_store.replace_documents(documents, doc_to_path=metadata.doc_to_path)
+        # Delete metadata variables before we load the entire metadata again to save memory
+        del hists, name_to_vector, documents
+
         fainder_index.update(
             metadata=metadata,
             rebinning_path=settings.rebinning_index_path,

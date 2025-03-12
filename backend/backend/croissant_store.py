@@ -34,7 +34,7 @@ class CroissantStore(ABC):
         pass
 
     @abstractmethod
-    def load_documents(self) -> None:
+    def load_documents(self, doc_to_path: dict[int, str]) -> None:
         """Load documents into the store."""
 
     @abstractmethod
@@ -49,7 +49,7 @@ class CroissantStore(ABC):
         """Add a new document to the store."""
 
     @abstractmethod
-    def replace_documents(self, docs: dict[int, Document]) -> None:
+    def replace_documents(self, docs: dict[int, Document], doc_to_path: dict[int, str]) -> None:
         """Replace all documents in the store."""
 
 
@@ -69,7 +69,7 @@ class MemoryCroissantStore(CroissantStore):
     def __len__(self) -> int:
         return len(self.documents)
 
-    def load_documents(self) -> None:
+    def load_documents(self, doc_to_path: dict[int, str]) -> None:
         self.documents.clear()
         for file in self.path.iterdir():
             if self.json_encoding == JsonEncoding.json:
@@ -115,7 +115,7 @@ class MemoryCroissantStore(CroissantStore):
         # TODO: choose a more specific name and replace "id" with the field name of our ID
         self.documents[doc["id"]] = doc
 
-    def replace_documents(self, docs: dict[int, Document]) -> None:
+    def replace_documents(self, docs: dict[int, Document], doc_to_path: dict[int, str]) -> None:
         self.documents = docs
 
 
@@ -130,25 +130,13 @@ class DiskCroissantStore(CroissantStore):
     def __len__(self) -> int:
         return len(self.document_ids)
 
-    def load_documents(self) -> None:
+    def load_documents(self, doc_to_path: dict[int, str]) -> None:
         """Load document IDs and file mappings but not the documents themselves."""
         self.document_ids.clear()
         self.file_mapping.clear()
-        for file in self.path.iterdir():
-            try:
-                if self.json_encoding == JsonEncoding.json:
-                    with file.open("r") as f:
-                        doc = json.load(f)
-                else:
-                    with file.open("rb") as f:
-                        doc = orjson.loads(f.read())
-                # TODO: choose a more specific name
-                # and replace "id" with the field name of our ID
-                doc_id = doc["id"]
-                self.document_ids.add(doc_id)
-                self.file_mapping[doc_id] = file
-            except (ValueError, KeyError):
-                logger.error(f"Error loading document from {file}")
+        for doc_id, file_path in doc_to_path.items():
+            self.document_ids.add(doc_id)
+            self.file_mapping[doc_id] = Path((self.path) / file_path)
 
     def get_document(self, doc_id: int) -> Document:
         if doc_id not in self.document_ids:
@@ -190,7 +178,7 @@ class DiskCroissantStore(CroissantStore):
         self.document_ids.add(doc_id)
         self.file_mapping[doc_id] = file_path
 
-    def replace_documents(self, docs: dict[int, Document]) -> None:
+    def replace_documents(self, docs: dict[int, Document], doc_to_path: dict[int, str]) -> None:
         # Clear existing files
         for file in self.path.iterdir():
             file.unlink()
@@ -199,6 +187,5 @@ class DiskCroissantStore(CroissantStore):
         self.document_ids.clear()
         self.file_mapping.clear()
 
-        # Write new documents
-        for doc in docs.values():
-            self.add_document(doc)
+        # Update mappings
+        self.load_documents(doc_to_path)
