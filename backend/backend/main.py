@@ -1,4 +1,5 @@
 import copy
+import json
 import time
 import traceback
 from collections.abc import AsyncGenerator
@@ -57,8 +58,15 @@ configure_logging(
         "uvicorn.error",
     ],
 )
-with settings.metadata_path.open("rb") as file:
-    metadata = Metadata(**orjson.loads(file.read()))
+if settings.metadata_path.exists():
+    if settings.json_encoding == "json":
+        with settings.metadata_path.open("r") as file:
+            metadata = Metadata(**json.load(file))
+    else:
+        with settings.metadata_path.open("rb") as file:
+            metadata = Metadata(**orjson.loads(file.read()))
+else:
+    quit("Metadata file not found")
 
 # Initialize the appropriate CroissantStore based on configuration
 if settings.croissant_store_type == CroissantStoreType.memory:
@@ -67,15 +75,18 @@ if settings.croissant_store_type == CroissantStoreType.memory:
     )
 else:
     croissant_store = DiskCroissantStore(settings.croissant_path, settings.dataset_slug)
+logger.trace("Loaded Croissant store")
 
 
 tantivy_index = TantivyIndex(settings.tantivy_path)
+logger.trace("Loaded tantivy index")
 fainder_index = FainderIndex(
     metadata=metadata,
     rebinning_path=settings.rebinning_index_path,
     conversion_path=settings.conversion_index_path,
     histogram_path=settings.histogram_path,
 )
+logger.trace("Loaded Fainder index")
 
 column_index = ColumnIndex(
     settings.hnsw_index_path,
@@ -280,9 +291,12 @@ async def update_indices() -> MessageResponse:
         croissant_store.replace_documents(documents)
         # Delete metadata variables before we load the entire metadata again to save memory
         del hists, name_to_vector, documents
-
-        with settings.metadata_path.open() as file:
-            metadata = Metadata(**orjson.loads(file.read()))
+        if settings.json_encoding == "json":
+            with settings.metadata_path.open("r") as file:
+                metadata = Metadata(**json.load(file))
+        else:
+            with settings.metadata_path.open() as file:
+                metadata = Metadata(**orjson.loads(file.read()))
         fainder_index.update(
             metadata=metadata,
             rebinning_path=settings.rebinning_index_path,

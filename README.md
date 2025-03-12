@@ -50,6 +50,7 @@ DATASET_SLUG=kaggleRef       # Document field with a unique dataset identifier
 
 # Croissant
 CROISSANT_STORE_TYPE=memory  # Memory or disk (for Croissant Store)
+JSON_ENCODING=urjson         # JSON encoding for Croissant (urjson or json)
 
 # Fainder
 FAINDER_N_CLUSTERS=50               # Number of index clusters

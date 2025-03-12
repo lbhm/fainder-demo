@@ -1,3 +1,4 @@
+import json
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
@@ -5,7 +6,7 @@ from typing import Any
 import orjson
 from loguru import logger
 
-from backend.config import CroissantError
+from backend.config import CroissantError, JsonEncoding
 
 Document = dict[str, Any]
 
@@ -13,10 +14,17 @@ Document = dict[str, Any]
 class CroissantStore(ABC):
     """Abstract base class for storing a collection of Croissant files."""
 
-    def __init__(self, path: Path, dataset_slug: str, overwrite_docs: bool = False) -> None:
+    def __init__(
+        self,
+        path: Path,
+        dataset_slug: str,
+        overwrite_docs: bool = False,
+        json_encoding: JsonEncoding = JsonEncoding.orjson,
+    ) -> None:
         self.path = path
         self.dataset_slug = dataset_slug
         self.overwrite_docs = overwrite_docs
+        self.json_encoding = json_encoding
 
     def __getitem__(self, index: int) -> Document:
         return self.get_document(index)
@@ -48,8 +56,14 @@ class CroissantStore(ABC):
 class MemoryCroissantStore(CroissantStore):
     """Store a collection of Croissant files in memory."""
 
-    def __init__(self, path: Path, dataset_slug: str, overwrite_docs: bool = False) -> None:
-        super().__init__(path, dataset_slug, overwrite_docs)
+    def __init__(
+        self,
+        path: Path,
+        dataset_slug: str,
+        overwrite_docs: bool = False,
+        json_encoding: JsonEncoding = JsonEncoding.orjson,
+    ) -> None:
+        super().__init__(path, dataset_slug, overwrite_docs, json_encoding)
         self.documents: dict[int, Document] = {}
 
     def __len__(self) -> int:
@@ -58,10 +72,15 @@ class MemoryCroissantStore(CroissantStore):
     def load_documents(self) -> None:
         self.documents.clear()
         for file in self.path.iterdir():
-            with file.open("rb") as f:
-                doc = orjson.loads(f.read())
-                # TODO: choose a more specific name and replace "id" with the field name of our ID
-                self.documents[doc["id"]] = doc
+            if self.json_encoding == JsonEncoding.json:
+                with file.open("r") as f:
+                    doc = json.load(f)
+            else:
+                with file.open("rb") as f:
+                    doc = orjson.loads(f.read())
+                    # TODO: choose a more specific name and
+                    # replace "id" with the field name of our ID
+                    self.documents[doc["id"]] = doc
 
     def get_document(self, doc_id: int) -> Document:
         try:
@@ -85,8 +104,12 @@ class MemoryCroissantStore(CroissantStore):
             else:
                 raise CroissantError(f"Document with dataset slug {ref} already exists")
 
-        with file_path.open("wb") as file:
-            file.write(orjson.dumps(doc))
+        if self.json_encoding == JsonEncoding.json:
+            with file_path.open("w") as file:
+                json.dump(doc, file)
+        else:
+            with file_path.open("wb") as file:
+                file.write(orjson.dumps(doc))
 
         # Add to in-memory collection
         # TODO: choose a more specific name and replace "id" with the field name of our ID
@@ -113,13 +136,17 @@ class DiskCroissantStore(CroissantStore):
         self.file_mapping.clear()
         for file in self.path.iterdir():
             try:
-                with file.open("rb") as f:
-                    doc = orjson.loads(f.read())
-                    # TODO: choose a more specific name
-                    # and replace "id" with the field name of our ID
-                    doc_id = doc["id"]
-                    self.document_ids.add(doc_id)
-                    self.file_mapping[doc_id] = file
+                if self.json_encoding == JsonEncoding.json:
+                    with file.open("r") as f:
+                        doc = json.load(f)
+                else:
+                    with file.open("rb") as f:
+                        doc = orjson.loads(f.read())
+                # TODO: choose a more specific name
+                # and replace "id" with the field name of our ID
+                doc_id = doc["id"]
+                self.document_ids.add(doc_id)
+                self.file_mapping[doc_id] = file
             except (ValueError, KeyError):
                 logger.error(f"Error loading document from {file}")
 
@@ -152,9 +179,12 @@ class DiskCroissantStore(CroissantStore):
 
         # TODO: choose a more specific name and replace "id" with the field name of our ID
         doc_id = doc["id"]
-
-        with file_path.open("wb") as file:
-            file.write(orjson.dumps(doc))
+        if self.json_encoding == JsonEncoding.json:
+            with file_path.open("w") as file:
+                json.dump(doc, file)
+        else:
+            with file_path.open("wb") as file:
+                file.write(orjson.dumps(doc))
 
         # Update mapping
         self.document_ids.add(doc_id)

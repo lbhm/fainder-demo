@@ -1,4 +1,5 @@
 import argparse
+import json
 import os
 import sys
 from collections import defaultdict
@@ -17,15 +18,34 @@ from fainder.utils import configure_run, save_output
 from loguru import logger
 from sentence_transformers import SentenceTransformer
 
-from backend.config import Settings
+from backend.config import JsonEncoding, Settings
 from backend.tantivy_index import TantivyIndex, get_schema
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
 
 
+def _save_metadata(
+    metadata: dict[str, Any],
+    json_encoding: JsonEncoding,
+    metadata_path: Path,
+) -> None:
+    if not metadata_path.exists():
+        metadata_path.mkdir(parents=True)
+    if json_encoding == JsonEncoding.json:
+        with metadata_path.open("w") as file:
+            json.dump(metadata, file)
+    else:
+        with metadata_path.open("wb") as file:
+            file.write(orjson.dumps(metadata))
+
+
 def generate_metadata(
-    croissant_path: Path, metadata_path: Path, tantivy_path: Path, return_documents: bool = True
+    croissant_path: Path,
+    metadata_path: Path,
+    tantivy_path: Path,
+    return_documents: bool = True,
+    json_enconding: JsonEncoding = JsonEncoding.orjson,
 ) -> tuple[
     list[tuple[np.uint32, Histogram]], dict[str, int], dict[int, dict[str, Any]], TantivyIndex
 ]:
@@ -95,8 +115,12 @@ def generate_metadata(
                 logger.error(f"KeyError {e} reading file {path}")
 
             # Replace the file with the updated metadata
-            with path.open("wb") as file:
-                file.write(orjson.dumps(json_doc))
+            if json_enconding == JsonEncoding.json:
+                with path.open("w") as file:
+                    json.dump(json_doc, file)
+            else:
+                with path.open("wb") as file:
+                    file.write(orjson.dumps(json_doc))
 
             # Modify the document to be ingested by Tantivy
             json_doc["keywords"] = "; ".join(json_doc["keywords"])
@@ -116,19 +140,16 @@ def generate_metadata(
 
     # Save the mappings and indices
     logger.info("Saving metadata")
-    with metadata_path.open("wb") as file:
-        file.write(
-            orjson.dumps(
-                {
-                    "doc_to_cols": {str(k): list(v) for k, v in doc_to_cols.items()},
-                    "col_to_doc": {str(k): v for k, v in col_to_doc.items()},
-                    "col_to_hist": {str(k): v for k, v in col_to_hist.items()},
-                    "hist_to_col": {str(k): v for k, v in hist_to_col.items()},
-                    "name_to_vector": name_to_vector,
-                    "vector_to_cols": {str(k): list(v) for k, v in vector_to_cols.items()},
-                },
-            )
-        )
+    new_metadata = {
+        "doc_to_cols": {str(k): list(v) for k, v in doc_to_cols.items()},
+        "col_to_doc": {str(k): v for k, v in col_to_doc.items()},
+        "col_to_hist": {str(k): v for k, v in col_to_hist.items()},
+        "hist_to_col": {str(k): v for k, v in hist_to_col.items()},
+        "name_to_vector": name_to_vector,
+        "vector_to_cols": {str(k): list(v) for k, v in vector_to_cols.items()},
+    }
+
+    _save_metadata(new_metadata, json_enconding, metadata_path / "metadata.json")
 
     return hists, name_to_vector, json_docs, tantivy_index
 
@@ -281,6 +302,7 @@ if __name__ == "__main__":
         settings.metadata_path,
         settings.tantivy_path,
         return_documents=False,
+        json_enconding=settings.json_encoding,
     )
 
     if not args.no_fainder:

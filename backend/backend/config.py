@@ -33,6 +33,11 @@ class CroissantStoreType(str, Enum):
     disk = "disk"
 
 
+class JsonEncoding(str, Enum):
+    json = "json"
+    orjson = "orjson"
+
+
 class Settings(BaseSettings):
     # Path settings
     data_dir: DirectoryPath
@@ -46,6 +51,7 @@ class Settings(BaseSettings):
 
     # CroissantStore settings
     croissant_store_type: CroissantStoreType = CroissantStoreType.memory
+    json_encoding: JsonEncoding = JsonEncoding.orjson
 
     # Engine settings
     query_cache_size: int = 128
