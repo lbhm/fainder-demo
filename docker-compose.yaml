@@ -16,6 +16,7 @@ services:
       - DATA_DIR=/app/data
       - COLLECTION_NAME=${COLLECTION_NAME:?COLLECTION_NAME is missing}
       - METADATA_FILE=${METADATA_FILE:-metadata.json}
+      - CROISSANT_STORE_TYPE=${CROISSANT_STORE_TYPE:-dict}
       - HF_HUB_CACHE=/app/data/${COLLECTION_NAME}/${EMBEDDING_DIR:-embeddings}/model_cache
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     volumes:

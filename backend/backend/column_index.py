@@ -31,7 +31,7 @@ class ColumnIndex:
         self.embedder: SentenceTransformer | None = None
 
         if not use_embeddings:
-            logger.trace("No SentenceTransformer")
+            logger.debug("Not loading SentenceTransformer model")
             return
 
         # Embedding model

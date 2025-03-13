@@ -47,7 +47,7 @@ class Engine:
     def _execute(
         self,
         query: str,
-        fainder_mode: FainderMode = FainderMode.low_memory,
+        fainder_mode: FainderMode = FainderMode.LOW_MEMORY,
         enable_highlighting: bool = False,
         enable_filtering: bool = False,
     ) -> tuple[list[int], Highlights]:

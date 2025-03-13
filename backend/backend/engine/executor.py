@@ -31,7 +31,7 @@ class Executor(Transformer[Token, tuple[set[int], Highlights]]):
         fainder_index: FainderIndex,
         hnsw_index: ColumnIndex,
         metadata: Metadata,
-        fainder_mode: FainderMode = FainderMode.low_memory,
+        fainder_mode: FainderMode = FainderMode.LOW_MEMORY,
         enable_highlighting: bool = False,
         enable_filtering: bool = False,
     ) -> None:

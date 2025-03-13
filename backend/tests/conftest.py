@@ -8,7 +8,7 @@ import pytest
 from loguru import logger
 
 from backend.column_index import ColumnIndex
-from backend.config import JsonEncoding, Metadata, Settings
+from backend.config import Metadata, Settings
 from backend.engine import Engine, Parser
 from backend.fainder_index import FainderIndex
 from backend.tantivy_index import TantivyIndex
@@ -51,7 +51,6 @@ def engine() -> Engine:
     settings = Settings(
         data_dir=Path(__file__).parent / "assets",
         collection_name="toy_collection",
-        json_encoding=JsonEncoding.json,
         _env_file=None,  # type: ignore
     )
 

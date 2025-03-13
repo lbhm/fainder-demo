@@ -19,6 +19,18 @@ ColumnHighlights = set[uint32]
 Highlights = tuple[DocumentHighlights, ColumnHighlights]
 
 
+class CroissantStoreType(str, Enum):
+    DICT = "dict"
+    FILE = "file"
+
+
+class FainderMode(str, Enum):
+    LOW_MEMORY = "low_memory"
+    FULL_PRECISION = "full_precision"
+    FULL_RECALL = "full_recall"
+    EXACT = "exact"
+
+
 class Metadata(BaseModel):
     doc_to_cols: dict[int, set[int]]
     col_to_doc: dict[int, int]
@@ -27,16 +39,6 @@ class Metadata(BaseModel):
     name_to_vector: dict[str, int]
     vector_to_cols: dict[int, set[int]]
     doc_to_path: dict[int, str]
-
-
-class CroissantStoreType(str, Enum):
-    memory = "memory"
-    disk = "disk"
-
-
-class JsonEncoding(str, Enum):
-    json = "json"
-    orjson = "orjson"
 
 
 class Settings(BaseSettings):
@@ -50,9 +52,9 @@ class Settings(BaseSettings):
     metadata_file: Path = Path("metadata.json")
     dataset_slug: str = "kaggleRef"
 
-    # CroissantStore settings
-    croissant_store_type: CroissantStoreType = CroissantStoreType.memory
-    json_encoding: JsonEncoding = JsonEncoding.orjson
+    # Croissant store settings
+    croissant_store_type: CroissantStoreType = CroissantStoreType.DICT
+    croissant_cache_size: int = 128
 
     # Engine settings
     query_cache_size: int = 128
@@ -129,18 +131,11 @@ class Settings(BaseSettings):
         return self.data_dir / self.collection_name / self.metadata_file
 
 
-class FainderMode(str, Enum):
-    low_memory = "low_memory"
-    full_precision = "full_precision"
-    full_recall = "full_recall"
-    exact = "exact"
-
-
 class QueryRequest(BaseModel):
     query: str
     page: int = 1
     per_page: int = 10
-    fainder_mode: FainderMode = FainderMode.low_memory
+    fainder_mode: FainderMode = FainderMode.LOW_MEMORY
     enable_highlighting: bool = False
 
 

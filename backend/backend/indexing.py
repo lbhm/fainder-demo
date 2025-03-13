@@ -1,5 +1,4 @@
 import argparse
-import json
 import os
 import sys
 from collections import defaultdict
@@ -9,7 +8,6 @@ from typing import TYPE_CHECKING, Any, Literal
 
 import hnswlib
 import numpy as np
-import orjson
 import tantivy
 from fainder.preprocessing.clustering import cluster_histograms
 from fainder.preprocessing.percentile_index import create_index
@@ -18,40 +16,12 @@ from fainder.utils import configure_run, save_output
 from loguru import logger
 from sentence_transformers import SentenceTransformer
 
-from backend.config import JsonEncoding, Settings
+from backend.config import Settings
 from backend.tantivy_index import TantivyIndex, get_schema
+from backend.util import dump_json, load_json
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
-
-
-def _save_metadata(
-    metadata: dict[str, Any],
-    json_encoding: JsonEncoding,
-    metadata_path: Path,
-) -> None:
-    if not metadata_path.exists():
-        metadata_path.mkdir(parents=True)
-    if json_encoding == JsonEncoding.json:
-        with metadata_path.open("w") as file:
-            json.dump(metadata, file)
-    else:
-        with metadata_path.open("wb") as file:
-            file.write(orjson.dumps(metadata))
-
-
-def _load_metadata(metadata_path: Path, json_encoding: JsonEncoding) -> dict[str, Any]:
-    try:
-        if json_encoding == JsonEncoding.json:
-            with metadata_path.open("r") as file:
-                metadata = json.load(file)
-        else:
-            with metadata_path.open("rb") as file:
-                metadata = orjson.loads(file.read())
-        return metadata
-    except (orjson.JSONDecodeError, json.JSONDecodeError) as e:
-        logger.error(f"Error parsing JSON from {metadata_path}: {e}")
-        return {}
 
 
 def generate_metadata(
@@ -59,25 +29,24 @@ def generate_metadata(
     metadata_path: Path,
     tantivy_path: Path,
     return_documents: bool = True,
-    json_encoding: JsonEncoding = JsonEncoding.orjson,
 ) -> tuple[
     list[tuple[np.uint32, Histogram]], dict[str, int], dict[int, dict[str, Any]], TantivyIndex
 ]:
     """Load Croissant files and generate metadata.
 
-    While loading the files, assign unique IDs to documents and columns. The function also creates
-    and stores mappings between document IDs, columns IDs, and column names that are needed for
+    While loading the files, assign unique IDs to documents, columns, histograms, and vectors.
+    This function also creates and stores mappings between entities that are needed for
     downstream processing.
     """
     # Initialize mappings
     # NOTE: We need the vector_id intermediate step because hnswlib requires int IDs for vectors
     doc_to_cols: dict[int, set[int]] = defaultdict(set)
+    doc_to_path: dict[int, str] = {}
     col_to_doc: dict[int, int] = {}
     col_to_hist: dict[int, int] = {}
     hist_to_col: dict[int, int] = {}
     name_to_vector: dict[str, int] = {}
     vector_to_cols: dict[int, set[int]] = defaultdict(set)
-    doc_to_path: dict[int, str] = {}
 
     json_docs: dict[int, dict[str, Any]] = {}
     tantivy_docs: list[tantivy.Document] = []
@@ -89,61 +58,57 @@ def generate_metadata(
     hist_id = 0
     vector_id = 0
 
-    logger.info("Reading croissant files")
+    logger.info("Processing croissant files")
     # NOTE: Remove the sorting if it becomes a bottleneck
     for doc_id, path in enumerate(sorted(croissant_path.iterdir())):
-        if path.is_file():
-            # Read the file and add a document ID to it
-            json_doc = _load_metadata(path, json_encoding)
+        if not path.is_file():
+            continue
 
-            json_doc["id"] = doc_id
-            if return_documents:
-                json_docs[doc_id] = json_doc
+        # Read the file and add a document ID to it
+        json_doc = load_json(path)
+        json_doc["id"] = doc_id
+        if return_documents:
+            json_docs[doc_id] = json_doc
 
-            # Ingest histograms and assign unique ids to columns
-            try:
-                for record_set in json_doc["recordSet"]:
-                    for col in record_set["field"]:
-                        col_name = col["name"]
-                        doc_to_cols[doc_id].add(col_id)
-                        col_to_doc[col_id] = doc_id
-                        col["id"] = col_id
+        # Ingest histograms and assign unique ids to columns
+        try:
+            for record_set in json_doc["recordSet"]:
+                for col in record_set["field"]:
+                    col["id"] = col_id
+                    doc_to_cols[doc_id].add(col_id)
+                    col_to_doc[col_id] = doc_id
 
-                        if "histogram" in col:
-                            densities = np.array(col["histogram"]["densities"], dtype=np.float32)
-                            bins = np.array(col["histogram"]["bins"], dtype=np.float64)
+                    if "histogram" in col:
+                        densities = np.array(col["histogram"]["densities"], dtype=np.float32)
+                        bins = np.array(col["histogram"]["bins"], dtype=np.float64)
 
-                            hists.append((np.uint32(hist_id), (densities, bins)))
-                            col_to_hist[col_id] = hist_id
-                            hist_to_col[hist_id] = col_id
-                            col["histogram"]["id"] = hist_id
-                            hist_id += 1
+                        hists.append((np.uint32(hist_id), (densities, bins)))
+                        col_to_hist[col_id] = hist_id
+                        hist_to_col[hist_id] = col_id
+                        col["histogram"]["id"] = hist_id
+                        hist_id += 1
 
-                        if col_name not in name_to_vector:
-                            name_to_vector[col_name] = vector_id
-                            vector_id += 1
-                        vector_to_cols[name_to_vector[col_name]].add(col_id)
+                    col_name = col["name"]
+                    if col_name not in name_to_vector:
+                        name_to_vector[col_name] = vector_id
+                        vector_id += 1
+                    vector_to_cols[name_to_vector[col_name]].add(col_id)
 
-                        col_id += 1
-            except KeyError as e:
-                logger.error(f"KeyError {e} reading file {path}")
+                    col_id += 1
+        except KeyError as e:
+            logger.error(f"KeyError {e} reading file {path}")
 
-            # Store the document path for disk based mode
-            doc_to_path[doc_id] = path.name
+        # Store the document path for file-based Croissant stores
+        doc_to_path[doc_id] = path.name
 
-            # Replace the file with the updated metadata
-            if json_encoding == JsonEncoding.json:
-                with path.open("w") as file:
-                    json.dump(json_doc, file)
-            else:
-                with path.open("wb") as file:
-                    file.write(orjson.dumps(json_doc))
+        # Replace the original file with the extended document
+        dump_json(json_doc, path)
 
-            # Modify the document to be ingested by Tantivy
-            json_doc["keywords"] = "; ".join(json_doc["keywords"])
-            json_doc["creator"] = json_doc["creator"]["name"]
-            json_doc["publisher"] = json_doc["publisher"]["name"]
-            tantivy_docs.append(tantivy.Document.from_dict(json_doc, tantivy_schema))  # pyright: ignore[reportUnknownMemberType]
+        # Modify the document to be ingested by Tantivy
+        json_doc["keywords"] = "; ".join(json_doc["keywords"])
+        json_doc["creator"] = json_doc["creator"]["name"]
+        json_doc["publisher"] = json_doc["publisher"]["name"]
+        tantivy_docs.append(tantivy.Document.from_dict(json_doc, tantivy_schema))  # pyright: ignore[reportUnknownMemberType]
 
     logger.info(
         f"Found {len(doc_to_cols)} documents with {len(col_to_doc)} columns and "
@@ -157,17 +122,18 @@ def generate_metadata(
 
     # Save the mappings and indices
     logger.info("Saving metadata")
-    new_metadata = {
-        "doc_to_cols": {str(k): list(v) for k, v in doc_to_cols.items()},
-        "col_to_doc": {str(k): v for k, v in col_to_doc.items()},
-        "col_to_hist": {str(k): v for k, v in col_to_hist.items()},
-        "hist_to_col": {str(k): v for k, v in hist_to_col.items()},
-        "name_to_vector": name_to_vector,
-        "vector_to_cols": {str(k): list(v) for k, v in vector_to_cols.items()},
-        "doc_to_path": {str(k): v for k, v in doc_to_path.items()},
-    }
-
-    _save_metadata(new_metadata, json_encoding, metadata_path)
+    dump_json(
+        {
+            "doc_to_cols": {str(k): list(v) for k, v in doc_to_cols.items()},
+            "col_to_doc": {str(k): v for k, v in col_to_doc.items()},
+            "col_to_hist": {str(k): v for k, v in col_to_hist.items()},
+            "hist_to_col": {str(k): v for k, v in hist_to_col.items()},
+            "name_to_vector": name_to_vector,
+            "vector_to_cols": {str(k): list(v) for k, v in vector_to_cols.items()},
+            "doc_to_path": {str(k): v for k, v in doc_to_path.items()},
+        },
+        metadata_path,
+    )
 
     return hists, name_to_vector, json_docs, tantivy_index
 
@@ -320,7 +286,6 @@ if __name__ == "__main__":
         settings.metadata_path,
         settings.tantivy_path,
         return_documents=False,
-        json_encoding=settings.json_encoding,
     )
 
     if not args.no_fainder:

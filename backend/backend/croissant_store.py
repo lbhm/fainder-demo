@@ -1,12 +1,15 @@
-import json
 from abc import ABC, abstractmethod
+from functools import lru_cache
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-import orjson
 from loguru import logger
 
-from backend.config import CroissantError, JsonEncoding
+from backend.config import CroissantError, CroissantStoreType
+from backend.util import dump_json, load_json
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 Document = dict[str, Any]
 
@@ -16,73 +19,93 @@ class CroissantStore(ABC):
 
     def __init__(
         self,
-        path: Path,
+        base_path: Path,
+        doc_to_path: dict[int, str],
+        *,
         dataset_slug: str,
+        cache_size: int = 128,
         overwrite_docs: bool = False,
-        json_encoding: JsonEncoding = JsonEncoding.orjson,
     ) -> None:
-        self.path = path
+        self.base_path = base_path
+        self.doc_to_path = self._rewrite_paths(doc_to_path)
         self.dataset_slug = dataset_slug
         self.overwrite_docs = overwrite_docs
-        self.json_encoding = json_encoding
+
+        self.get_document: Callable[[int], Document] = (
+            lru_cache(maxsize=cache_size)(self._get_document)
+            if cache_size > 0
+            else self._get_document
+        )
 
     def __getitem__(self, index: int) -> Document:
-        return self.get_document(index)
+        """Get a document by ID."""
+        return self._get_document(index)
 
     @abstractmethod
     def __len__(self) -> int:
-        pass
+        """Get the number of documents in the store."""
 
     @abstractmethod
-    def load_documents(self, doc_to_path: dict[int, str]) -> None:
-        """Load documents into the store."""
-
-    @abstractmethod
-    def get_document(self, doc_id: int) -> Document:
+    def _get_document(self, doc_id: int) -> Document:
         """Get a document by ID."""
 
     def get_documents(self, doc_ids: list[int]) -> list[Document]:
-        return [self.get_document(doc_id) for doc_id in doc_ids]
+        return [self._get_document(doc_id) for doc_id in doc_ids]
 
-    @abstractmethod
     def add_document(self, doc: Document) -> None:
         """Add a new document to the store."""
+        if self.dataset_slug not in doc:
+            raise CroissantError(
+                f"Document does not have the specified dataset slug {self.dataset_slug}"
+            )
+
+        ref: str = doc[self.dataset_slug].replace("/", "_")
+        file_path = (self.base_path / ref).with_suffix(".json")
+
+        if file_path.exists():
+            if self.overwrite_docs:
+                logger.warning(f"Overwriting document with dataset slug {ref}")
+            else:
+                raise CroissantError(f"Document with dataset slug {ref} already exists")
+
+        # Update mapping
+        self.doc_to_path[doc["id"]] = file_path
+
+        # Save to file system
+        dump_json(doc, file_path)
 
     @abstractmethod
-    def replace_documents(self, docs: dict[int, Document], doc_to_path: dict[int, str]) -> None:
+    def replace_documents(self, doc_to_path: dict[int, str]) -> None:
         """Replace all documents in the store."""
 
+    def _rewrite_paths(self, doc_to_path: dict[int, str]) -> dict[int, Path]:
+        return {doc_id: Path((self.base_path) / path) for doc_id, path in doc_to_path.items()}
 
-class MemoryCroissantStore(CroissantStore):
-    """Store a collection of Croissant files in memory."""
+
+class DictCroissantStore(CroissantStore):
+    """Store a collection of Croissant files in an in-memory hash table."""
 
     def __init__(
         self,
-        path: Path,
+        base_path: Path,
+        doc_to_path: dict[int, str],
+        *,
         dataset_slug: str,
         overwrite_docs: bool = False,
-        json_encoding: JsonEncoding = JsonEncoding.orjson,
     ) -> None:
-        super().__init__(path, dataset_slug, overwrite_docs, json_encoding)
-        self.documents: dict[int, Document] = {}
+        super().__init__(
+            base_path,
+            doc_to_path,
+            dataset_slug=dataset_slug,
+            cache_size=0,
+            overwrite_docs=overwrite_docs,
+        )
+        self.documents = {doc_id: load_json(path) for doc_id, path in self.doc_to_path.items()}
 
     def __len__(self) -> int:
         return len(self.documents)
 
-    def load_documents(self, doc_to_path: dict[int, str]) -> None:
-        self.documents.clear()
-        for file in self.path.iterdir():
-            if self.json_encoding == JsonEncoding.json:
-                with file.open("r") as f:
-                    doc = json.load(f)
-            else:
-                with file.open("rb") as f:
-                    doc = orjson.loads(f.read())
-                    # TODO: choose a more specific name and
-                    # replace "id" with the field name of our ID
-                    self.documents[doc["id"]] = doc
-
-    def get_document(self, doc_id: int) -> Document:
+    def _get_document(self, doc_id: int) -> Document:
         try:
             return self.documents[doc_id]
         except KeyError:
@@ -90,102 +113,74 @@ class MemoryCroissantStore(CroissantStore):
             return {}
 
     def add_document(self, doc: Document) -> None:
-        if self.dataset_slug not in doc:
-            raise CroissantError(
-                f"Document does not have the specified dataset slug {self.dataset_slug}"
-            )
-
-        ref: str = doc[self.dataset_slug].replace("/", "_")
-        file_path = self.path / f"{ref}.json"
-
-        if file_path.exists():
-            if self.overwrite_docs:
-                logger.warning(f"Overwriting document with dataset slug {ref}")
-            else:
-                raise CroissantError(f"Document with dataset slug {ref} already exists")
-
-        if self.json_encoding == JsonEncoding.json:
-            with file_path.open("w") as file:
-                json.dump(doc, file)
-        else:
-            with file_path.open("wb") as file:
-                file.write(orjson.dumps(doc))
-
-        # Add to in-memory collection
-        # TODO: choose a more specific name and replace "id" with the field name of our ID
+        super().add_document(doc)
         self.documents[doc["id"]] = doc
 
-    def replace_documents(self, docs: dict[int, Document], doc_to_path: dict[int, str]) -> None:
-        self.documents = docs
+    def replace_documents(self, doc_to_path: dict[int, str]) -> None:
+        self.doc_to_path = self._rewrite_paths(doc_to_path)
+        del self.documents
+        self.documents = {doc_id: load_json(path) for doc_id, path in self.doc_to_path.items()}
 
 
-class DiskCroissantStore(CroissantStore):
-    """Store a collection of Croissant files on disk, loading them only when requested."""
+class FileCroissantStore(CroissantStore):
+    """Manage a collection of Croissant files, loading them only when requested."""
 
-    def __init__(self, path: Path, dataset_slug: str, overwrite_docs: bool = False) -> None:
-        super().__init__(path, dataset_slug, overwrite_docs)
-        self.document_ids: set[int] = set()
-        self.file_mapping: dict[int, Path] = {}
+    def __init__(
+        self,
+        base_path: Path,
+        doc_to_path: dict[int, str],
+        *,
+        dataset_slug: str,
+        cache_size: int = 128,
+        overwrite_docs: bool = False,
+    ) -> None:
+        super().__init__(
+            base_path,
+            doc_to_path,
+            dataset_slug=dataset_slug,
+            cache_size=cache_size,
+            overwrite_docs=overwrite_docs,
+        )
 
     def __len__(self) -> int:
-        return len(self.document_ids)
+        return len(self.doc_to_path)
 
-    def load_documents(self, doc_to_path: dict[int, str]) -> None:
-        """Load document IDs and file mappings but not the documents themselves."""
-        self.document_ids.clear()
-        self.file_mapping.clear()
-        for doc_id, file_path in doc_to_path.items():
-            self.document_ids.add(doc_id)
-            self.file_mapping[doc_id] = Path((self.path) / file_path)
-
-    def get_document(self, doc_id: int) -> Document:
-        if doc_id not in self.document_ids:
+    def _get_document(self, doc_id: int) -> Document:
+        try:
+            return load_json(self.doc_to_path[doc_id])
+        except KeyError:
             logger.error(f"Document with id {doc_id} not found")
             return {}
-
-        try:
-            with self.file_mapping[doc_id].open("rb") as f:
-                return orjson.loads(f.read())
-        except (KeyError, FileNotFoundError, ValueError) as e:
+        except (FileNotFoundError, ValueError) as e:
             logger.error(f"Error loading document with id {doc_id}: {e}")
             return {}
 
-    def add_document(self, doc: Document) -> None:
-        if self.dataset_slug not in doc:
-            raise CroissantError(
-                f"Document does not have the specified dataset slug {self.dataset_slug}"
+    def replace_documents(self, doc_to_path: dict[int, str]) -> None:
+        self.doc_to_path = self._rewrite_paths(doc_to_path)
+
+
+def get_croissant_store(
+    store_type: CroissantStoreType,
+    base_path: Path,
+    doc_to_path: dict[int, str],
+    dataset_slug: str,
+    *,
+    cache_size: int = 128,
+    overwrite_docs: bool = False,
+) -> CroissantStore:
+    match store_type:
+        case CroissantStoreType.DICT:
+            return DictCroissantStore(
+                base_path=base_path,
+                doc_to_path=doc_to_path,
+                dataset_slug=dataset_slug,
+                overwrite_docs=overwrite_docs,
             )
-
-        ref: str = doc[self.dataset_slug].replace("/", "_")
-        file_path = self.path / f"{ref}.json"
-
-        if file_path.exists():
-            if self.overwrite_docs:
-                logger.warning(f"Overwriting document with dataset slug {ref}")
-            else:
-                raise CroissantError(f"Document with dataset slug {ref} already exists")
-
-        # TODO: choose a more specific name and replace "id" with the field name of our ID
-        doc_id = doc["id"]
-        if self.json_encoding == JsonEncoding.json:
-            with file_path.open("w") as file:
-                json.dump(doc, file)
-        else:
-            with file_path.open("wb") as file:
-                file.write(orjson.dumps(doc))
-
-        # Update mapping
-        self.document_ids.add(doc_id)
-        self.file_mapping[doc_id] = file_path
-
-    def replace_documents(self, docs: dict[int, Document], doc_to_path: dict[int, str]) -> None:
-        # Clear existing files
-        for file in self.path.iterdir():
-            file.unlink()
-
-        # Clear mappings
-        self.document_ids.clear()
-        self.file_mapping.clear()
-
-        # Update mappings
-        self.load_documents(doc_to_path)
+        case CroissantStoreType.FILE:
+            return FileCroissantStore(
+                base_path=base_path,
+                doc_to_path=doc_to_path,
+                dataset_slug=dataset_slug,
+                cache_size=cache_size,
+                overwrite_docs=overwrite_docs,
+            )

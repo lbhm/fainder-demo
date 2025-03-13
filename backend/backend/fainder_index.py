@@ -77,7 +77,7 @@ class FainderIndex:
         # Predicate evaluation
         query: PctlQuery = (percentile, comparison, reference)  # type: ignore
         match fainder_mode:
-            case FainderMode.low_memory:
+            case FainderMode.LOW_MEMORY:
                 if self.rebinning_index is None:
                     raise FainderError("Rebinning index must be loaded for low_memory mode.")
                 result, runtime = run_approx(
@@ -86,7 +86,7 @@ class FainderIndex:
                     index_mode="recall",
                     id_filter=id_filter,
                 )
-            case FainderMode.full_precision:
+            case FainderMode.FULL_PRECISION:
                 if self.conversion_index is None:
                     raise FainderError("Conversion index must be loaded for full_precision mode.")
                 result, runtime = run_approx(
@@ -95,7 +95,7 @@ class FainderIndex:
                     index_mode="precision",
                     id_filter=id_filter,
                 )
-            case FainderMode.full_recall:
+            case FainderMode.FULL_RECALL:
                 if self.conversion_index is None:
                     raise FainderError("Conversion index must be loaded for full_recall mode.")
                 result, runtime = run_approx(
@@ -104,7 +104,7 @@ class FainderIndex:
                     index_mode="recall",
                     id_filter=id_filter,
                 )
-            case FainderMode.exact:
+            case FainderMode.EXACT:
                 if self.conversion_index is None or self.hists is None:
                     raise FainderError(
                         "Conversion index and histograms must be loaded for exact mode."

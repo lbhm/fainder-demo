@@ -1,9 +1,6 @@
 import copy
-import json
 import time
 import traceback
-from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
 from typing import Any
 
 import orjson
@@ -28,12 +25,7 @@ from backend.config import (
     Settings,
     configure_logging,
 )
-from backend.croissant_store import (
-    CroissantStore,
-    DiskCroissantStore,
-    Document,
-    MemoryCroissantStore,
-)
+from backend.croissant_store import Document, get_croissant_store
 from backend.engine import Engine
 from backend.fainder_index import FainderIndex
 from backend.indexing import (
@@ -42,9 +34,13 @@ from backend.indexing import (
     generate_metadata,
 )
 from backend.tantivy_index import TantivyIndex
+from backend.util import load_json
 
-# Global variables to store persistent objects
+logger.info("Starting backend")
+
+# Load global variables to store persistent objects
 settings = Settings()  # type: ignore
+
 # NOTE: Potentially add more modules here if they are not intercepted by loguru
 configure_logging(
     settings.log_level,
@@ -58,37 +54,31 @@ configure_logging(
         "uvicorn.error",
     ],
 )
-if settings.metadata_path.exists():
-    if settings.json_encoding == "json":
-        with settings.metadata_path.open("r") as file:
-            metadata = Metadata(**json.load(file))
-    else:
-        with settings.metadata_path.open("rb") as file:
-            metadata = Metadata(**orjson.loads(file.read()))
-    logger.trace(f"Metadata loaded from {settings.metadata_path}")
-else:
-    quit("Metadata file not found")
 
-# Initialize the appropriate CroissantStore based on configuration
-if settings.croissant_store_type == CroissantStoreType.memory:
-    croissant_store: CroissantStore = MemoryCroissantStore(
-        settings.croissant_path, settings.dataset_slug
-    )
-else:
-    croissant_store = DiskCroissantStore(settings.croissant_path, settings.dataset_slug)
-logger.trace("Loaded Croissant store")
+logger.info("Loading metadata")
+metadata = Metadata(**load_json(settings.metadata_path))
 
+logger.info("Initializing Croissant store")
+croissant_store = get_croissant_store(
+    store_type=settings.croissant_store_type,
+    base_path=settings.croissant_path,
+    doc_to_path=metadata.doc_to_path,
+    dataset_slug=settings.dataset_slug,
+    cache_size=settings.croissant_cache_size,
+)
 
+logger.info("Initializing tantivy index")
 tantivy_index = TantivyIndex(settings.tantivy_path)
-logger.trace("Loaded tantivy index")
+
+logger.info("Initializing Fainder index")
 fainder_index = FainderIndex(
     metadata=metadata,
     rebinning_path=settings.rebinning_index_path,
     conversion_path=settings.conversion_index_path,
     histogram_path=settings.histogram_path,
 )
-logger.trace("Loaded Fainder index")
 
+logger.info("Initializing HNSW index")
 column_index = ColumnIndex(
     settings.hnsw_index_path,
     metadata,
@@ -96,6 +86,8 @@ column_index = ColumnIndex(
     use_embeddings=settings.use_embeddings,
     ef=settings.hnsw_ef,
 )
+
+logger.info("Initializing engine")
 engine = Engine(
     tantivy_index=tantivy_index,
     fainder_index=fainder_index,
@@ -104,24 +96,11 @@ engine = Engine(
     cache_size=settings.query_cache_size,
 )
 
-cors_origins = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[Any, Any]:
-    # Startup
-    croissant_store.load_documents(metadata.doc_to_path)
-
-    yield
-
-
-app = FastAPI(lifespan=lifespan)
+logger.info("Initializing FastAPI app")
+app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins,
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -237,16 +216,17 @@ async def query(request: QueryRequest) -> QueryResponse:
 
 @app.post("/upload")
 async def upload_files(files: list[UploadFile]) -> MessageResponse:
-    """Handle upload of JSON files."""
+    """Add new JSON documents to the Croissant store."""
+    for file in files:
+        if not file.filename:
+            raise HTTPException(status_code=400, detail="No file uploaded")
+        if not file.filename.endswith(".json"):
+            raise HTTPException(status_code=400, detail="Only .json files are accepted")
+
     try:
         for file in files:
-            if not file.filename:
-                raise HTTPException(status_code=400, detail="No file uploaded")
-            if not file.filename.endswith(".json"):
-                raise HTTPException(status_code=400, detail="Only .json files are accepted")
             content = await file.read()
-            doc = orjson.loads(content)
-            croissant_store.add_document(doc)
+            croissant_store.add_document(orjson.loads(content))
             logger.debug(f"Uploaded file: {file.filename}")
 
         logger.info(f"{len(files)} files uploaded successfully")
@@ -269,7 +249,7 @@ async def update_indices() -> MessageResponse:
             croissant_path=settings.croissant_path,
             metadata_path=settings.metadata_path,
             tantivy_path=settings.tantivy_path,
-            load_documents=settings.croissant_store_type == CroissantStoreType.memory,
+            return_documents=settings.croissant_store_type == CroissantStoreType.DICT,
         )
         generate_embedding_index(
             name_to_vector=name_to_vector,
@@ -289,16 +269,12 @@ async def update_indices() -> MessageResponse:
             algorithm=settings.fainder_cluster_algorithm,
         )
 
-        # Update global variables
-        if settings.json_encoding == "json":
-            with settings.metadata_path.open("r") as file:
-                metadata = Metadata(**json.load(file))
-        else:
-            with settings.metadata_path.open() as file:
-                metadata = Metadata(**orjson.loads(file.read()))
-        croissant_store.replace_documents(documents, doc_to_path=metadata.doc_to_path)
         # Delete metadata variables before we load the entire metadata again to save memory
         del hists, name_to_vector, documents
+
+        # Update global variables
+        metadata = Metadata(**load_json(settings.metadata_path))
+        croissant_store.replace_documents(metadata.doc_to_path)
 
         fainder_index.update(
             metadata=metadata,

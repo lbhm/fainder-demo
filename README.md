@@ -47,10 +47,8 @@ TANTIVY_DIR=tantivy          # Subdirectory containing a keyword index for a col
 METADATA_FILE=metadata.json  # JSON file with metadata about a collection
 QUERY_CACHE_SIZE=128         # Maximum number of query resuls to cache
 DATASET_SLUG=kaggleRef       # Document field with a unique dataset identifier
-
-# Croissant
-CROISSANT_STORE_TYPE=memory  # Memory or disk (for Croissant Store)
-JSON_ENCODING=urjson         # JSON encoding for Croissant (urjson or json)
+CROISSANT_STORE_TYPE=dict    # Croissant store implementation (dict or file)
+CROISSANT_CACHE_SIZE=128     # Size of the Croissant store cache (only relevant for file store)
 
 # Fainder
 FAINDER_N_CLUSTERS=50               # Number of index clusters
