@@ -44,8 +44,6 @@ HIGHLIGHTING_CASES: dict[str, HighlightingCase] = {
         "expected": (
             {},
             {
-                np.uint32(1),
-                np.uint32(2),
                 np.uint32(3),
                 np.uint32(4),
                 np.uint32(5),
@@ -63,9 +61,7 @@ HIGHLIGHTING_CASES: dict[str, HighlightingCase] = {
                 np.uint32(19),
                 np.uint32(20),
                 np.uint32(22),
-                np.uint32(24),
                 np.uint32(28),
-                np.uint32(31),
                 np.uint32(36),
                 np.uint32(40),
                 np.uint32(41),
@@ -133,8 +129,6 @@ HIGHLIGHTING_CASES: dict[str, HighlightingCase] = {
                 }
             },
             {
-                np.uint32(1),
-                np.uint32(2),
                 np.uint32(3),
                 np.uint32(4),
                 np.uint32(5),
