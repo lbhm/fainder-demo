@@ -98,20 +98,21 @@ def generate_metadata(
             with path.open("w") as file:
                 json.dump(json_doc, file)
 
+            # Modify the document to be ingested by Tantivy
             json_doc["keywords"] = "; ".join(json_doc["keywords"])
             json_doc["creator"] = json_doc["creator"]["name"]
             json_doc["publisher"] = json_doc["publisher"]["name"]
             tantivy_docs.append(tantivy.Document.from_dict(json_doc, tantivy_schema))  # pyright: ignore[reportUnknownMemberType]
 
-    # Initialize Tantivy index
-    tantivy_index = TantivyIndex(tantivy_path, recreate=True)
-    # We index all documents at once to increase performance
-    tantivy_index.add_documents(tantivy_docs)
-
     logger.info(
         f"Found {len(doc_to_cols)} documents with {len(col_to_doc)} columns and "
         f"{len(hist_to_col)} histograms."
     )
+
+    # Index the documents in Tantivy (we index all documents at once to increase performance)
+    logger.info("Initializing tantivy index")
+    tantivy_index = TantivyIndex(tantivy_path, recreate=True)
+    tantivy_index.add_documents(tantivy_docs)
 
     # Save the mappings and indices
     logger.info("Saving metadata")

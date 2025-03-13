@@ -55,7 +55,7 @@ with settings.metadata_path.open() as file:
     metadata = Metadata(**json.load(file))
 
 croissant_store = CroissantStore(settings.croissant_path, settings.dataset_slug)
-tantivy_index = TantivyIndex(str(settings.tantivy_path))
+tantivy_index = TantivyIndex(settings.tantivy_path)
 fainder_index = FainderIndex(
     metadata=metadata,
     rebinning_path=settings.rebinning_index_path,
