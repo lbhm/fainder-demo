@@ -348,6 +348,71 @@ page
                             />
                           </div>
                         </div>
+                        <!-- Date Data -->
+                        <div
+                          v-else-if="field.min_date && field.max_date"
+                          class="field-content date"
+                        >
+                          <div class="date-timeline">
+                            <div class="timeline-container">
+                              <div class="timeline-wrapper">
+                                <div class="timeline-bar">
+                                  <div class="timeline-start">
+                                    {{ formatDate(field.min_date) }}
+                                  </div>
+                                  <div class="timeline-line" />
+                                  <div class="timeline-end">
+                                    {{ formatDate(field.max_date) }}
+                                  </div>
+                                </div>
+                                <div class="timeline-duration">
+                                  {{
+                                    calculateDateDifference(
+                                      field.min_date,
+                                      field.max_date,
+                                    )
+                                  }}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="date-statistics">
+                            <table class="statistics-table">
+                              <tbody>
+                                <tr>
+                                  <td class="stat-label">Earliest Date:</td>
+                                  <td class="stat-value">
+                                    {{ formatDateFull(field.min_date) }}
+                                  </td>
+                                </tr>
+                                <tr>
+                                  <td class="stat-label">Latest Date:</td>
+                                  <td class="stat-value">
+                                    {{ formatDateFull(field.max_date) }}
+                                  </td>
+                                </tr>
+                                <tr v-if="field.unique_dates !== undefined">
+                                  <td class="stat-label">Unique Dates:</td>
+                                  <td class="stat-value">
+                                    {{ formatNumber(field.unique_dates) }}
+                                  </td>
+                                </tr>
+                                <tr>
+                                  <td class="stat-label">Time Span:</td>
+                                  <td class="stat-value">
+                                    {{
+                                      calculateDateDifference(
+                                        field.min_date,
+                                        field.max_date,
+                                        true,
+                                      )
+                                    }}
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
                         <!-- Categorical Data -->
                         <div v-else class="field-content categorical">
                           <div class="categorical-summary">
@@ -886,6 +951,85 @@ const formatNumber = (value) => {
     maximumFractionDigits: 4,
   });
 };
+
+// Format date as YYYY-MM-DD
+const formatDate = (dateString) => {
+  if (!dateString) return "-";
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return dateString; // Return as-is if invalid
+
+  return date.toISOString().split("T")[0];
+};
+
+// Format date with both date and time
+const formatDateFull = (dateString) => {
+  if (!dateString) return "-";
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return dateString; // Return as-is if invalid
+
+  const options = {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  };
+
+  return new Intl.DateTimeFormat("en-US", options).format(date);
+};
+
+// Calculate the difference between two dates in a human-readable format
+const calculateDateDifference = (
+  startDateStr,
+  endDateStr,
+  detailed = false,
+) => {
+  if (!startDateStr || !endDateStr) return "-";
+
+  const startDate = new Date(startDateStr);
+  const endDate = new Date(endDateStr);
+
+  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+    return "Invalid date range";
+  }
+
+  // Calculate difference in milliseconds
+  const diffMs = Math.abs(endDate - startDate);
+
+  // Convert to days, months, years
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const diffMonths = Math.floor(diffDays / 30.44); // Average days in a month
+  const diffYears = Math.floor(diffDays / 365.25); // Account for leap years
+
+  if (!detailed) {
+    // Simple format for timeline display
+    if (diffYears > 0) {
+      return `${diffYears} year${diffYears !== 1 ? "s" : ""}`;
+    } else if (diffMonths > 0) {
+      return `${diffMonths} month${diffMonths !== 1 ? "s" : ""}`;
+    } else {
+      return `${diffDays} day${diffDays !== 1 ? "s" : ""}`;
+    }
+  } else {
+    // Detailed format for statistics table
+    const remainingMonths = diffMonths % 12;
+    const remainingDays = diffDays % 30;
+
+    let result = "";
+
+    if (diffYears > 0) {
+      result += `${diffYears} year${diffYears !== 1 ? "s" : ""} `;
+    }
+
+    if (remainingMonths > 0) {
+      result += `${remainingMonths} month${remainingMonths !== 1 ? "s" : ""} `;
+    }
+
+    if (remainingDays > 0 || result === "") {
+      result += `${remainingDays} day${remainingDays !== 1 ? "s" : ""}`;
+    }
+
+    return result.trim();
+  }
+};
 </script>
 
 <style scoped>
@@ -1368,6 +1512,14 @@ const formatNumber = (value) => {
   .value-label {
     max-width: none;
   }
+
+  .field-content.date {
+    grid-template-columns: 1fr;
+  }
+
+  .timeline-wrapper {
+    max-width: 100%;
+  }
 }
 
 /* Add specific mobile styles */
@@ -1382,6 +1534,40 @@ const formatNumber = (value) => {
 
   .content-wrapper {
     padding: 12px;
+  }
+
+  .timeline-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .timeline-start,
+  .timeline-end {
+    width: 100%;
+    text-align: center;
+    margin: 10px 0;
+  }
+
+  .timeline-line {
+    height: 100px;
+    width: 4px;
+    margin: 0 auto;
+    background: linear-gradient(
+      to bottom,
+      rgba(77, 182, 172, 0.8),
+      rgba(255, 167, 38, 0.8)
+    );
+  }
+
+  .timeline-line::before {
+    left: -6px;
+    top: -8px;
+  }
+
+  .timeline-line::after {
+    right: -6px;
+    top: auto;
+    bottom: -8px;
   }
 }
 
@@ -1445,5 +1631,100 @@ const formatNumber = (value) => {
   position: relative;
   z-index: 2;
   margin-bottom: 16px;
+}
+
+.date-timeline {
+  background-color: rgba(var(--v-theme-surface), 0.8);
+  border-radius: 8px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.timeline-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.timeline-wrapper {
+  width: 100%;
+  max-width: 600px;
+}
+
+.timeline-bar {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  margin: 20px 0;
+}
+
+.timeline-start,
+.timeline-end {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: rgb(var(--v-theme-on-surface));
+  width: 100px;
+}
+
+.timeline-start {
+  text-align: right;
+  margin-right: 10px;
+}
+
+.timeline-end {
+  text-align: left;
+  margin-left: 10px;
+}
+
+.timeline-line {
+  flex-grow: 1;
+  height: 4px;
+  background: linear-gradient(
+    to right,
+    rgba(77, 182, 172, 0.8),
+    rgba(255, 167, 38, 0.8)
+  );
+  border-radius: 2px;
+  position: relative;
+}
+
+.timeline-line::before,
+.timeline-line::after {
+  content: "";
+  position: absolute;
+  top: -6px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+}
+
+.timeline-line::before {
+  left: -8px;
+  background-color: rgba(77, 182, 172, 0.8);
+}
+
+.timeline-line::after {
+  right: -8px;
+  background-color: rgba(255, 167, 38, 0.8);
+}
+
+.timeline-duration {
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin-top: 10px;
+}
+
+.date-statistics {
+  background-color: rgba(var(--v-theme-surface), 0.8);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.field-content.date {
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
 }
 </style>
