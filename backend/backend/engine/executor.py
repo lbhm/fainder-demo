@@ -10,13 +10,9 @@ from loguru import logger
 from numpy import uint32
 
 from backend.column_index import ColumnIndex
-from backend.config import FainderMode, Metadata
+from backend.config import ColumnHighlights, DocumentHighlights, FainderMode, Highlights, Metadata
 from backend.fainder_index import FainderIndex
 from backend.tantivy_index import TantivyIndex
-
-DocumentHighlights = dict[int, dict[str, str]]
-ColumnHighlights = set[uint32]
-Highlights = tuple[DocumentHighlights, ColumnHighlights]
 
 T = TypeVar("T", tuple[set[int], Highlights], set[uint32])
 

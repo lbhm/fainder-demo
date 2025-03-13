@@ -1,33 +1,45 @@
 import shutil
 import time
+from collections import defaultdict
 from pathlib import Path
-from typing import Any
 
 import tantivy
 from loguru import logger
 
-DOCS_MAX = 1000000
+from backend.config import DocumentHighlights
 
-FIELDS: list[str] = ["name", "description", "keywords", "creator", "publisher", "alternateName"]
+MAX_DOCS = 1000000
+DOC_FIELDS: list[str] = [
+    "name",
+    "description",
+    "keywords",
+    "creator",
+    "publisher",
+    "alternateName",
+]
+
+
+def get_schema() -> tantivy.Schema:
+    """Construct the schema for the Tantivy index.
+
+    See https://docs.rs/tantivy/latest/tantivy/schema/index.html for how to configure fields.
+    """
+    schema_builder = tantivy.SchemaBuilder()
+    schema_builder.add_unsigned_field("id", stored=True, indexed=True, fast=True)
+    schema_builder.add_text_field("name", stored=True, tokenizer_name="en_stem")
+    schema_builder.add_text_field("description", stored=True, tokenizer_name="en_stem")
+    schema_builder.add_text_field("keywords", stored=True, tokenizer_name="en_stem")
+    schema_builder.add_text_field("creator", stored=True, tokenizer_name="en_stem")
+    schema_builder.add_text_field("publisher", stored=True, tokenizer_name="en_stem")
+    schema_builder.add_text_field("alternateName", stored=True, tokenizer_name="en_stem")
+    return schema_builder.build()
 
 
 class TantivyIndex:
-    def __init__(self, index_path: str, recreate: bool = False) -> None:
-        self.index_path = index_path
-        self.schema = self._schema()
+    def __init__(self, index_path: str | Path, recreate: bool = False) -> None:
+        self.index_path = str(index_path)
+        self.schema = get_schema()
         self.index = self.load_index(self.schema, recreate)
-
-    def _schema(self) -> tantivy.Schema:
-        schema_builder = tantivy.SchemaBuilder()
-        schema_builder.add_date_field("dateModified", stored=True)
-        schema_builder.add_text_field("description", stored=True, tokenizer_name="en_stem")
-        schema_builder.add_text_field("name", stored=True, tokenizer_name="en_stem")
-        schema_builder.add_text_field("alternateName", stored=True, tokenizer_name="en_stem")
-        schema_builder.add_integer_field("id", stored=True)
-        schema_builder.add_text_field("keywords", stored=True, tokenizer_name="en_stem")
-        schema_builder.add_text_field("creator", stored=True, tokenizer_name="en_stem")
-        schema_builder.add_text_field("publisher", stored=True, tokenizer_name="en_stem")
-        return schema_builder.build()
 
     def load_index(self, schema: tantivy.Schema, recreate: bool = False) -> tantivy.Index:
         """
@@ -35,64 +47,55 @@ class TantivyIndex:
         """
         tantivy_path = Path(self.index_path)
         if recreate and tantivy_path.exists():
-            # delete the index if it already exists to make sure we start from scratch
+            # Delete the index if it already exists to make sure we start from scratch
             shutil.rmtree(tantivy_path, ignore_errors=True)
         tantivy_path.mkdir(parents=True, exist_ok=True)
-        return tantivy.Index(schema, self.index_path, not recreate)
 
-    def add_document(self, index: tantivy.Index, doc: dict[str, Any]) -> None:
-        writer = index.writer()
-        # Add document to index
-        keywords = "; ".join(doc["keywords"])
-        writer.add_document(
-            tantivy.Document(
-                dateModified=doc["dateModified"],
-                description=doc["description"],
-                name=doc["name"],
-                alternateName=doc["alternateName"],
-                id=doc["id"],
-                keywords=keywords,
-                creator=doc["creator"]["name"],
-                publisher=doc["publisher"]["name"],
-            )
-        )
+        return tantivy.Index(schema=schema, path=self.index_path, reuse=not recreate)
+
+    def add_documents(self, docs: list[tantivy.Document]) -> None:
+        writer = self.index.writer()
+        for doc in docs:
+            writer.add_document(doc)
         writer.commit()
         writer.wait_merging_threads()
 
     def search(
         self, query: str, enable_highlighting: bool = False
-    ) -> tuple[list[int], list[float], dict[int, dict[str, str]]]:
-        parsered_query = self.index.parse_query(query)
+    ) -> tuple[list[int], list[float], DocumentHighlights]:
+        parsed_query = self.index.parse_query(query, default_field_names=DOC_FIELDS)
         searcher = self.index.searcher()
-        start_time = time.perf_counter()
-        top_docs = searcher.search(parsered_query, DOCS_MAX).hits
-        logger.info(f"Search took {time.perf_counter() - start_time} seconds")
+
+        search_start = time.perf_counter()
+        search_result = searcher.search(parsed_query, limit=MAX_DOCS).hits
+        logger.info(f"Tantivy search took {time.perf_counter() - search_start:.5f}s")
 
         results: list[int] = []
         scores: list[float] = []
-        highlights: dict[int, dict[str, str]] = {}
+        highlights: DocumentHighlights = defaultdict(dict)
 
-        start_time = time.perf_counter()
-        for doc_results in top_docs:
-            best_score, doc_address = doc_results
+        process_start = time.perf_counter()
+        for score, doc_address in search_result:
             doc = searcher.doc(doc_address)
-            doc_id: int = doc["id"][0]  # type: ignore
-            assert isinstance(doc_id, int)
+            doc_id: int | None = doc.get_first("id")
+            if doc_id is None:
+                logger.error(f"Tantivy document with address {doc_address} has no id field")
+                continue
             results.append(doc_id)
+            scores.append(score)
 
-            scores.append(best_score)
             if enable_highlighting:
-                for field in FIELDS:
+                for field in DOC_FIELDS:
+                    # NOTE: Recreating the snippet generators for each result doc is inefficient
                     snippet_generator = tantivy.SnippetGenerator.create(
-                        searcher, parsered_query, self.schema, field
+                        searcher, parsed_query, self.schema, field
                     )
                     snippet = snippet_generator.snippet_from_doc(doc)
                     highlighted = snippet.highlighted()
                     if len(highlighted) == 0:
                         continue
 
-                    html_snippet: str = str(doc[field][0]) if doc[field] and doc[field][0] else ""  # type: ignore
-
+                    html_snippet: str = doc.get_first(field) or ""
                     offset = 0
                     for fragment in highlighted:
                         start = fragment.start
@@ -106,13 +109,11 @@ class TantivyIndex:
                         )
                         offset += len("<mark></mark>")
 
-                    if doc_id not in highlights:
-                        highlights[doc_id] = {}
                     field_name = field
                     if field in ["creator", "publisher"]:
                         field_name += "-name"
                     highlights[doc_id][field_name] = html_snippet
 
-        logger.info(f"Processing results took {time.perf_counter() - start_time} seconds")
+        logger.info(f"Processing results took {time.perf_counter() - process_start:.5f}s")
 
         return results, scores, highlights

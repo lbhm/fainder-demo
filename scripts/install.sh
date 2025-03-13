@@ -12,9 +12,3 @@
     uv sync --extra dev
     uv run pre-commit install
 )
-
-# Lucene setup
-(
-    cd lucene || exit
-    mvn clean package
-)

@@ -68,7 +68,7 @@ def engine() -> Engine:
         path=settings.hnsw_index_path, metadata=metadata, use_embeddings=False
     )
     return Engine(
-        tantivy_index = TantivyIndex(index_path=str(settings.tantivy_path), recreate=False),
+        tantivy_index=TantivyIndex(index_path=settings.tantivy_path, recreate=False),
         fainder_index=fainder_index,
         hnsw_index=column_index,
         metadata=metadata,

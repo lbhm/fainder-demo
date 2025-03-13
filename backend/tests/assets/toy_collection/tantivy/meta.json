@@ -5,44 +5,30 @@
   },
   "segments": [
     {
-      "segment_id": "fa02ba71-0029-457f-843e-ea7ac7e0a47c",
+      "segment_id": "e2ce2f1f-89c6-4140-a6dd-701f8b484831",
       "max_doc": 1,
       "deletes": null
     },
     {
-      "segment_id": "335616c3-a5ad-4057-b0f5-3148f1b4810f",
+      "segment_id": "8a26dc5f-4877-4aab-a62e-09f3c3e98d32",
       "max_doc": 1,
       "deletes": null
     },
     {
-      "segment_id": "895f9653-920e-4f6b-bdfe-c20b05ac6214",
+      "segment_id": "2ac74e8a-f049-422b-8170-9b08160d8c4b",
       "max_doc": 1,
       "deletes": null
     }
   ],
   "schema": [
     {
-      "name": "dateModified",
-      "type": "date",
+      "name": "id",
+      "type": "u64",
       "options": {
-        "indexed": false,
+        "indexed": true,
         "fieldnorms": false,
-        "fast": false,
-        "stored": true,
-        "precision": "seconds"
-      }
-    },
-    {
-      "name": "description",
-      "type": "text",
-      "options": {
-        "indexing": {
-          "record": "position",
-          "fieldnorms": true,
-          "tokenizer": "en_stem"
-        },
-        "stored": true,
-        "fast": false
+        "fast": true,
+        "stored": true
       }
     },
     {
@@ -59,7 +45,7 @@
       }
     },
     {
-      "name": "alternateName",
+      "name": "description",
       "type": "text",
       "options": {
         "indexing": {
@@ -69,16 +55,6 @@
         },
         "stored": true,
         "fast": false
-      }
-    },
-    {
-      "name": "id",
-      "type": "i64",
-      "options": {
-        "indexed": false,
-        "fieldnorms": false,
-        "fast": false,
-        "stored": true
       }
     },
     {
@@ -109,6 +85,19 @@
     },
     {
       "name": "publisher",
+      "type": "text",
+      "options": {
+        "indexing": {
+          "record": "position",
+          "fieldnorms": true,
+          "tokenizer": "en_stem"
+        },
+        "stored": true,
+        "fast": false
+      }
+    },
+    {
+      "name": "alternateName",
       "type": "text",
       "options": {
         "indexing": {

@@ -1,19 +1,4 @@
 services:
-  lucene:
-    build:
-      context: ./lucene
-      dockerfile: Dockerfile
-    user: ${UID:-1000}:${GID:-1000}
-    environment:
-      - DATA_DIR=/app/data
-      - COLLECTION_NAME=${COLLECTION_NAME:?COLLECTION_NAME is missing}
-    volumes:
-      - ./data:/app/data
-    # ports:
-    #   - "8001:8001"
-    networks:
-      - fainder-network
-
   backend:
     build:
       context: ./backend
@@ -31,8 +16,6 @@ services:
       - DATA_DIR=/app/data
       - COLLECTION_NAME=${COLLECTION_NAME:?COLLECTION_NAME is missing}
       - METADATA_FILE=${METADATA_FILE:-metadata.json}
-      - LUCENE_HOST=${LUCENE_HOST:-lucene}
-      - LUCENE_PORT=${LUCENE_PORT:-8001}
       - HF_HUB_CACHE=/app/data/${COLLECTION_NAME}/${EMBEDDING_DIR:-embeddings}/model_cache
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     volumes:

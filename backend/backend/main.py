@@ -14,7 +14,9 @@ from loguru import logger
 from backend.column_index import ColumnIndex
 from backend.config import (
     CacheInfo,
+    ColumnHighlights,
     ColumnSearchError,
+    DocumentHighlights,
     FainderError,
     IndexingError,
     MessageResponse,
@@ -26,7 +28,6 @@ from backend.config import (
 )
 from backend.croissant_store import CroissantStore, Document
 from backend.engine import Engine
-from backend.engine.executor import ColumnHighlights, DocumentHighlights
 from backend.fainder_index import FainderIndex
 from backend.indexing import (
     generate_embedding_index,
@@ -54,13 +55,13 @@ with settings.metadata_path.open() as file:
     metadata = Metadata(**json.load(file))
 
 croissant_store = CroissantStore(settings.croissant_path, settings.dataset_slug)
+tantivy_index = TantivyIndex(str(settings.tantivy_path))
 fainder_index = FainderIndex(
     metadata=metadata,
     rebinning_path=settings.rebinning_index_path,
     conversion_path=settings.conversion_index_path,
     histogram_path=settings.histogram_path,
 )
-tantivy_index = TantivyIndex(str(settings.tantivy_path))
 
 column_index = ColumnIndex(
     settings.hnsw_index_path,

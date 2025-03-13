@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 import hnswlib
 import numpy as np
+import tantivy
 from fainder.preprocessing.clustering import cluster_histograms
 from fainder.preprocessing.percentile_index import create_index
 from fainder.typing import Histogram
@@ -17,16 +18,17 @@ from loguru import logger
 from sentence_transformers import SentenceTransformer
 
 from backend.config import Settings
-from backend.croissant_store import Document
-from backend.tantivy_index import TantivyIndex
+from backend.tantivy_index import TantivyIndex, get_schema
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
 
 
 def generate_metadata(
-    croissant_path: Path, metadata_path: Path, tantivy_path: Path, load_documents: bool = True
-) -> tuple[list[tuple[np.uint32, Histogram]], dict[str, int], dict[int, Document], TantivyIndex]:
+    croissant_path: Path, metadata_path: Path, tantivy_path: Path, return_documents: bool = True
+) -> tuple[
+    list[tuple[np.uint32, Histogram]], dict[str, int], dict[int, dict[str, Any]], TantivyIndex
+]:
     """Load Croissant files and generate metadata.
 
     While loading the files, assign unique IDs to documents and columns. The function also creates
@@ -34,7 +36,7 @@ def generate_metadata(
     downstream processing.
     """
     # Initialize mappings
-    # NOTE: We need the vector_id intermediate step because annoy and faiss require integer IDs
+    # NOTE: We need the vector_id intermediate step because hnswlib requires int IDs for vectors
     doc_to_cols: dict[int, set[int]] = defaultdict(set)
     col_to_doc: dict[int, int] = {}
     col_to_hist: dict[int, int] = {}
@@ -42,10 +44,9 @@ def generate_metadata(
     name_to_vector: dict[str, int] = {}
     vector_to_cols: dict[int, set[int]] = defaultdict(set)
 
-    documents: dict[int, Document] = {}
-
-    # Initialize Tantivy index
-    tantivy_index = TantivyIndex(str(tantivy_path), recreate=True)
+    json_docs: dict[int, dict[str, Any]] = {}
+    tantivy_docs: list[tantivy.Document] = []
+    tantivy_schema = get_schema()
 
     # Ingest Croissant files and assign unique ids to datasets and columns
     hists: list[tuple[np.uint32, Histogram]] = []
@@ -59,15 +60,15 @@ def generate_metadata(
         if path.is_file():
             # Read the file and add a document ID to it
             with path.open("r") as file:
-                metadata = json.load(file)
+                json_doc: dict[str, Any] = json.load(file)
 
-            metadata["id"] = doc_id
-            if load_documents:
-                documents[doc_id] = metadata
+            json_doc["id"] = doc_id
+            if return_documents:
+                json_docs[doc_id] = json_doc
 
             # Ingest histograms and assign unique ids to columns
             try:
-                for record_set in metadata["recordSet"]:
+                for record_set in json_doc["recordSet"]:
                     for col in record_set["field"]:
                         col_name = col["name"]
                         doc_to_cols[doc_id].add(col_id)
@@ -93,11 +94,19 @@ def generate_metadata(
             except KeyError as e:
                 logger.error(f"KeyError {e} reading file {path}")
 
-            tantivy_index.add_document(tantivy_index.index, metadata)
-
             # Replace the file with the updated metadata
             with path.open("w") as file:
-                json.dump(metadata, file)
+                json.dump(json_doc, file)
+
+            json_doc["keywords"] = "; ".join(json_doc["keywords"])
+            json_doc["creator"] = json_doc["creator"]["name"]
+            json_doc["publisher"] = json_doc["publisher"]["name"]
+            tantivy_docs.append(tantivy.Document.from_dict(json_doc, tantivy_schema))  # pyright: ignore[reportUnknownMemberType]
+
+    # Initialize Tantivy index
+    tantivy_index = TantivyIndex(tantivy_path, recreate=True)
+    # We index all documents at once to increase performance
+    tantivy_index.add_documents(tantivy_docs)
 
     logger.info(
         f"Found {len(doc_to_cols)} documents with {len(col_to_doc)} columns and "
@@ -119,7 +128,7 @@ def generate_metadata(
             file,
         )
 
-    return hists, name_to_vector, documents, tantivy_index
+    return hists, name_to_vector, json_docs, tantivy_index
 
 
 def generate_fainder_indices(
@@ -269,7 +278,7 @@ if __name__ == "__main__":
         settings.croissant_path,
         settings.metadata_path,
         settings.tantivy_path,
-        load_documents=False,
+        return_documents=False,
     )
 
     if not args.no_fainder:

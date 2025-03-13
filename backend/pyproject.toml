@@ -27,18 +27,14 @@ classifiers = [
 dependencies = [
     "fainder@git+https://github.com/lbhm/fainder@demo",
     "fastapi[standard]~=0.115.6",
-    "grpcio~=1.69",
-    "grpcio-tools~=1.69",
     "hnswlib~=0.8.0",
     "lark[interegular]~=1.2",
     "loguru~=0.7.3",
-    "mypy-protobuf~=3.6",
     "numpy~=2.0",
-    "protobuf~=5.29",
     "pydantic~=2.10",
     "pydantic-settings~=2.7",
     "sentence-transformers~=3.3",
-    "tantivy>=0.22.0",
+    "tantivy~=0.22.0",
     "torch~=2.0",
 ]
 
@@ -50,13 +46,11 @@ parse-dql = "backend.engine.parser:main"
 
 [dependency-groups]
 dev = [
-    "grpc-stubs~=1.53",
     "mypy~=1.13",
     "pre-commit~=4.0",
     "pytest~=8.3",
     "pytest-cov~=6.0.0",
     "types-hnswlib~=0.8.0",
-    "types-protobuf~=5.29",
 ]
 
 [tool.hatch.version]
@@ -68,7 +62,6 @@ allow-direct-references = true
 [tool.ruff]
 line-length = 99
 target-version = "py311"
-exclude = ["proto"]
 
 [tool.ruff.lint]
 select = [
@@ -121,7 +114,6 @@ torch = { index = "pytorch" }
 
 [tool.pyright]
 inlucde = ["backend", "tests"]
-exclude = ["**/proto", "**/__pycache__", "**/.*"]
 # reportUnnecessaryTypeIgnoreComment = true
 typeCheckingMode = "strict"
 venvPath = "."

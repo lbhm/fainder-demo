@@ -1,4 +1,4 @@
-# Fainder Backend
+# Fainder Demo Backend
 
 ## Helpful Commands
 

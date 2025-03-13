@@ -1,1 +1,540 @@
-{"id": 0, "@context": {"@language": "en", "@vocab": "https://schema.org/", "citeAs": "cr:citeAs", "column": "cr:column", "conformsTo": "dct:conformsTo", "cr": "http://mlcommons.org/croissant/", "data": {"@id": "cr:data", "@type": "@json"}, "dataBiases": "cr:dataBiases", "dataCollection": "cr:dataCollection", "dataType": {"@id": "cr:dataType", "@type": "@vocab"}, "dct": "http://purl.org/dc/terms/", "extract": "cr:extract", "field": "cr:field", "fileProperty": "cr:fileProperty", "fileObject": "cr:fileObject", "fileSet": "cr:fileSet", "format": "cr:format", "includes": "cr:includes", "isEnumeration": "cr:isEnumeration", "isLiveDataset": "cr:isLiveDataset", "jsonPath": "cr:jsonPath", "key": "cr:key", "md5": "cr:md5", "parentField": "cr:parentField", "path": "cr:path", "personalSensitiveInformation": "cr:personalSensitiveInformation", "recordSet": "cr:recordSet", "references": "cr:references", "regex": "cr:regex", "repeated": "cr:repeated", "replace": "cr:replace", "sc": "https://schema.org/", "separator": "cr:separator", "source": "cr:source", "subField": "cr:subField", "transform": "cr:transform", "wd": "https://www.wikidata.org/wiki/"}, "alternateName": "Weather Patterns Rainfall and Climate German Cities", "conformsTo": "http://mlcommons.org/croissant/1.0", "license": {"@type": "sc:CreativeWork", "name": "MIT", "url": "https://www.mit.edu/~amini/LICENSE.md"}, "distribution": [{"contentUrl": "https://www.kaggle.com/api/v1/datasets/download/heidarmirhajisadati/germany-city-rainfall-data?datasetVersionNumber=1", "contentSize": "12.263 KB", "md5": "R+pZc9DHpc96bqsMUVwgtQ==", "encodingFormat": "application/zip", "@id": "archive.zip", "@type": "cr:FileObject", "name": "archive.zip", "description": "Archive containing all the contents of the Germany City Rainfall Data dataset"}, {"contentUrl": "Rainfall_Data_Germany_Complete.csv", "containedIn": {"@id": "archive.zip"}, "encodingFormat": "text/csv", "@id": "Rainfall_Data_Germany_Complete.csv_fileobject", "@type": "cr:FileObject", "name": "Rainfall_Data_Germany_Complete.csv", "description": "City: Name of the city.\nLatitude: City's latitude in degrees.\nLongitude: City's longitude in degrees.\nMonth: The month number (1-12).\nYear: The year of the data.\nRainfall (mm): Rainfall amount in millimeters.\nElevation (m): City\u2019s elevation above sea level in meters.\nClimate_Type: The climate classification of the city.\nTemperature (\u00b0C): Average temperature for the month in Celsius.\nHumidity (%): Average humidity level for the month in percentage."}], "recordSet": [{"field": [{"dataType": ["sc:Text"], "source": {"fileObject": {"@id": "Rainfall_Data_Germany_Complete.csv_fileobject"}, "extract": {"column": "City"}}, "@id": "Rainfall_Data_Germany_Complete.csv/City", "@type": "cr:Field", "name": "City", "description": "name", "id": 0}, {"dataType": ["sc:Text"], "source": {"fileObject": {"@id": "Rainfall_Data_Germany_Complete.csv_fileobject"}, "extract": {"column": "Latitude"}}, "@id": "Rainfall_Data_Germany_Complete.csv/Latitude", "@type": "cr:Field", "name": "Latitude", "description": "", "histogram": {"densities": [0.10000000149011612, 0.10000000149011612, 0.0, 0.10000000149011612, 0.20000000298023224, 0.20000000298023224, 0.0, 0.20000000298023224, 0.10000000149011612], "bins": [48.1351, 48.73687777777778, 49.338655555555555, 49.94043333333333, 50.54221111111111, 51.14398888888889, 51.74576666666667, 52.347544444444445, 52.94932222222222, 53.5511], "id": 0}, "id": 1}, {"dataType": ["sc:Text"], "source": {"fileObject": {"@id": "Rainfall_Data_Germany_Complete.csv_fileobject"}, "extract": {"column": "Longitude"}}, "@id": "Rainfall_Data_Germany_Complete.csv/Longitude", "@type": "cr:Field", "name": "Longitude", "description": "", "histogram": {"densities": [0.20000000298023224, 0.0, 0.10000000149011612, 0.20000000298023224, 0.10000000149011612, 0.0, 0.10000000149011612, 0.10000000149011612, 0.20000000298023224], "bins": [6.7735, 7.547255555555556, 8.321011111111112, 9.094766666666667, 9.868522222222222, 10.642277777777778, 11.416033333333333, 12.189788888888888, 12.963544444444445, 13.7373], "id": 1}, "id": 2}, {"dataType": ["sc:Integer"], "source": {"fileObject": {"@id": "Rainfall_Data_Germany_Complete.csv_fileobject"}, "extract": {"column": "Month"}}, "@id": "Rainfall_Data_Germany_Complete.csv/Month", "@type": "cr:Field", "name": "Month", "description": "", "histogram": {"densities": [0.0833333358168602, 0.0833333358168602, 0.0833333358168602, 0.0833333358168602, 0.0833333358168602, 0.0833333358168602, 0.0833333358168602, 0.0833333358168602, 0.0833333358168602, 0.0833333358168602, 0.1666666716337204], "bins": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0], "id": 2}, "id": 3}, {"dataType": ["sc:Integer"], "source": {"fileObject": {"@id": "Rainfall_Data_Germany_Complete.csv_fileobject"}, "extract": {"column": "Year"}}, "@id": "Rainfall_Data_Germany_Complete.csv/Year", "@type": "cr:Field", "name": "Year", "description": "", "histogram": {"densities": [0.1111111119389534, 0.1111111119389534, 0.1111111119389534, 0.1111111119389534, 0.1111111119389534, 0.1111111119389534, 0.1111111119389534, 0.2222222238779068], "bins": [2015.0, 2016.0, 2017.0, 2018.0, 2019.0, 2020.0, 2021.0, 2022.0, 2023.0], "id": 3}, "id": 4}, {"dataType": ["sc:Float"], "source": {"fileObject": {"@id": "Rainfall_Data_Germany_Complete.csv_fileobject"}, "extract": {"column": "Rainfall (mm)"}}, "@id": "Rainfall_Data_Germany_Complete.csv/Rainfall+(mm)", "@type": "cr:Field", "name": "Rainfall (mm)", "description": "", "histogram": {"densities": [0.05277777835726738, 0.05740740895271301, 0.040740739554166794, 0.05648148059844971, 0.05833333358168602, 0.06296296417713165, 0.046296294778585434, 0.05370370298624039, 0.049074072390794754, 0.05370370298624039, 0.040740739554166794, 0.05370370298624039, 0.05925925821065903, 0.05370370298624039, 0.06018518656492233, 0.05648148059844971, 0.05092592537403107, 0.03981481492519379, 0.05370370298624039], "bins": [0.0, 10.52157894736842, 21.04315789473684, 31.564736842105262, 42.08631578947368, 52.6078947368421, 63.129473684210524, 73.65105263157893, 84.17263157894736, 94.69421052631579, 105.2157894736842, 115.73736842105262, 126.25894736842105, 136.78052631578947, 147.30210526315787, 157.8236842105263, 168.34526315789472, 178.86684210526315, 189.38842105263157, 199.91], "id": 4}, "id": 5}, {"dataType": ["sc:Integer"], "source": {"fileObject": {"@id": "Rainfall_Data_Germany_Complete.csv_fileobject"}, "extract": {"column": "Elevation (m)"}}, "@id": "Rainfall_Data_Germany_Complete.csv/Elevation+(m)", "@type": "cr:Field", "name": "Elevation (m)", "description": "", "histogram": {"densities": [0.5, 0.30000001192092896, 0.0, 0.10000000149011612, 0.0, 0.0, 0.0, 0.10000000149011612], "bins": [6.0, 70.125, 134.25, 198.375, 262.5, 326.625, 390.75, 454.875, 519.0], "id": 5}, "id": 6}, {"dataType": ["sc:Text"], "source": {"fileObject": {"@id": "Rainfall_Data_Germany_Complete.csv_fileobject"}, "extract": {"column": "Climate_Type"}}, "@id": "Rainfall_Data_Germany_Complete.csv/Climate_Type", "@type": "cr:Field", "name": "Climate_Type", "description": "", "id": 7}, {"dataType": ["sc:Float"], "source": {"fileObject": {"@id": "Rainfall_Data_Germany_Complete.csv_fileobject"}, "extract": {"column": "Temperature (\u00b0C)"}}, "@id": "Rainfall_Data_Germany_Complete.csv/Temperature+(%C2%B0C)", "@type": "cr:Field", "name": "Temperature (\u00b0C)", "description": "", "histogram": {"densities": [0.07037036865949631, 0.0694444477558136, 0.06481481343507767, 0.06388889253139496, 0.05925925821065903, 0.07500000298023224, 0.07500000298023224, 0.051851850003004074, 0.08425925672054291, 0.06388889253139496, 0.07037036865949631, 0.05370370298624039, 0.07222222536802292, 0.05648148059844971, 0.0694444477558136], "bins": [-5.0, -2.3400000000000003, 0.3199999999999994, 2.9799999999999986, 5.639999999999999, 8.299999999999999, 10.959999999999997, 13.619999999999997, 16.279999999999998, 18.939999999999998, 21.599999999999998, 24.259999999999998, 26.919999999999995, 29.58, 32.239999999999995, 34.9], "id": 6}, "id": 8}, {"dataType": ["sc:Integer"], "source": {"fileObject": {"@id": "Rainfall_Data_Germany_Complete.csv_fileobject"}, "extract": {"column": "Humidity (%)"}}, "@id": "Rainfall_Data_Germany_Complete.csv/Humidity+(%25)", "@type": "cr:Field", "name": "Humidity (%)", "description": "", "histogram": {"densities": [0.0962962955236435, 0.08796296268701553, 0.11296296119689941, 0.10185185074806213, 0.08055555820465088, 0.10833333432674408, 0.09444444626569748, 0.1111111119389534, 0.09907407313585281, 0.10740740597248077], "bins": [30.0, 36.9, 43.8, 50.7, 57.6, 64.5, 71.4, 78.30000000000001, 85.2, 92.1, 99.0], "id": 7}, "id": 9}], "@id": "Rainfall_Data_Germany_Complete.csv", "@type": "cr:RecordSet", "name": "Rainfall_Data_Germany_Complete.csv", "description": "City: Name of the city.\nLatitude: City's latitude in degrees.\nLongitude: City's longitude in degrees.\nMonth: The month number (1-12).\nYear: The year of the data.\nRainfall (mm): Rainfall amount in millimeters.\nElevation (m): City\u2019s elevation above sea level in meters.\nClimate_Type: The climate classification of the city.\nTemperature (\u00b0C): Average temperature for the month in Celsius.\nHumidity (%): Average humidity level for the month in percentage."}], "version": 1, "keywords": ["subject > earth and nature > environment > weather and climate", "language > german"], "isAccessibleForFree": true, "includedInDataCatalog": {"@type": "sc:DataCatalog", "name": "Kaggle", "url": "https://www.kaggle.com"}, "creator": {"@type": "sc:Person", "name": "Heidar Mirhaji Sadati", "url": "/heidarmirhajisadati", "image": "https://storage.googleapis.com/kaggle-avatars/thumbnails/20128584-kg.jpG?t=2024-05-23-10-31-02"}, "publisher": {"@type": "sc:Organization", "name": "Kaggle", "url": "https://www.kaggle.com/organizations/kaggle", "image": "https://storage.googleapis.com/kaggle-organizations/4/thumbnail.png"}, "thumbnailUrl": "https://storage.googleapis.com/kaggle-datasets-images/6232015/10103534/d26b4950778d06476371baf0016d8370/dataset-card.JPG?t=2024-12-04-22-31-52", "dateModified": "2024-12-04T22:20:48.963", "datePublished": "2024-12-04T22:20:48.963", "@type": "sc:Dataset", "name": "Germany City Rainfall Data", "url": "https://www.kaggle.com/datasets/heidarmirhajisadati/germany-city-rainfall-data/versions/1", "description": "\n**This dataset, provides detailed weather and climate statistics for major cities in Germany from 2015 to 2023.** \n\nIt includes rainfall amounts, temperatures, humidity levels, and other geographical and climatic details, making it ideal for analyzing weather patterns, climate change, and their impacts across different regions.\n\n1. **City:** Name of the city.\n\n2. **Latitude:** City's latitude in degrees.\n\n3. **Longitude:** City's longitude in degrees.\n\n4. **Month:** The month number (1-12).\n\n5. **Year:** The year of the data.\n\n6. **Rainfall (mm):** Rainfall amount in millimeters.\n\n7. **Elevation (m):** City\u2019s elevation above sea level in meters.\n\n8. **Climate_Type:** The climate classification of the city.\n\n9. **Temperature (\u00b0C):** Average temperature for the month in Celsius.\n\n10. **Humidity (%):** Average humidity level for the month in percentage.\n\n"}
+{
+    "id": 0,
+    "@context": {
+        "@language": "en",
+        "@vocab": "https://schema.org/",
+        "citeAs": "cr:citeAs",
+        "column": "cr:column",
+        "conformsTo": "dct:conformsTo",
+        "cr": "http://mlcommons.org/croissant/",
+        "data": {
+            "@id": "cr:data",
+            "@type": "@json"
+        },
+        "dataBiases": "cr:dataBiases",
+        "dataCollection": "cr:dataCollection",
+        "dataType": {
+            "@id": "cr:dataType",
+            "@type": "@vocab"
+        },
+        "dct": "http://purl.org/dc/terms/",
+        "extract": "cr:extract",
+        "field": "cr:field",
+        "fileProperty": "cr:fileProperty",
+        "fileObject": "cr:fileObject",
+        "fileSet": "cr:fileSet",
+        "format": "cr:format",
+        "includes": "cr:includes",
+        "isEnumeration": "cr:isEnumeration",
+        "isLiveDataset": "cr:isLiveDataset",
+        "jsonPath": "cr:jsonPath",
+        "key": "cr:key",
+        "md5": "cr:md5",
+        "parentField": "cr:parentField",
+        "path": "cr:path",
+        "personalSensitiveInformation": "cr:personalSensitiveInformation",
+        "recordSet": "cr:recordSet",
+        "references": "cr:references",
+        "regex": "cr:regex",
+        "repeated": "cr:repeated",
+        "replace": "cr:replace",
+        "sc": "https://schema.org/",
+        "separator": "cr:separator",
+        "source": "cr:source",
+        "subField": "cr:subField",
+        "transform": "cr:transform",
+        "wd": "https://www.wikidata.org/wiki/"
+    },
+    "alternateName": "Weather Patterns Rainfall and Climate German Cities",
+    "conformsTo": "http://mlcommons.org/croissant/1.0",
+    "license": {
+        "@type": "sc:CreativeWork",
+        "name": "MIT",
+        "url": "https://www.mit.edu/~amini/LICENSE.md"
+    },
+    "distribution": [
+        {
+            "contentUrl": "https://www.kaggle.com/api/v1/datasets/download/heidarmirhajisadati/germany-city-rainfall-data?datasetVersionNumber=1",
+            "contentSize": "12.263 KB",
+            "md5": "R+pZc9DHpc96bqsMUVwgtQ==",
+            "encodingFormat": "application/zip",
+            "@id": "archive.zip",
+            "@type": "cr:FileObject",
+            "name": "archive.zip",
+            "description": "Archive containing all the contents of the Germany City Rainfall Data dataset"
+        },
+        {
+            "contentUrl": "Rainfall_Data_Germany_Complete.csv",
+            "containedIn": {
+                "@id": "archive.zip"
+            },
+            "encodingFormat": "text/csv",
+            "@id": "Rainfall_Data_Germany_Complete.csv_fileobject",
+            "@type": "cr:FileObject",
+            "name": "Rainfall_Data_Germany_Complete.csv",
+            "description": "City: Name of the city.\nLatitude: City's latitude in degrees.\nLongitude: City's longitude in degrees.\nMonth: The month number (1-12).\nYear: The year of the data.\nRainfall (mm): Rainfall amount in millimeters.\nElevation (m): City\u2019s elevation above sea level in meters.\nClimate_Type: The climate classification of the city.\nTemperature (\u00b0C): Average temperature for the month in Celsius.\nHumidity (%): Average humidity level for the month in percentage."
+        }
+    ],
+    "recordSet": [
+        {
+            "field": [
+                {
+                    "dataType": [
+                        "sc:Text"
+                    ],
+                    "source": {
+                        "fileObject": {
+                            "@id": "Rainfall_Data_Germany_Complete.csv_fileobject"
+                        },
+                        "extract": {
+                            "column": "City"
+                        }
+                    },
+                    "@id": "Rainfall_Data_Germany_Complete.csv/City",
+                    "@type": "cr:Field",
+                    "name": "City",
+                    "description": "name",
+                    "id": 0
+                },
+                {
+                    "dataType": [
+                        "sc:Text"
+                    ],
+                    "source": {
+                        "fileObject": {
+                            "@id": "Rainfall_Data_Germany_Complete.csv_fileobject"
+                        },
+                        "extract": {
+                            "column": "Latitude"
+                        }
+                    },
+                    "@id": "Rainfall_Data_Germany_Complete.csv/Latitude",
+                    "@type": "cr:Field",
+                    "name": "Latitude",
+                    "description": "",
+                    "histogram": {
+                        "densities": [
+                            0.10000000149011612,
+                            0.10000000149011612,
+                            0.0,
+                            0.10000000149011612,
+                            0.20000000298023224,
+                            0.20000000298023224,
+                            0.0,
+                            0.20000000298023224,
+                            0.10000000149011612
+                        ],
+                        "bins": [
+                            48.1351,
+                            48.73687777777778,
+                            49.338655555555555,
+                            49.94043333333333,
+                            50.54221111111111,
+                            51.14398888888889,
+                            51.74576666666667,
+                            52.347544444444445,
+                            52.94932222222222,
+                            53.5511
+                        ],
+                        "id": 0
+                    },
+                    "id": 1
+                },
+                {
+                    "dataType": [
+                        "sc:Text"
+                    ],
+                    "source": {
+                        "fileObject": {
+                            "@id": "Rainfall_Data_Germany_Complete.csv_fileobject"
+                        },
+                        "extract": {
+                            "column": "Longitude"
+                        }
+                    },
+                    "@id": "Rainfall_Data_Germany_Complete.csv/Longitude",
+                    "@type": "cr:Field",
+                    "name": "Longitude",
+                    "description": "",
+                    "histogram": {
+                        "densities": [
+                            0.20000000298023224,
+                            0.0,
+                            0.10000000149011612,
+                            0.20000000298023224,
+                            0.10000000149011612,
+                            0.0,
+                            0.10000000149011612,
+                            0.10000000149011612,
+                            0.20000000298023224
+                        ],
+                        "bins": [
+                            6.7735,
+                            7.547255555555556,
+                            8.321011111111112,
+                            9.094766666666667,
+                            9.868522222222222,
+                            10.642277777777778,
+                            11.416033333333333,
+                            12.189788888888888,
+                            12.963544444444445,
+                            13.7373
+                        ],
+                        "id": 1
+                    },
+                    "id": 2
+                },
+                {
+                    "dataType": [
+                        "sc:Integer"
+                    ],
+                    "source": {
+                        "fileObject": {
+                            "@id": "Rainfall_Data_Germany_Complete.csv_fileobject"
+                        },
+                        "extract": {
+                            "column": "Month"
+                        }
+                    },
+                    "@id": "Rainfall_Data_Germany_Complete.csv/Month",
+                    "@type": "cr:Field",
+                    "name": "Month",
+                    "description": "",
+                    "histogram": {
+                        "densities": [
+                            0.0833333358168602,
+                            0.0833333358168602,
+                            0.0833333358168602,
+                            0.0833333358168602,
+                            0.0833333358168602,
+                            0.0833333358168602,
+                            0.0833333358168602,
+                            0.0833333358168602,
+                            0.0833333358168602,
+                            0.0833333358168602,
+                            0.1666666716337204
+                        ],
+                        "bins": [
+                            1.0,
+                            2.0,
+                            3.0,
+                            4.0,
+                            5.0,
+                            6.0,
+                            7.0,
+                            8.0,
+                            9.0,
+                            10.0,
+                            11.0,
+                            12.0
+                        ],
+                        "id": 2
+                    },
+                    "id": 3
+                },
+                {
+                    "dataType": [
+                        "sc:Integer"
+                    ],
+                    "source": {
+                        "fileObject": {
+                            "@id": "Rainfall_Data_Germany_Complete.csv_fileobject"
+                        },
+                        "extract": {
+                            "column": "Year"
+                        }
+                    },
+                    "@id": "Rainfall_Data_Germany_Complete.csv/Year",
+                    "@type": "cr:Field",
+                    "name": "Year",
+                    "description": "",
+                    "histogram": {
+                        "densities": [
+                            0.1111111119389534,
+                            0.1111111119389534,
+                            0.1111111119389534,
+                            0.1111111119389534,
+                            0.1111111119389534,
+                            0.1111111119389534,
+                            0.1111111119389534,
+                            0.2222222238779068
+                        ],
+                        "bins": [
+                            2015.0,
+                            2016.0,
+                            2017.0,
+                            2018.0,
+                            2019.0,
+                            2020.0,
+                            2021.0,
+                            2022.0,
+                            2023.0
+                        ],
+                        "id": 3
+                    },
+                    "id": 4
+                },
+                {
+                    "dataType": [
+                        "sc:Float"
+                    ],
+                    "source": {
+                        "fileObject": {
+                            "@id": "Rainfall_Data_Germany_Complete.csv_fileobject"
+                        },
+                        "extract": {
+                            "column": "Rainfall (mm)"
+                        }
+                    },
+                    "@id": "Rainfall_Data_Germany_Complete.csv/Rainfall+(mm)",
+                    "@type": "cr:Field",
+                    "name": "Rainfall (mm)",
+                    "description": "",
+                    "histogram": {
+                        "densities": [
+                            0.05277777835726738,
+                            0.05740740895271301,
+                            0.040740739554166794,
+                            0.05648148059844971,
+                            0.05833333358168602,
+                            0.06296296417713165,
+                            0.046296294778585434,
+                            0.05370370298624039,
+                            0.049074072390794754,
+                            0.05370370298624039,
+                            0.040740739554166794,
+                            0.05370370298624039,
+                            0.05925925821065903,
+                            0.05370370298624039,
+                            0.06018518656492233,
+                            0.05648148059844971,
+                            0.05092592537403107,
+                            0.03981481492519379,
+                            0.05370370298624039
+                        ],
+                        "bins": [
+                            0.0,
+                            10.52157894736842,
+                            21.04315789473684,
+                            31.564736842105262,
+                            42.08631578947368,
+                            52.6078947368421,
+                            63.129473684210524,
+                            73.65105263157893,
+                            84.17263157894736,
+                            94.69421052631579,
+                            105.2157894736842,
+                            115.73736842105262,
+                            126.25894736842105,
+                            136.78052631578947,
+                            147.30210526315787,
+                            157.8236842105263,
+                            168.34526315789472,
+                            178.86684210526315,
+                            189.38842105263157,
+                            199.91
+                        ],
+                        "id": 4
+                    },
+                    "id": 5
+                },
+                {
+                    "dataType": [
+                        "sc:Integer"
+                    ],
+                    "source": {
+                        "fileObject": {
+                            "@id": "Rainfall_Data_Germany_Complete.csv_fileobject"
+                        },
+                        "extract": {
+                            "column": "Elevation (m)"
+                        }
+                    },
+                    "@id": "Rainfall_Data_Germany_Complete.csv/Elevation+(m)",
+                    "@type": "cr:Field",
+                    "name": "Elevation (m)",
+                    "description": "",
+                    "histogram": {
+                        "densities": [
+                            0.5,
+                            0.30000001192092896,
+                            0.0,
+                            0.10000000149011612,
+                            0.0,
+                            0.0,
+                            0.0,
+                            0.10000000149011612
+                        ],
+                        "bins": [
+                            6.0,
+                            70.125,
+                            134.25,
+                            198.375,
+                            262.5,
+                            326.625,
+                            390.75,
+                            454.875,
+                            519.0
+                        ],
+                        "id": 5
+                    },
+                    "id": 6
+                },
+                {
+                    "dataType": [
+                        "sc:Text"
+                    ],
+                    "source": {
+                        "fileObject": {
+                            "@id": "Rainfall_Data_Germany_Complete.csv_fileobject"
+                        },
+                        "extract": {
+                            "column": "Climate_Type"
+                        }
+                    },
+                    "@id": "Rainfall_Data_Germany_Complete.csv/Climate_Type",
+                    "@type": "cr:Field",
+                    "name": "Climate_Type",
+                    "description": "",
+                    "id": 7
+                },
+                {
+                    "dataType": [
+                        "sc:Float"
+                    ],
+                    "source": {
+                        "fileObject": {
+                            "@id": "Rainfall_Data_Germany_Complete.csv_fileobject"
+                        },
+                        "extract": {
+                            "column": "Temperature (\u00b0C)"
+                        }
+                    },
+                    "@id": "Rainfall_Data_Germany_Complete.csv/Temperature+(%C2%B0C)",
+                    "@type": "cr:Field",
+                    "name": "Temperature (\u00b0C)",
+                    "description": "",
+                    "histogram": {
+                        "densities": [
+                            0.07037036865949631,
+                            0.0694444477558136,
+                            0.06481481343507767,
+                            0.06388889253139496,
+                            0.05925925821065903,
+                            0.07500000298023224,
+                            0.07500000298023224,
+                            0.051851850003004074,
+                            0.08425925672054291,
+                            0.06388889253139496,
+                            0.07037036865949631,
+                            0.05370370298624039,
+                            0.07222222536802292,
+                            0.05648148059844971,
+                            0.0694444477558136
+                        ],
+                        "bins": [
+                            -5.0,
+                            -2.3400000000000003,
+                            0.3199999999999994,
+                            2.9799999999999986,
+                            5.639999999999999,
+                            8.299999999999999,
+                            10.959999999999997,
+                            13.619999999999997,
+                            16.279999999999998,
+                            18.939999999999998,
+                            21.599999999999998,
+                            24.259999999999998,
+                            26.919999999999995,
+                            29.58,
+                            32.239999999999995,
+                            34.9
+                        ],
+                        "id": 6
+                    },
+                    "id": 8
+                },
+                {
+                    "dataType": [
+                        "sc:Integer"
+                    ],
+                    "source": {
+                        "fileObject": {
+                            "@id": "Rainfall_Data_Germany_Complete.csv_fileobject"
+                        },
+                        "extract": {
+                            "column": "Humidity (%)"
+                        }
+                    },
+                    "@id": "Rainfall_Data_Germany_Complete.csv/Humidity+(%25)",
+                    "@type": "cr:Field",
+                    "name": "Humidity (%)",
+                    "description": "",
+                    "histogram": {
+                        "densities": [
+                            0.0962962955236435,
+                            0.08796296268701553,
+                            0.11296296119689941,
+                            0.10185185074806213,
+                            0.08055555820465088,
+                            0.10833333432674408,
+                            0.09444444626569748,
+                            0.1111111119389534,
+                            0.09907407313585281,
+                            0.10740740597248077
+                        ],
+                        "bins": [
+                            30.0,
+                            36.9,
+                            43.8,
+                            50.7,
+                            57.6,
+                            64.5,
+                            71.4,
+                            78.30000000000001,
+                            85.2,
+                            92.1,
+                            99.0
+                        ],
+                        "id": 7
+                    },
+                    "id": 9
+                }
+            ],
+            "@id": "Rainfall_Data_Germany_Complete.csv",
+            "@type": "cr:RecordSet",
+            "name": "Rainfall_Data_Germany_Complete.csv",
+            "description": "City: Name of the city.\nLatitude: City's latitude in degrees.\nLongitude: City's longitude in degrees.\nMonth: The month number (1-12).\nYear: The year of the data.\nRainfall (mm): Rainfall amount in millimeters.\nElevation (m): City\u2019s elevation above sea level in meters.\nClimate_Type: The climate classification of the city.\nTemperature (\u00b0C): Average temperature for the month in Celsius.\nHumidity (%): Average humidity level for the month in percentage."
+        }
+    ],
+    "version": 1,
+    "keywords": [
+        "subject > earth and nature > environment > weather and climate",
+        "language > german"
+    ],
+    "isAccessibleForFree": true,
+    "includedInDataCatalog": {
+        "@type": "sc:DataCatalog",
+        "name": "Kaggle",
+        "url": "https://www.kaggle.com"
+    },
+    "creator": {
+        "@type": "sc:Person",
+        "name": "Heidar Mirhaji Sadati",
+        "url": "/heidarmirhajisadati",
+        "image": "https://storage.googleapis.com/kaggle-avatars/thumbnails/20128584-kg.jpG?t=2024-05-23-10-31-02"
+    },
+    "publisher": {
+        "@type": "sc:Organization",
+        "name": "Kaggle",
+        "url": "https://www.kaggle.com/organizations/kaggle",
+        "image": "https://storage.googleapis.com/kaggle-organizations/4/thumbnail.png"
+    },
+    "thumbnailUrl": "https://storage.googleapis.com/kaggle-datasets-images/6232015/10103534/d26b4950778d06476371baf0016d8370/dataset-card.JPG?t=2024-12-04-22-31-52",
+    "dateModified": "2024-12-04T22:20:48.963",
+    "datePublished": "2024-12-04T22:20:48.963",
+    "@type": "sc:Dataset",
+    "name": "Germany City Rainfall Data",
+    "url": "https://www.kaggle.com/datasets/heidarmirhajisadati/germany-city-rainfall-data/versions/1",
+    "description": "\n**This dataset, provides detailed weather and climate statistics for major cities in Germany from 2015 to 2023.** \n\nIt includes rainfall amounts, temperatures, humidity levels, and other geographical and climatic details, making it ideal for analyzing weather patterns, climate change, and their impacts across different regions.\n\n1. **City:** Name of the city.\n\n2. **Latitude:** City's latitude in degrees.\n\n3. **Longitude:** City's longitude in degrees.\n\n4. **Month:** The month number (1-12).\n\n5. **Year:** The year of the data.\n\n6. **Rainfall (mm):** Rainfall amount in millimeters.\n\n7. **Elevation (m):** City\u2019s elevation above sea level in meters.\n\n8. **Climate_Type:** The climate classification of the city.\n\n9. **Temperature (\u00b0C):** Average temperature for the month in Celsius.\n\n10. **Humidity (%):** Average humidity level for the month in percentage.\n\n"
+}

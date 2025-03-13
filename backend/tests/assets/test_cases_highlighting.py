@@ -1,4 +1,4 @@
-# ruff: noqa
+# ruff: noqa: E501, RUF001
 from typing import TypedDict
 
 import numpy as np
@@ -6,13 +6,12 @@ import numpy as np
 from backend.engine.executor import Highlights
 
 
-class CaseHighlighter(TypedDict):
+class HighlightingCase(TypedDict):
     query: str
     expected: Highlights
 
 
-TEST_CASES_HIGHLIGHTER: dict[str, CaseHighlighter] = {
-    # test simple kw('weather')
+HIGHLIGHTING_CASES: dict[str, HighlightingCase] = {
     "test_simple_kw": {
         "query": "kw('weather')",
         "expected": (
@@ -40,11 +39,10 @@ TEST_CASES_HIGHLIGHTER: dict[str, CaseHighlighter] = {
             set(),
         ),
     },
-    # test simple pp
     "test_simple_pp": {
         "query": "col(pp(0.1;ge;1))",
         "expected": (
-            dict(),
+            {},
             {
                 np.uint32(1),
                 np.uint32(2),
@@ -76,12 +74,10 @@ TEST_CASES_HIGHLIGHTER: dict[str, CaseHighlighter] = {
             },
         ),
     },
-    # test simple col name
     "test_simple_col_name": {
         "query": "col(name('movie_id'; 0))",
         "expected": ({}, {np.uint32(24)}),
     },
-    # test simple kw in field KW('name:(germany)')
     "test_kw_in_name_field": {
         "query": "kw('name:(germany)')",
         "expected": (
@@ -89,7 +85,6 @@ TEST_CASES_HIGHLIGHTER: dict[str, CaseHighlighter] = {
             set(),
         ),
     },
-    # test simple kw in field: keywords
     "test_kw_in_keywords_field": {
         "query": "kw('keywords:(environment)')",
         "expected": (
@@ -104,7 +99,6 @@ TEST_CASES_HIGHLIGHTER: dict[str, CaseHighlighter] = {
             set(),
         ),
     },
-    # test simple kw in field: Creator.name
     "test_kw_in_creator_field": {
         "query": "kw('creator:(Ayush Yadav)')",
         "expected": (
@@ -112,7 +106,6 @@ TEST_CASES_HIGHLIGHTER: dict[str, CaseHighlighter] = {
             set(),
         ),
     },
-    # test simple pp and simple kw('weather')
     "test_simple_pp_and_kw": {
         "query": "col(pp(0.1;ge;1)) AND kw('weather')",
         "expected": (

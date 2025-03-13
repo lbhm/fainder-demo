@@ -7,11 +7,16 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
 from loguru import logger
+from numpy import uint32
 from pydantic import BaseModel, DirectoryPath, computed_field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 if TYPE_CHECKING:
     from types import FrameType
+
+DocumentHighlights = dict[int, dict[str, str]]
+ColumnHighlights = set[uint32]
+Highlights = tuple[DocumentHighlights, ColumnHighlights]
 
 
 class Metadata(BaseModel):
@@ -34,7 +39,7 @@ class Settings(BaseSettings):
     metadata_file: Path = Path("metadata.json")
     dataset_slug: str = "kaggleRef"
 
-    # QueryEvaluator settings
+    # Engine settings
     query_cache_size: int = 128
 
     # Fainder settings

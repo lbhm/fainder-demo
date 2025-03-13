@@ -13,19 +13,17 @@
 ![GitHub License](https://img.shields.io/github/license/lbhm/fainder-demo)
 
 This repository contains the source code for our demonstration of Fainder, a fast and accurate
-index for distibution-aware dataset search. The demo consists of three components:
+index for distibution-aware dataset search. The demo consists of two components:
 
 - **Frontend**: Web-based user interface for interacting with the search engine.
-- **Backend**: Responsible for query parsing and processing [percentile predicates](https://doi.org/10.14778/3681954.3681999).
-- **Lucene**: An extension of [Apache Lucene](https://lucene.apache.org/) for handling keyword predicates. (deprecated)
+- **Backend**: Responsible for query parsing, optimization, and execution (including [percentile predicates](https://doi.org/10.14778/3681954.3681999)).
 
 The repository is structured as follows:
 
 ```bash
 fainder/
-├── backend  # main component for query parsing and execution (Python)
+├── backend  # main component for query parsing, optimization, and execution (Python)
 ├── data  # placeholder for dataset profiles and index files
-├── lucene  # Lucene extension for executing keyword queries (Java)
 ├── scripts  # scripts for installing and starting components (Bash)
 └── ui  # user interface (Vue)
 ```
@@ -35,7 +33,7 @@ fainder/
 ### Environment Configuration
 
 Our system uses environment variables to configure its components. You can export these variables
-in your shell or create a `.env` file in the directory from where you start each component. The
+in your shell or create a `.env` file in the directory from where you start the components. The
 following variables are available (no default means it must be set):
 
 ```bash
@@ -45,10 +43,10 @@ COLLECTION_NAME=             # Name of the dataset collection (subdirectoy in DA
 CROISSANT_DIR=croissant      # Subdirectory containing the Croissant files of a collection
 EMBEDDING_DIR=embeddings     # Subdirectory containing a HNSW index with column names
 FAINDER_DIR=fainder          # Subdirectory containing Fainder indices for a collection
-TANTIVY_DIR=tantivy          # Subdirectory containing Tantivy indices for a collection
+TANTIVY_DIR=tantivy          # Subdirectory containing a keyword index for a collection
 METADATA_FILE=metadata.json  # JSON file with metadata about a collection
 QUERY_CACHE_SIZE=128         # Maximum number of query resuls to cache
-DATASET_SLUG=kaggleRef       # Slug specific to the dataset collection
+DATASET_SLUG=kaggleRef       # Document field with a unique dataset identifier
 
 # Fainder
 FAINDER_N_CLUSTERS=50               # Number of index clusters
@@ -113,11 +111,9 @@ docker compose down
 #### Prerequisites
 
 - Python 3.11 or greater
-- Java 21 or greater
 - Node.js 18 or greater
-- `maven` (Java build tool)
-- `npm` (Node.js package manager)
 - `pip` (Python package manager)
+- `npm` (Node.js package manager)
 
 #### Installation
 
@@ -145,9 +141,3 @@ components in development mode:
 ```bash
 FASTAPI_MODE=dev NUXT_MODE=dev docker compose up --build --watch
 ```
-
-## Generating gRPC Code (Deprecated)
-
-The Fainder backend uses gRPC to communicate with the Lucene service. To generate the necessary
-code, install the development dependencies in `backend/`, activate your virtual environment, and
-run `scripts/gen_proto.sh`.
