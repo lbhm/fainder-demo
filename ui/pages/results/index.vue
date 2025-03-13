@@ -336,8 +336,8 @@ page
                         <!-- Boolean Data -->
                         <div
                           v-else-if="
-                            field.n_true !== undefined &&
-                            field.n_false !== undefined
+                            field.counts?.Yes !== undefined &&
+                            field.counts?.No !== undefined
                           "
                           class="field-content boolean"
                         >
@@ -883,7 +883,7 @@ const getBooleanChartData = (field) => {
         borderColor: "rgba(0, 0, 0, 0.1)",
         borderWidth: 1,
         borderRadius: 0,
-        data: [field.n_true, field.n_false],
+        data: [field.counts.Yes, field.counts.No],
       },
     ],
   };
