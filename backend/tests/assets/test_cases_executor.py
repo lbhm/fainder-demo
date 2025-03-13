@@ -608,10 +608,9 @@ EXECUTOR_CASES: dict[str, dict[str, ExecutorCase]] = {
                 ],
             ),
         },
-        # TODO
         "percentile_with_identifer": {
-            "query": "col(name('Latitude'; 0) AND pp(0.5;ge;50))",
-            "expected": [],
+            "query": "col(name('AveragePrice'; 0) AND pp(0.5;ge;0.75))",
+            "expected": [1],
             "parse_tree": Tree(
                 Token("RULE", "query"),
                 [
@@ -623,14 +622,14 @@ EXECUTOR_CASES: dict[str, dict[str, ExecutorCase]] = {
                                 [
                                     Tree(
                                         Token("RULE", "name_op"),
-                                        [Token("STRING", "'Latitude'"), Token("INT", "0")],
+                                        [Token("STRING", "'AveragePrice'"), Token("INT", "0")],
                                     ),
                                     Tree(
                                         Token("RULE", "percentile_op"),
                                         [
                                             Token("FLOAT", "0.5"),
                                             Token("COMPARISON", "ge"),
-                                            Token("SIGNED_NUMBER", "50"),
+                                            Token("SIGNED_NUMBER", "0.75"),
                                         ],
                                     ),
                                 ],
@@ -640,10 +639,9 @@ EXECUTOR_CASES: dict[str, dict[str, ExecutorCase]] = {
                 ],
             ),
         },
-        # TODO
         "keyword_filter": {
-            "query": "col(name('Latitude'; 0) AND pp(0.5;ge;50)) AND kw('data')",
-            "expected": [0],
+            "query": "col(name('AveragePrice'; 0) AND pp(0.5;ge;0.75)) AND kw('A*')",
+            "expected": [1],
             "parse_tree": Tree(
                 Token("RULE", "query"),
                 [
@@ -659,7 +657,7 @@ EXECUTOR_CASES: dict[str, dict[str, ExecutorCase]] = {
                                             Tree(
                                                 Token("RULE", "name_op"),
                                                 [
-                                                    Token("STRING", "'Latitude'"),
+                                                    Token("STRING", "'AveragePrice'"),
                                                     Token("INT", "0"),
                                                 ],
                                             ),
@@ -668,14 +666,14 @@ EXECUTOR_CASES: dict[str, dict[str, ExecutorCase]] = {
                                                 [
                                                     Token("FLOAT", "0.5"),
                                                     Token("COMPARISON", "ge"),
-                                                    Token("SIGNED_NUMBER", "50"),
+                                                    Token("SIGNED_NUMBER", "0.75"),
                                                 ],
                                             ),
                                         ],
                                     )
                                 ],
                             ),
-                            Tree(Token("RULE", "keyword_op"), [Token("STRING", "'data'")]),
+                            Tree(Token("RULE", "keyword_op"), [Token("STRING", "'A*'")]),
                         ],
                     )
                 ],
@@ -704,9 +702,9 @@ EXECUTOR_CASES: dict[str, dict[str, ExecutorCase]] = {
                 ],
             ),
         },
-        # TODO
         "complex_column": {
-            "query": "col((name('Latitude'; 0) AND pp(0.5;ge;50)) OR name('Longitude'; 0))",
+            "query": "col((name('Humidity (%)'; 0) AND pp(0.5;ge;50)) "
+            "OR name('Temperature (°C)' ; 0))",
             "expected": [0],
             "parse_tree": Tree(
                 Token("RULE", "query"),
@@ -723,7 +721,7 @@ EXECUTOR_CASES: dict[str, dict[str, ExecutorCase]] = {
                                             Tree(
                                                 Token("RULE", "name_op"),
                                                 [
-                                                    Token("STRING", "'Latitude'"),
+                                                    Token("STRING", "'Humidity (%)'"),
                                                     Token("INT", "0"),
                                                 ],
                                             ),
@@ -739,7 +737,7 @@ EXECUTOR_CASES: dict[str, dict[str, ExecutorCase]] = {
                                     ),
                                     Tree(
                                         Token("RULE", "name_op"),
-                                        [Token("STRING", "'Longitude'"), Token("INT", "0")],
+                                        [Token("STRING", "'Temperature (°C)'"), Token("INT", "0")],
                                     ),
                                 ],
                             )
@@ -748,10 +746,9 @@ EXECUTOR_CASES: dict[str, dict[str, ExecutorCase]] = {
                 ],
             ),
         },
-        # TODO
         "not_complex_column": {
-            "query": "NOT col((name('Latitude'; 0) AND pp(0.5;ge;50)))",
-            "expected": [0, 1, 2],
+            "query": "NOT col((name('Rainfall (mm)'; 0) AND pp(0.5;ge;80)))",
+            "expected": [1, 2],
             "parse_tree": Tree(
                 Token("RULE", "query"),
                 [
@@ -767,7 +764,7 @@ EXECUTOR_CASES: dict[str, dict[str, ExecutorCase]] = {
                                             Tree(
                                                 Token("RULE", "name_op"),
                                                 [
-                                                    Token("STRING", "'Latitude'"),
+                                                    Token("STRING", "'Rainfall (mm)'"),
                                                     Token("INT", "0"),
                                                 ],
                                             ),
@@ -776,7 +773,7 @@ EXECUTOR_CASES: dict[str, dict[str, ExecutorCase]] = {
                                                 [
                                                     Token("FLOAT", "0.5"),
                                                     Token("COMPARISON", "ge"),
-                                                    Token("SIGNED_NUMBER", "50"),
+                                                    Token("SIGNED_NUMBER", "80"),
                                                 ],
                                             ),
                                         ],
