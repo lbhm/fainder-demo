@@ -427,7 +427,7 @@ async function searchData() {
 
   // Process plain text as keyword search
   if (isPlainText && query) {
-    query = `KW(${query})`;
+    query = `KW('${query}')`;
   }
 
   // Combine filter terms with query

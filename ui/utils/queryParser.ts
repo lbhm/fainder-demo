@@ -46,7 +46,7 @@ function extractBalancedParentheses(
 
 export function predicateToString(predicate: Predicate): string {
   if (predicate.type === "name") {
-    return `NAME(${predicate.column};${predicate.threshold})`;
+    return `NAME('${predicate.column}';${predicate.threshold})`;
   } else if (predicate.type === "percentile") {
     return `PERCENTILE(${predicate.percentile};${predicate.comparison};${predicate.value})`;
   }
