@@ -86,7 +86,7 @@ Docker setup).
 python -m backend.indexing
 ```
 
-<!-- The backend automtically generates the necessary index files for Fainder, HNSW, and Lucene if
+<!-- The backend automtically generates the necessary index files for Fainder, HNSW, and Tantivy if
 the respective folders do not exist. In order to recreate the indices, delete the folders and
 restart the apllication or call the `/update_indices` endpoint. -->
 

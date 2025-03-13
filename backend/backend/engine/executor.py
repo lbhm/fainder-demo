@@ -18,7 +18,7 @@ T = TypeVar("T", tuple[set[int], Highlights], set[uint32])
 
 
 class Executor(Transformer[Token, tuple[set[int], Highlights]]):
-    """This transformer evaluates the parse tree bottom-up and compute the query result."""
+    """This transformer evaluates a parse tree bottom-up and computes the query result."""
 
     fainder_mode: FainderMode
     scores: dict[int, float]
@@ -70,7 +70,6 @@ class Executor(Transformer[Token, tuple[set[int], Highlights]]):
     ### Operator implementations ###
 
     def keyword_op(self, items: list[Token]) -> tuple[set[int], Highlights]:
-        """Evaluate keyword term using merged Lucene query."""
         logger.trace(f"Evaluating keyword term: {items}")
 
         # NOTE: Currently unused

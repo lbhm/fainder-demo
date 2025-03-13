@@ -50,7 +50,3 @@ pytest.xml
 # Local project folders
 data/
 logs/
-
-# Lucene
-target/
-/lucene_index

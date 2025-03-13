@@ -178,8 +178,8 @@ class MergeKeywords(Visitor[Token], OptimizationRule):
                 keyword_ops.append(child)
                 one_positive_kw_op = True
             elif child.data == "negation":
-                # We can only negate keywords if they appear together with other keywords as
-                # Lucene/tantivy do not support stand-alone negation queries
+                # We can only negate keywords if they appear together with other keywords since
+                # tantivy does not support stand-alone negation queries
                 negation_child = child.children[0]
                 if isinstance(negation_child, Tree) and negation_child.data == "keyword_op":
                     keyword_ops.append(self._negate_keyword(negation_child))
