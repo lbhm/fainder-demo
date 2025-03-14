@@ -9,7 +9,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from lark import UnexpectedInput
 from loguru import logger
 
-from backend.column_index import ColumnIndex
 from backend.config import (
     CacheInfo,
     ColumnHighlights,
@@ -27,13 +26,12 @@ from backend.config import (
 )
 from backend.croissant_store import Document, get_croissant_store
 from backend.engine import Engine
-from backend.fainder_index import FainderIndex
 from backend.indexing import (
     generate_embedding_index,
     generate_fainder_indices,
     generate_metadata,
 )
-from backend.tantivy_index import TantivyIndex
+from backend.indices import FainderIndex, HnswIndex, TantivyIndex
 from backend.util import load_json
 
 logger.info("Starting backend")
@@ -78,7 +76,7 @@ fainder_index = FainderIndex(
 )
 
 logger.info("Initializing HNSW index")
-column_index = ColumnIndex(
+hnsw_index = HnswIndex(
     settings.hnsw_index_path,
     metadata,
     model=settings.embedding_model,
@@ -90,7 +88,7 @@ logger.info("Initializing engine")
 engine = Engine(
     tantivy_index=tantivy_index,
     fainder_index=fainder_index,
-    hnsw_index=column_index,
+    hnsw_index=hnsw_index,
     metadata=metadata,
     cache_size=settings.query_cache_size,
 )
@@ -280,11 +278,11 @@ async def update_indices() -> MessageResponse:
             conversion_path=settings.conversion_index_path,
             histogram_path=settings.histogram_path,
         )
-        column_index.update(path=settings.hnsw_index_path, metadata=metadata)
+        hnsw_index.update(path=settings.hnsw_index_path, metadata=metadata)
         engine.update_indices(
             fainder_index=fainder_index,
             tantivy_index=tantivy_index,
-            hnsw_index=column_index,
+            hnsw_index=hnsw_index,
             metadata=metadata,
         )
 

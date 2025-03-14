@@ -17,7 +17,7 @@ from loguru import logger
 from sentence_transformers import SentenceTransformer
 
 from backend.config import Settings
-from backend.tantivy_index import TantivyIndex, get_schema
+from backend.indices import TantivyIndex, get_tantivy_schema
 from backend.util import dump_json, load_json
 
 if TYPE_CHECKING:
@@ -50,7 +50,7 @@ def generate_metadata(
 
     json_docs: dict[int, dict[str, Any]] = {}
     tantivy_docs: list[tantivy.Document] = []
-    tantivy_schema = get_schema()
+    tantivy_schema = get_tantivy_schema()
 
     # Ingest Croissant files and assign unique ids to datasets and columns
     hists: list[tuple[np.uint32, Histogram]] = []

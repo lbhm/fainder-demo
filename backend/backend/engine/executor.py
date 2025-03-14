@@ -10,10 +10,8 @@ from loguru import logger
 from numpy import uint32
 from numpy.typing import NDArray
 
-from backend.column_index import ColumnIndex
 from backend.config import ColumnHighlights, DocumentHighlights, FainderMode, Highlights, Metadata
-from backend.fainder_index import FainderIndex
-from backend.tantivy_index import TantivyIndex
+from backend.indices import FainderIndex, HnswIndex, TantivyIndex
 
 T = TypeVar("T", tuple[set[int], Highlights], set[uint32])
 
@@ -30,7 +28,7 @@ class Executor(Transformer[Token, tuple[set[int], Highlights]]):
         self,
         tantivy_index: TantivyIndex,
         fainder_index: FainderIndex,
-        hnsw_index: ColumnIndex,
+        hnsw_index: HnswIndex,
         metadata: Metadata,
         fainder_mode: FainderMode = FainderMode.LOW_MEMORY,
         enable_highlighting: bool = False,

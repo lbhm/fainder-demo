@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
 
-class ColumnIndex:
+class HnswIndex:
     def __init__(
         self,
         path: Path,

@@ -1,9 +1,7 @@
 from functools import lru_cache
 
-from backend.column_index import ColumnIndex
 from backend.config import CacheInfo, FainderMode, Metadata
-from backend.fainder_index import FainderIndex
-from backend.tantivy_index import TantivyIndex
+from backend.indices import FainderIndex, HnswIndex, TantivyIndex
 
 from .executor import Executor, Highlights
 from .optimizer import Optimizer
@@ -15,7 +13,7 @@ class Engine:
         self,
         tantivy_index: TantivyIndex,
         fainder_index: FainderIndex,
-        hnsw_index: ColumnIndex,
+        hnsw_index: HnswIndex,
         metadata: Metadata,
         cache_size: int = 128,
     ) -> None:
@@ -31,7 +29,7 @@ class Engine:
         self,
         tantivy_index: TantivyIndex,
         fainder_index: FainderIndex,
-        hnsw_index: ColumnIndex,
+        hnsw_index: HnswIndex,
         metadata: Metadata,
     ) -> None:
         self.executor = Executor(tantivy_index, fainder_index, hnsw_index, metadata)

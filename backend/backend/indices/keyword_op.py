@@ -19,7 +19,7 @@ DOC_FIELDS: list[str] = [
 ]
 
 
-def get_schema() -> tantivy.Schema:
+def get_tantivy_schema() -> tantivy.Schema:
     """Construct the schema for the Tantivy index.
 
     See https://docs.rs/tantivy/latest/tantivy/schema/index.html for how to configure fields.
@@ -38,7 +38,7 @@ def get_schema() -> tantivy.Schema:
 class TantivyIndex:
     def __init__(self, index_path: str | Path, recreate: bool = False) -> None:
         self.index_path = str(index_path)
-        self.schema = get_schema()
+        self.schema = get_tantivy_schema()
         self.index = self.load_index(self.schema, recreate)
 
     def load_index(self, schema: tantivy.Schema, recreate: bool = False) -> tantivy.Index:
