@@ -9,6 +9,6 @@
 # Backend setup
 (
     cd backend || exit
-    uv sync --extra dev
+    uv sync
     uv run pre-commit install
 )

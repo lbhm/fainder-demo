@@ -112,7 +112,7 @@ docker compose down
 
 #### Prerequisites
 
-- Python 3.11 or greater
+- Python 3.11 or 3.12 (tantivy does not support 3.13 yet)
 - Node.js 18 or greater
 - `pip` (Python package manager)
 - `npm` (Node.js package manager)
