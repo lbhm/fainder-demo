@@ -6,7 +6,7 @@ cd "$(git rev-parse --show-toplevel)"
 # Fainder service
 (
     cd backend || exit
-    fastapi dev server.py
+    fastapi dev main.py
 )
 
 # UI
