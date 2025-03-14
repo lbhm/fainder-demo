@@ -6,7 +6,7 @@ from fainder.execution.new_runner import run_approx, run_exact
 from fainder.utils import load_input
 from loguru import logger
 
-from backend.config import FainderError, FainderMode, Metadata
+from backend.config import FainderError, FainderMode
 
 if TYPE_CHECKING:
     from fainder.typing import Histogram
@@ -18,16 +18,10 @@ if TYPE_CHECKING:
 class FainderIndex:
     def __init__(
         self,
-        metadata: Metadata,
         rebinning_path: Path | None,
         conversion_path: Path | None,
         histogram_path: Path | None,
     ) -> None:
-        self.doc_to_cols = metadata.doc_to_cols
-        self.col_to_doc = metadata.col_to_doc
-        self.col_to_hist = metadata.col_to_hist
-        self.hist_to_col = metadata.hist_to_col
-
         self.rebinning_index: tuple[list[PctlIndex], list[NDArray[np.float64]]] | None = (
             load_input(rebinning_path, "rebinning index") if rebinning_path else None
         )
@@ -40,16 +34,10 @@ class FainderIndex:
 
     def update(
         self,
-        metadata: Metadata,
         rebinning_path: Path | None,
         conversion_path: Path | None,
         histogram_path: Path | None,
     ) -> None:
-        self.doc_to_cols = metadata.doc_to_cols
-        self.col_to_doc = metadata.col_to_doc
-        self.col_to_hist = metadata.col_to_hist
-        self.hist_to_col = metadata.hist_to_col
-
         self.rebinning_index = (
             load_input(rebinning_path, "rebinning index") if rebinning_path else None
         )

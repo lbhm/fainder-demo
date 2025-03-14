@@ -8,6 +8,7 @@ from typing import Any, TypeGuard, TypeVar
 from lark import Token, Transformer
 from loguru import logger
 from numpy import uint32
+from numpy.typing import NDArray
 
 from backend.column_index import ColumnIndex
 from backend.config import ColumnHighlights, DocumentHighlights, FainderMode, Highlights, Metadata
@@ -155,7 +156,7 @@ class Executor(Transformer[Token, tuple[set[int], Highlights]]):
 
         to_negate_cols = items[0]
         # For column expressions, we negate using the set of all column IDs
-        all_columns = {uint32(col_id) for col_id in self.metadata.col_to_doc}
+        all_columns = {uint32(col_id) for col_id in range(len(self.metadata.col_to_doc))}
         return all_columns - to_negate_cols
 
     def query(self, items: list[tuple[set[int], Highlights]]) -> tuple[set[int], Highlights]:
@@ -276,15 +277,13 @@ def doc_to_col_ids(doc_ids: set[int], doc_to_cols: dict[int, set[int]]) -> set[u
     }
 
 
-def col_to_doc_ids(col_ids: set[uint32], col_to_doc: dict[int, int]) -> set[int]:
-    return {col_to_doc[int(col_id)] for col_id in col_ids if int(col_id) in col_to_doc}
+def col_to_doc_ids(col_ids: set[uint32], col_to_doc: NDArray[uint32]) -> set[int]:
+    return {int(col_to_doc[col_id]) for col_id in col_ids}
 
 
 def col_to_hist_ids(col_ids: set[uint32], col_to_hist: dict[int, int]) -> set[uint32]:
     return {uint32(col_to_hist[int(col_id)]) for col_id in col_ids if int(col_id) in col_to_hist}
 
 
-def hist_to_col_ids(hist_ids: set[uint32], hist_to_col: dict[int, int]) -> set[uint32]:
-    return {
-        uint32(hist_to_col[int(hist_id)]) for hist_id in hist_ids if int(hist_id) in hist_to_col
-    }
+def hist_to_col_ids(hist_ids: set[uint32], hist_to_col: NDArray[uint32]) -> set[uint32]:
+    return {hist_to_col[hist_id] for hist_id in hist_ids}

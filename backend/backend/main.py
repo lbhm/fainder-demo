@@ -72,7 +72,6 @@ tantivy_index = TantivyIndex(settings.tantivy_path)
 
 logger.info("Initializing Fainder index")
 fainder_index = FainderIndex(
-    metadata=metadata,
     rebinning_path=settings.rebinning_index_path,
     conversion_path=settings.conversion_index_path,
     histogram_path=settings.histogram_path,
@@ -277,7 +276,6 @@ async def update_indices() -> MessageResponse:
         croissant_store.replace_documents(metadata.doc_to_path)
 
         fainder_index.update(
-            metadata=metadata,
             rebinning_path=settings.rebinning_index_path,
             conversion_path=settings.conversion_index_path,
             histogram_path=settings.histogram_path,

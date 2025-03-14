@@ -41,10 +41,10 @@ def generate_metadata(
     # Initialize mappings
     # NOTE: We need the vector_id intermediate step because hnswlib requires int IDs for vectors
     doc_to_cols: dict[int, set[int]] = defaultdict(set)
-    doc_to_path: dict[int, str] = {}
-    col_to_doc: dict[int, int] = {}
+    doc_to_path: list[str] = []
+    col_to_doc: list[int] = []
     col_to_hist: dict[int, int] = {}
-    hist_to_col: dict[int, int] = {}
+    hist_to_col: list[int] = []
     name_to_vector: dict[str, int] = {}
     vector_to_cols: dict[int, set[int]] = defaultdict(set)
 
@@ -61,9 +61,6 @@ def generate_metadata(
     logger.info("Processing croissant files")
     # NOTE: Remove the sorting if it becomes a bottleneck
     for doc_id, path in enumerate(sorted(croissant_path.iterdir())):
-        if not path.is_file():
-            continue
-
         # Read the file and add a document ID to it
         json_doc = load_json(path)
         json_doc["id"] = doc_id
@@ -76,7 +73,7 @@ def generate_metadata(
                 for col in record_set["field"]:
                     col["id"] = col_id
                     doc_to_cols[doc_id].add(col_id)
-                    col_to_doc[col_id] = doc_id
+                    col_to_doc.append(doc_id)
 
                     if "histogram" in col:
                         densities = np.array(col["histogram"]["densities"], dtype=np.float32)
@@ -84,7 +81,7 @@ def generate_metadata(
 
                         hists.append((np.uint32(hist_id), (densities, bins)))
                         col_to_hist[col_id] = hist_id
-                        hist_to_col[hist_id] = col_id
+                        hist_to_col.append(col_id)
                         col["histogram"]["id"] = hist_id
                         hist_id += 1
 
@@ -99,7 +96,7 @@ def generate_metadata(
             logger.error(f"KeyError {e} reading file {path}")
 
         # Store the document path for file-based Croissant stores
-        doc_to_path[doc_id] = path.name
+        doc_to_path.append(path.name)
 
         # Replace the original file with the extended document
         dump_json(json_doc, path)
@@ -125,12 +122,12 @@ def generate_metadata(
     dump_json(
         {
             "doc_to_cols": {str(k): list(v) for k, v in doc_to_cols.items()},
-            "col_to_doc": {str(k): v for k, v in col_to_doc.items()},
+            "doc_to_path": doc_to_path,
+            "col_to_doc": col_to_doc,
             "col_to_hist": {str(k): v for k, v in col_to_hist.items()},
-            "hist_to_col": {str(k): v for k, v in hist_to_col.items()},
+            "hist_to_col": hist_to_col,
             "name_to_vector": name_to_vector,
             "vector_to_cols": {str(k): list(v) for k, v in vector_to_cols.items()},
-            "doc_to_path": {str(k): v for k, v in doc_to_path.items()},
         },
         metadata_path,
     )

@@ -4,19 +4,33 @@ from collections.abc import Sequence
 from enum import Enum
 from itertools import chain
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Annotated, Any, Literal
 
+import numpy as np
 from loguru import logger
-from numpy import uint32
-from pydantic import BaseModel, DirectoryPath, computed_field, field_validator
+from numpy.typing import NDArray
+from pydantic import (
+    BaseModel,
+    BeforeValidator,
+    ConfigDict,
+    DirectoryPath,
+    PlainSerializer,
+    computed_field,
+    field_validator,
+)
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 if TYPE_CHECKING:
     from types import FrameType
 
 DocumentHighlights = dict[int, dict[str, str]]
-ColumnHighlights = set[uint32]
+ColumnHighlights = set[np.uint32]
 Highlights = tuple[DocumentHighlights, ColumnHighlights]
+IntegerArray = Annotated[
+    NDArray[np.uint32],
+    BeforeValidator(lambda data: np.array(data, dtype=np.uint32)),
+    PlainSerializer(lambda data: data.tolist()),
+]
 
 
 class CroissantStoreType(str, Enum):
@@ -33,12 +47,14 @@ class FainderMode(str, Enum):
 
 class Metadata(BaseModel):
     doc_to_cols: dict[int, set[int]]
-    col_to_doc: dict[int, int]
-    col_to_hist: dict[int, int]
-    hist_to_col: dict[int, int]
+    doc_to_path: list[str]
+    col_to_doc: IntegerArray
+    col_to_hist: dict[int, int]  # Must be a dict, not every column has a histogram
+    hist_to_col: IntegerArray
     name_to_vector: dict[str, int]
     vector_to_cols: dict[int, set[int]]
-    doc_to_path: dict[int, str]
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class Settings(BaseSettings):

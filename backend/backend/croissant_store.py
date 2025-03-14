@@ -20,7 +20,7 @@ class CroissantStore(ABC):
     def __init__(
         self,
         base_path: Path,
-        doc_to_path: dict[int, str],
+        doc_to_path: list[str],
         *,
         dataset_slug: str,
         cache_size: int = 128,
@@ -75,11 +75,11 @@ class CroissantStore(ABC):
         dump_json(doc, file_path)
 
     @abstractmethod
-    def replace_documents(self, doc_to_path: dict[int, str]) -> None:
+    def replace_documents(self, doc_to_path: list[str]) -> None:
         """Replace all documents in the store."""
 
-    def _rewrite_paths(self, doc_to_path: dict[int, str]) -> dict[int, Path]:
-        return {doc_id: Path((self.base_path) / path) for doc_id, path in doc_to_path.items()}
+    def _rewrite_paths(self, doc_to_path: list[str]) -> list[Path]:
+        return [self.base_path / path for path in doc_to_path]
 
 
 class DictCroissantStore(CroissantStore):
@@ -88,7 +88,7 @@ class DictCroissantStore(CroissantStore):
     def __init__(
         self,
         base_path: Path,
-        doc_to_path: dict[int, str],
+        doc_to_path: list[str],
         *,
         dataset_slug: str,
         overwrite_docs: bool = False,
@@ -100,7 +100,7 @@ class DictCroissantStore(CroissantStore):
             cache_size=0,
             overwrite_docs=overwrite_docs,
         )
-        self.documents = {doc_id: load_json(path) for doc_id, path in self.doc_to_path.items()}
+        self.documents = {doc_id: load_json(path) for doc_id, path in enumerate(self.doc_to_path)}
 
     def __len__(self) -> int:
         return len(self.documents)
@@ -116,10 +116,10 @@ class DictCroissantStore(CroissantStore):
         super().add_document(doc)
         self.documents[doc["id"]] = doc
 
-    def replace_documents(self, doc_to_path: dict[int, str]) -> None:
+    def replace_documents(self, doc_to_path: list[str]) -> None:
         self.doc_to_path = self._rewrite_paths(doc_to_path)
         del self.documents
-        self.documents = {doc_id: load_json(path) for doc_id, path in self.doc_to_path.items()}
+        self.documents = {doc_id: load_json(path) for doc_id, path in enumerate(self.doc_to_path)}
 
 
 class FileCroissantStore(CroissantStore):
@@ -128,7 +128,7 @@ class FileCroissantStore(CroissantStore):
     def __init__(
         self,
         base_path: Path,
-        doc_to_path: dict[int, str],
+        doc_to_path: list[str],
         *,
         dataset_slug: str,
         cache_size: int = 128,
@@ -155,14 +155,14 @@ class FileCroissantStore(CroissantStore):
             logger.error(f"Error loading document with id {doc_id}: {e}")
             return {}
 
-    def replace_documents(self, doc_to_path: dict[int, str]) -> None:
+    def replace_documents(self, doc_to_path: list[str]) -> None:
         self.doc_to_path = self._rewrite_paths(doc_to_path)
 
 
 def get_croissant_store(
     store_type: CroissantStoreType,
     base_path: Path,
-    doc_to_path: dict[int, str],
+    doc_to_path: list[str],
     dataset_slug: str,
     *,
     cache_size: int = 128,
