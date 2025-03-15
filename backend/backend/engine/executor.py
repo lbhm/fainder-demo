@@ -33,6 +33,8 @@ class Executor(Transformer[Token, tuple[set[int], Highlights]]):
         fainder_mode: FainderMode = FainderMode.LOW_MEMORY,
         enable_highlighting: bool = False,
         enable_filtering: bool = False,
+        min_usability_score: float = 0.0,
+        use_usability_score: bool = True,
     ) -> None:
         super().__init__(visit_tokens=False)
 
@@ -40,6 +42,8 @@ class Executor(Transformer[Token, tuple[set[int], Highlights]]):
         self.fainder_index = fainder_index
         self.hnsw_index = hnsw_index
         self.metadata = metadata
+        self.min_usability_score = min_usability_score
+        self.use_usability_score = use_usability_score
 
         self.reset(fainder_mode, enable_highlighting, enable_filtering)
 
@@ -48,10 +52,14 @@ class Executor(Transformer[Token, tuple[set[int], Highlights]]):
         fainder_mode: FainderMode,
         enable_highlighting: bool = False,
         enable_filtering: bool = False,
+        min_usability_score: float = 0.0,
+        use_usability_score: bool = True,
     ) -> None:
         self.scores = defaultdict(float)
         self.last_result = None
         self.current_side = None
+        self.min_usability_score = min_usability_score
+        self.use_usability_score = use_usability_score
 
         self.fainder_mode = fainder_mode
         self.enable_highlighting = enable_highlighting
@@ -75,7 +83,7 @@ class Executor(Transformer[Token, tuple[set[int], Highlights]]):
         # doc_filter = None
 
         result_docs, scores, highlights = self.tantivy_index.search(
-            items[0], self.enable_highlighting
+            items[0], self.enable_highlighting, self.min_usability_score, self.use_usability_score
         )
         self.updates_scores(result_docs, scores)
 
