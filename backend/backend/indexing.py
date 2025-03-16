@@ -24,66 +24,25 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
 
-def _process_column(
-    col: dict[str, Any],
-    col_id: int,
-    doc_id: int,
-    hist_id: int,
-    doc_to_cols: dict[int, set[int]],
-    col_to_doc: list[int],
-    col_to_hist: dict[int, int],
-    hist_to_col: list[int],
-    name_to_vector: dict[str, int],
-    vector_to_cols: dict[int, set[int]],
-    vector_id: int,
-    hists: list[tuple[np.uint32, Histogram]],
-) -> tuple[int, int]:
-    """Process a single column and update all relevant data structures."""
-    col["id"] = col_id
-    doc_to_cols[doc_id].add(col_id)
-    col_to_doc.append(doc_id)
-
-    if "histogram" in col:
-        densities = np.array(col["histogram"]["densities"], dtype=np.float32)
-        bins = np.array(col["histogram"]["bins"], dtype=np.float64)
-
-        hists.append((np.uint32(hist_id), (densities, bins)))
-        col_to_hist[col_id] = hist_id
-        hist_to_col.append(col_id)
-        col["histogram"]["id"] = hist_id
-        hist_id += 1
-
-    col_name = col["name"]
-    if col_name not in name_to_vector:
-        name_to_vector[col_name] = vector_id
-        vector_id += 1
-    vector_to_cols[name_to_vector[col_name]].add(col_id)
-
-    return hist_id, vector_id
-
-
 def _prepare_document_for_tantivy(json_doc: dict[str, Any]) -> None:
     """Modify the document to be ingested by Tantivy."""
-    try:
-        if "keywords" in json_doc and isinstance(json_doc["keywords"], list):
-            keywords: list[Any] = json_doc["keywords"]
-            json_doc["keywords"] = "; ".join(str(keyword) for keyword in keywords)
+    if "keywords" in json_doc:
+        keywords: list[Any] = json_doc["keywords"]
+        json_doc["keywords"] = "; ".join(str(keyword) for keyword in keywords)
 
-        if (
-            "creator" in json_doc
-            and isinstance(json_doc["creator"], dict)
-            and "name" in json_doc["creator"]
-        ):
-            json_doc["creator"] = json_doc["creator"]["name"]
+    if (
+        "creator" in json_doc
+        and isinstance(json_doc["creator"], dict)
+        and "name" in json_doc["creator"]
+    ):
+        json_doc["creator"] = json_doc["creator"]["name"]
 
-        if (
-            "publisher" in json_doc
-            and isinstance(json_doc["publisher"], dict)
-            and "name" in json_doc["publisher"]
-        ):
-            json_doc["publisher"] = json_doc["publisher"]["name"]
-    except Exception as e:
-        logger.error(f"Error preparing document for Tantivy: {e}")
+    if (
+        "publisher" in json_doc
+        and isinstance(json_doc["publisher"], dict)
+        and "name" in json_doc["publisher"]
+    ):
+        json_doc["publisher"] = json_doc["publisher"]["name"]
 
 
 def generate_metadata(
@@ -133,20 +92,24 @@ def generate_metadata(
         try:
             for record_set in json_doc["recordSet"]:
                 for col in record_set["field"]:
-                    hist_id, vector_id = _process_column(
-                        col,
-                        col_id,
-                        doc_id,
-                        hist_id,
-                        doc_to_cols,
-                        col_to_doc,
-                        col_to_hist,
-                        hist_to_col,
-                        name_to_vector,
-                        vector_to_cols,
-                        vector_id,
-                        hists,
-                    )
+                    col["id"] = col_id
+                    doc_to_cols[doc_id].add(col_id)
+                    col_to_doc.append(doc_id)
+                    if "histogram" in col:
+                        densities = np.array(col["histogram"]["densities"], dtype=np.float32)
+                        bins = np.array(col["histogram"]["bins"], dtype=np.float64)
+
+                        hists.append((np.uint32(hist_id), (densities, bins)))
+                        col_to_hist[col_id] = hist_id
+                        hist_to_col.append(col_id)
+                        col["histogram"]["id"] = hist_id
+                        hist_id += 1
+
+                    col_name = col["name"]
+                    if col_name not in name_to_vector:
+                        name_to_vector[col_name] = vector_id
+                        vector_id += 1
+                    vector_to_cols[name_to_vector[col_name]].add(col_id)
                     col_id += 1
         except KeyError as e:
             logger.error(f"KeyError {e} reading file {path}")
