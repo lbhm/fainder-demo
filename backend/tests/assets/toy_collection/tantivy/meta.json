@@ -5,17 +5,17 @@
   },
   "segments": [
     {
-      "segment_id": "904a2e55-4f56-4337-9680-a19b76e63196",
+      "segment_id": "60a4b789-aa21-44e9-8048-09ee649be936",
       "max_doc": 1,
       "deletes": null
     },
     {
-      "segment_id": "6b18c0a4-e718-4a32-a306-0de0133ff46d",
+      "segment_id": "5173fa75-afbc-4f9e-bc94-f83c91b3182d",
       "max_doc": 1,
       "deletes": null
     },
     {
-      "segment_id": "5db843c1-f37d-437d-b863-046c76e59b94",
+      "segment_id": "2d2034bd-5b2b-4ffa-92b0-13101531a154",
       "max_doc": 1,
       "deletes": null
     }
@@ -110,8 +110,8 @@
       }
     },
     {
-      "name": "usabilityScore",
-      "type": "i64",
+      "name": "usability",
+      "type": "f64",
       "options": {
         "indexed": false,
         "fieldnorms": false,

@@ -111,7 +111,7 @@ class ParentAnnotator(Visitor[Token], OptimizationRule):
         return tree
 
     def apply(self, tree: ParseTree) -> None:
-        self.visit(tree)
+        self.visit_topdown(tree)
 
 
 class CostSorter(Visitor[Token], OptimizationRule):
