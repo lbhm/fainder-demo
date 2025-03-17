@@ -24,6 +24,27 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
 
+def _prepare_document_for_tantivy(json_doc: dict[str, Any]) -> None:
+    """Modify the document to be ingested by Tantivy."""
+    if "keywords" in json_doc:
+        keywords: list[Any] = json_doc["keywords"]
+        json_doc["keywords"] = "; ".join(str(keyword) for keyword in keywords)
+
+    if (
+        "creator" in json_doc
+        and isinstance(json_doc["creator"], dict)
+        and "name" in json_doc["creator"]
+    ):
+        json_doc["creator"] = json_doc["creator"]["name"]
+
+    if (
+        "publisher" in json_doc
+        and isinstance(json_doc["publisher"], dict)
+        and "name" in json_doc["publisher"]
+    ):
+        json_doc["publisher"] = json_doc["publisher"]["name"]
+
+
 def generate_metadata(
     croissant_path: Path,
     metadata_path: Path,
@@ -74,7 +95,6 @@ def generate_metadata(
                     col["id"] = col_id
                     doc_to_cols[doc_id].add(col_id)
                     col_to_doc.append(doc_id)
-
                     if "histogram" in col:
                         densities = np.array(col["histogram"]["densities"], dtype=np.float32)
                         bins = np.array(col["histogram"]["bins"], dtype=np.float64)
@@ -90,7 +110,6 @@ def generate_metadata(
                         name_to_vector[col_name] = vector_id
                         vector_id += 1
                     vector_to_cols[name_to_vector[col_name]].add(col_id)
-
                     col_id += 1
         except KeyError as e:
             logger.error(f"KeyError {e} reading file {path}")
@@ -101,10 +120,8 @@ def generate_metadata(
         # Replace the original file with the extended document
         dump_json(json_doc, path)
 
-        # Modify the document to be ingested by Tantivy
-        json_doc["keywords"] = "; ".join(json_doc["keywords"])
-        json_doc["creator"] = json_doc["creator"]["name"]
-        json_doc["publisher"] = json_doc["publisher"]["name"]
+        # Prepare document for Tantivy indexing
+        _prepare_document_for_tantivy(json_doc)
         tantivy_docs.append(tantivy.Document.from_dict(json_doc, tantivy_schema))  # pyright: ignore[reportUnknownMemberType]
 
     logger.info(

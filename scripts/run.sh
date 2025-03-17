@@ -3,13 +3,13 @@
 set -euxo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
-# Fainder service
+# Start backend
 (
     cd backend || exit
     fastapi dev main.py
 )
 
-# UI
+# Start UI
 (
     cd ui || exit
     npm run dev

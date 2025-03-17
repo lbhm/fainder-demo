@@ -25,7 +25,9 @@ class HnswIndex:
         ef: int = 50,
     ) -> None:
         self.name_to_vector = metadata.name_to_vector
-        self.vector_to_name = {v: k for k, v in self.name_to_vector.items()}
+        self.vector_to_name = [""] * len(self.name_to_vector)
+        for name, vector in self.name_to_vector.items():
+            self.vector_to_name[vector] = name
         self.vector_to_cols = metadata.vector_to_cols
         self.use_embeddings = use_embeddings
         self.embedder: SentenceTransformer | None = None
@@ -55,7 +57,9 @@ class HnswIndex:
 
     def update(self, path: Path, metadata: Metadata) -> None:
         self.name_to_vector = metadata.name_to_vector
-        self.vector_to_name = {v: k for k, v in self.name_to_vector.items()}
+        self.vector_to_name = [""] * len(self.name_to_vector)
+        for name, vector in self.name_to_vector.items():
+            self.vector_to_name[vector] = name
         self.vector_to_cols = metadata.vector_to_cols
 
         if not self.use_embeddings:
