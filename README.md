@@ -51,9 +51,8 @@ CROISSANT_STORE_TYPE=dict    # Croissant store implementation (dict or file)
 CROISSANT_CACHE_SIZE=128     # Size of the Croissant store cache (only relevant for file store)
 
 # QueryEvaluator settings
-QUERY_CACHE_SIZE=128           # Maximum number of query results to cache
-MIN_USABILITY=0.0              # Minimum usability threshold for query results
-USE_USABILITY=True             # Boolean to enable/disable usability
+MIN_USABILITY_SCORE=0.0             # Minimum usability threshold for query results
+USE_USABILITY_SCORE=True            # Boolean to enable/disable usability
 
 # Fainder
 FAINDER_N_CLUSTERS=50               # Number of index clusters
