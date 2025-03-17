@@ -106,22 +106,15 @@ class TantivyIndex:
                     snippet_generator = tantivy.SnippetGenerator.create(
                         searcher, parsed_query, self.schema, field
                     )
-
                     snippet = snippet_generator.snippet_from_doc(doc)
-
                     highlighted = snippet.highlighted()
                     if len(highlighted) == 0:
                         continue
-                    logger.trace(snippet.to_html())
                     html_snippet: str = doc.get_first(field) or ""
                     offset = 0
                     for fragment in highlighted:
                         start = fragment.start
                         end = fragment.end
-                        logger.debug(
-                            f"Highlighting fragment: {fragment.start} - {fragment.end} in {field}"
-                            f"with text {html_snippet[start + offset : end + offset]}"
-                        )
                         html_snippet = (
                             html_snippet[: start + offset]
                             + "<mark>"
@@ -137,6 +130,4 @@ class TantivyIndex:
                     highlights[doc_id][field_name] = html_snippet
 
         logger.info(f"Processing results took {time.perf_counter() - process_start:.5f}s")
-        logger.trace(f"Results: {results}, Scores: {scores}, Highlights: {highlights}")
-
         return results, scores, highlights

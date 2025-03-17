@@ -247,7 +247,7 @@
                             0.0041646117595484705,
                             0.0015891281714066523,
                             0.00016439256945586058,
-                            0.00005479752315195352,
+                            5.479752315195352e-05,
                             0.00010959504630390718
                         ],
                         "id": 8
@@ -303,7 +303,7 @@
                             0.0036714340511808884,
                             0.0014247356019507912,
                             0.00038358266206367465,
-                            0.00005479752315195356,
+                            5.479752315195356e-05,
                             0.00010959504630390695
                         ],
                         "id": 9
@@ -416,7 +416,7 @@
                             0.000986355416735164,
                             0.00027398761575976756,
                             0.0,
-                            0.00005479752315195357
+                            5.479752315195357e-05
                         ],
                         "id": 11
                     },
@@ -472,7 +472,7 @@
                             0.0013151405556468857,
                             0.00032878513891172116,
                             0.0002191900926078141,
-                            0.00005479752315195358
+                            5.479752315195358e-05
                         ],
                         "id": 12
                     },
@@ -584,7 +584,7 @@
                             0.00032878513891172127,
                             0.00016439256945586053,
                             0.0,
-                            0.00005479752315195359
+                            5.479752315195359e-05
                         ],
                         "id": 14
                     },
@@ -638,8 +638,8 @@
                             0.0006575702778234418,
                             0.0001643925694558606,
                             0.00010959504630390709,
-                            0.000054797523151953545,
-                            0.000054797523151953545
+                            5.4797523151953545e-05,
+                            5.4797523151953545e-05
                         ],
                         "id": 15
                     },
@@ -801,7 +801,7 @@
     "@type": "sc:Dataset",
     "name": "Avacado price prediction",
     "url": "https://www.kaggle.com/datasets/smokingkrils/avacado-price-prediction/versions/1",
-    "description": "Avacado Project\nProblem Statement:\nAvocado is a fruit consumed by people heavily in the United States. \n\nContent\nThis data was downloaded from the Hass Avocado Board website in May of 2018 & compiled into a single CSV. \n\nThe table below represents weekly 2018 retail scan data for National retail volume (units) and price. Retail scan data comes directly from retailers’ cash registers based on actual retail sales of Hass avocados. \n\nStarting in 2013, the table below reflects an expanded, multi-outlet retail data set. Multi-outlet reporting includes an aggregation of the following channels: grocery, mass, club, drug, dollar and military. The Average Price (of avocados) in the table reflects a per unit (per avocado) cost, even when multiple units (avocados) are sold in bags. \n\nThe Product Lookup codes (PLU’s) in the table are only for Hass avocados. Other varieties of avocados (e.g. greenskins) are not included in this table.",
+    "description": "Avacado Project\nProblem Statement:\nAvocado is a fruit consumed by people heavily in the United States. \n\nContent\nThis data was downloaded from the Hass Avocado Board website in May of 2018 & compiled into a single CSV. \n\nThe table below represents weekly 2018 retail scan data for National retail volume (units) and price. Retail scan data comes directly from retailers\u2019 cash registers based on actual retail sales of Hass avocados. \n\nStarting in 2013, the table below reflects an expanded, multi-outlet retail data set. Multi-outlet reporting includes an aggregation of the following channels: grocery, mass, club, drug, dollar and military. The Average Price (of avocados) in the table reflects a per unit (per avocado) cost, even when multiple units (avocados) are sold in bags. \n\nThe Product Lookup codes (PLU\u2019s) in the table are only for Hass avocados. Other varieties of avocados (e.g. greenskins) are not included in this table.",
     "kaggleRef": "smokingkrils/avacado-price-prediction",
     "usability": 0.83,
     "id": 1

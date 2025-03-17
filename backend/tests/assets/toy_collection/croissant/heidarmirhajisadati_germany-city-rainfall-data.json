@@ -71,7 +71,7 @@
             "@id": "Rainfall_Data_Germany_Complete.csv_fileobject",
             "@type": "cr:FileObject",
             "name": "Rainfall_Data_Germany_Complete.csv",
-            "description": "City: Name of the city.\nLatitude: City's latitude in degrees.\nLongitude: City's longitude in degrees.\nMonth: The month number (1-12).\nYear: The year of the data.\nRainfall (mm): Rainfall amount in millimeters.\nElevation (m): City’s elevation above sea level in meters.\nClimate_Type: The climate classification of the city.\nTemperature (°C): Average temperature for the month in Celsius.\nHumidity (%): Average humidity level for the month in percentage."
+            "description": "City: Name of the city.\nLatitude: City's latitude in degrees.\nLongitude: City's longitude in degrees.\nMonth: The month number (1-12).\nYear: The year of the data.\nRainfall (mm): Rainfall amount in millimeters.\nElevation (m): City\u2019s elevation above sea level in meters.\nClimate_Type: The climate classification of the city.\nTemperature (\u00b0C): Average temperature for the month in Celsius.\nHumidity (%): Average humidity level for the month in percentage."
         }
     ],
     "recordSet": [
@@ -426,12 +426,12 @@
                             "@id": "Rainfall_Data_Germany_Complete.csv_fileobject"
                         },
                         "extract": {
-                            "column": "Temperature (°C)"
+                            "column": "Temperature (\u00b0C)"
                         }
                     },
                     "@id": "Rainfall_Data_Germany_Complete.csv/Temperature+(%C2%B0C)",
                     "@type": "cr:Field",
-                    "name": "Temperature (°C)",
+                    "name": "Temperature (\u00b0C)",
                     "description": "",
                     "histogram": {
                         "bins": [
@@ -533,7 +533,7 @@
             "@id": "Rainfall_Data_Germany_Complete.csv",
             "@type": "cr:RecordSet",
             "name": "Rainfall_Data_Germany_Complete.csv",
-            "description": "City: Name of the city.\nLatitude: City's latitude in degrees.\nLongitude: City's longitude in degrees.\nMonth: The month number (1-12).\nYear: The year of the data.\nRainfall (mm): Rainfall amount in millimeters.\nElevation (m): City’s elevation above sea level in meters.\nClimate_Type: The climate classification of the city.\nTemperature (°C): Average temperature for the month in Celsius.\nHumidity (%): Average humidity level for the month in percentage."
+            "description": "City: Name of the city.\nLatitude: City's latitude in degrees.\nLongitude: City's longitude in degrees.\nMonth: The month number (1-12).\nYear: The year of the data.\nRainfall (mm): Rainfall amount in millimeters.\nElevation (m): City\u2019s elevation above sea level in meters.\nClimate_Type: The climate classification of the city.\nTemperature (\u00b0C): Average temperature for the month in Celsius.\nHumidity (%): Average humidity level for the month in percentage."
         }
     ],
     "version": 1,
@@ -565,7 +565,7 @@
     "@type": "sc:Dataset",
     "name": "Germany City Rainfall Data",
     "url": "https://www.kaggle.com/datasets/heidarmirhajisadati/germany-city-rainfall-data/versions/1",
-    "description": "\n**This dataset, provides detailed weather and climate statistics for major cities in Germany from 2015 to 2023.** \n\nIt includes rainfall amounts, temperatures, humidity levels, and other geographical and climatic details, making it ideal for analyzing weather patterns, climate change, and their impacts across different regions.\n\n1. **City:** Name of the city.\n\n2. **Latitude:** City's latitude in degrees.\n\n3. **Longitude:** City's longitude in degrees.\n\n4. **Month:** The month number (1-12).\n\n5. **Year:** The year of the data.\n\n6. **Rainfall (mm):** Rainfall amount in millimeters.\n\n7. **Elevation (m):** City’s elevation above sea level in meters.\n\n8. **Climate_Type:** The climate classification of the city.\n\n9. **Temperature (°C):** Average temperature for the month in Celsius.\n\n10. **Humidity (%):** Average humidity level for the month in percentage.\n\n",
+    "description": "\n**This dataset, provides detailed weather and climate statistics for major cities in Germany from 2015 to 2023.** \n\nIt includes rainfall amounts, temperatures, humidity levels, and other geographical and climatic details, making it ideal for analyzing weather patterns, climate change, and their impacts across different regions.\n\n1. **City:** Name of the city.\n\n2. **Latitude:** City's latitude in degrees.\n\n3. **Longitude:** City's longitude in degrees.\n\n4. **Month:** The month number (1-12).\n\n5. **Year:** The year of the data.\n\n6. **Rainfall (mm):** Rainfall amount in millimeters.\n\n7. **Elevation (m):** City\u2019s elevation above sea level in meters.\n\n8. **Climate_Type:** The climate classification of the city.\n\n9. **Temperature (\u00b0C):** Average temperature for the month in Celsius.\n\n10. **Humidity (%):** Average humidity level for the month in percentage.\n\n",
     "kaggleRef": "heidarmirhajisadati/germany-city-rainfall-data",
     "usability": 1.0,
     "id": 0
