@@ -16,10 +16,19 @@ class Engine:
         hnsw_index: HnswIndex,
         metadata: Metadata,
         cache_size: int = 128,
+        min_usability_score: float = 0.0,
+        rank_by_usability: bool = True,
     ) -> None:
         self.parser = Parser()
         self.optimizer = Optimizer()
-        self.executor = Executor(tantivy_index, fainder_index, hnsw_index, metadata)
+        self.executor = Executor(
+            tantivy_index=tantivy_index,
+            fainder_index=fainder_index,
+            hnsw_index=hnsw_index,
+            metadata=metadata,
+            min_usability_score=min_usability_score,
+            rank_by_usability=rank_by_usability,
+        )
 
         # NOTE: Don't use lru_cache on methods
         # See https://docs.astral.sh/ruff/rules/cached-instance-method/ for details

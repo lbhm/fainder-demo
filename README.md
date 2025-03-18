@@ -37,7 +37,7 @@ in your shell or create a `.env` file in the directory from where you start the 
 The following variables are available (no default means it must be set):
 
 ```bash
-# Backend
+# General Backend
 DATA_DIR=                    # Directory containing dataset collections
 COLLECTION_NAME=             # Name of the dataset collection (subdirectory in DATA_DIR)
 CROISSANT_DIR=croissant      # Subdirectory containing the Croissant files of a collection
@@ -45,12 +45,12 @@ EMBEDDING_DIR=embeddings     # Subdirectory containing a HNSW index with column 
 FAINDER_DIR=fainder          # Subdirectory containing Fainder indices for a collection
 TANTIVY_DIR=tantivy          # Subdirectory containing a keyword index for a collection
 METADATA_FILE=metadata.json  # JSON file with metadata about a collection
-QUERY_CACHE_SIZE=128         # Maximum number of query results to cache
 DATASET_SLUG=kaggleRef       # Document field with a unique dataset identifier
 CROISSANT_STORE_TYPE=dict    # Croissant store implementation (dict or file)
 CROISSANT_CACHE_SIZE=128     # Size of the Croissant store cache (only relevant for file store)
 
-# QueryEvaluator settings
+# Engine
+QUERY_CACHE_SIZE=128                # Maximum number of query results to cache
 MIN_USABILITY_SCORE=0.0             # Minimum usability threshold for query results
 RANK_BY_USABILITY=True              # Boolean to enable/disable usability
 
@@ -61,7 +61,7 @@ FAINDER_ALPHA=1.0                   # Float value for additive smoothing
 FAINDER_TRANSFORM=None              # None, standard, robust, quantile, or power
 FAINDER_CLUSTER_ALGORITHM=kmeans    # kmeans, hdbscan, or agglomerative
 
-# Embeddings
+# Similiarity Search / Embeddings
 USE_EMBEDDINGS=True                 # Boolean to enable/disable embeddings
 EMBEDDING_MODEL=all-MiniLM-L6-v2    # Name of the embedding model on Hugging Face
 EMBEDDING_BATCH_SIZE=32             # Batch size for embedding generation (during indexing)

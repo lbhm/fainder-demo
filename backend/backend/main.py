@@ -91,6 +91,8 @@ engine = Engine(
     hnsw_index=hnsw_index,
     metadata=metadata,
     cache_size=settings.query_cache_size,
+    min_usability_score=settings.min_usability_score,
+    rank_by_usability=settings.rank_by_usability,
 )
 
 logger.info("Initializing FastAPI app")
@@ -160,8 +162,6 @@ async def query(request: QueryRequest) -> QueryResponse:
             query=request.query,
             fainder_mode=request.fainder_mode,
             enable_highlighting=request.enable_highlighting,
-            min_usability_score=settings.min_usability_score,
-            use_usability_score=settings.rank_by_usability,
         )
 
         # Calculate pagination
