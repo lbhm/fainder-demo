@@ -89,7 +89,7 @@ class TantivyIndex:
                 continue
             usability_score: int | None = doc.get_first("usability")
             if usability_score is None or usability_score < min_usability_score:
-                logger.error(
+                logger.debug(
                     f"Tantivy document with id {doc_id} has no"
                     "usabilityScore field or score is too low"
                 )

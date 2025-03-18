@@ -161,7 +161,7 @@ async def query(request: QueryRequest) -> QueryResponse:
             fainder_mode=request.fainder_mode,
             enable_highlighting=request.enable_highlighting,
             min_usability_score=settings.min_usability_score,
-            use_usability_score=settings.use_usability_score,
+            use_usability_score=settings.rank_by_usability,
         )
 
         # Calculate pagination

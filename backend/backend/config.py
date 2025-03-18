@@ -75,7 +75,7 @@ class Settings(BaseSettings):
     # Engine settings
     query_cache_size: int = 128
     min_usability_score: float = 0.0
-    use_usability_score: bool = True
+    rank_by_usability: bool = True
 
     # Fainder settings
     fainder_n_clusters: int = 50

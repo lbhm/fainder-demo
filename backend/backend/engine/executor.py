@@ -52,14 +52,10 @@ class Executor(Transformer[Token, tuple[set[int], Highlights]]):
         fainder_mode: FainderMode,
         enable_highlighting: bool = False,
         enable_filtering: bool = False,
-        min_usability_score: float = 0.0,
-        use_usability_score: bool = True,
     ) -> None:
         self.scores = defaultdict(float)
         self.last_result = None
         self.current_side = None
-        self.min_usability_score = min_usability_score
-        self.use_usability_score = use_usability_score
 
         self.fainder_mode = fainder_mode
         self.enable_highlighting = enable_highlighting
