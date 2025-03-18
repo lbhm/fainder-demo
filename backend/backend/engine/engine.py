@@ -48,17 +48,9 @@ class Engine:
         fainder_mode: FainderMode = FainderMode.LOW_MEMORY,
         enable_highlighting: bool = False,
         enable_filtering: bool = False,
-        min_usability_score: float = 0.0,
-        use_usability_score: bool = True,
     ) -> tuple[list[int], Highlights]:
         # Reset state for new query
-        self.executor.reset(
-            fainder_mode,
-            enable_highlighting,
-            enable_filtering,
-            min_usability_score,
-            use_usability_score,
-        )
+        self.executor.reset(fainder_mode, enable_highlighting, enable_filtering)
 
         # Parse query
         parse_tree = self.parser.parse(query)
