@@ -130,7 +130,7 @@ def generate_metadata(
     )
 
     # Index the documents in Tantivy (we index all documents at once to increase performance)
-    logger.info("Initializing tantivy index")
+    logger.info("Initializing Tantivy index")
     tantivy_index = TantivyIndex(tantivy_path, recreate=True)
     tantivy_index.add_documents(tantivy_docs)
 

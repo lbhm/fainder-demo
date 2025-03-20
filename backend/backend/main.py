@@ -1,11 +1,8 @@
 import copy
 import time
 import traceback
-from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
 from typing import Any
 
-from backend.app_state import ApplicationState
 import orjson
 from fastapi import FastAPI, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,7 +14,6 @@ from backend.config import (
     CacheInfo,
     ColumnHighlights,
     ColumnSearchError,
-    CroissantStoreType,
     DocumentHighlights,
     FainderError,
     IndexingError,
@@ -27,11 +23,11 @@ from backend.config import (
 )
 from backend.croissant_store import Document
 
+logger.info("Starting backend")
 app_state = ApplicationState()
 app_state.initialize()
 
-
-logger.info("Initializing FastAPI app")
+logger.info("Starting FastAPI app")
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
@@ -94,7 +90,7 @@ async def query(request: QueryRequest) -> QueryResponse:
 
     try:
         start_time = time.perf_counter()
-        doc_ids, (doc_highlights, col_highlights) = app_state.components.engine.execute(
+        doc_ids, (doc_highlights, col_highlights) = app_state.engine.execute(
             query=request.query,
             fainder_mode=request.fainder_mode,
             enable_highlighting=request.enable_highlighting,
@@ -106,7 +102,7 @@ async def query(request: QueryRequest) -> QueryResponse:
         paginated_doc_ids = doc_ids[start_idx:end_idx]
         total_pages = (len(doc_ids) + request.per_page - 1) // request.per_page
 
-        docs = app_state.components.croissant_store.get_documents(paginated_doc_ids)
+        docs = app_state.croissant_store.get_documents(paginated_doc_ids)
         if request.enable_highlighting:
             # Make a deep copy of the documents to avoid modifying the original
             docs = copy.deepcopy(docs)
@@ -161,7 +157,7 @@ async def upload_files(files: list[UploadFile]) -> MessageResponse:
     try:
         for file in files:
             content = await file.read()
-            app_state.components.croissant_store.add_document(orjson.loads(content))
+            app_state.croissant_store.add_document(orjson.loads(content))
             logger.debug(f"Uploaded file: {file.filename}")
 
         logger.info(f"{len(files)} files uploaded successfully")
@@ -193,13 +189,13 @@ async def update_indices() -> MessageResponse:
 @app.get("/cache_statistics")
 async def cache_statistics() -> CacheInfo:
     """Return statistics about the query result cache."""
-    return app_state.components.engine.cache_info()
+    return app_state.engine.cache_info()
 
 
 @app.get("/clear_cache")
 async def clear_cache() -> MessageResponse:
     """Clear the query result cache."""
-    app_state.components.engine.clear_cache()
+    app_state.engine.clear_cache()
     logger.info("Cache cleared successfully")
     return MessageResponse(message="Cache cleared successfully")
 

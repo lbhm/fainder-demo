@@ -3,19 +3,10 @@ from dataclasses import dataclass
 
 from loguru import logger
 
-from backend.config import (
-    IndexingError,
-    Metadata,
-    Settings,
-    configure_logging,
-)
-from backend.croissant_store import CroissantStore, Document, get_croissant_store
+from backend.config import IndexingError, Metadata, Settings, configure_logging
+from backend.croissant_store import CroissantStore, get_croissant_store
 from backend.engine import Engine
-from backend.indexing import (
-    generate_embedding_index,
-    generate_fainder_indices,
-    generate_metadata,
-)
+from backend.indexing import generate_embedding_index, generate_fainder_indices, generate_metadata
 from backend.indices import FainderIndex, HnswIndex, TantivyIndex
 from backend.util import load_json
 
@@ -34,21 +25,33 @@ class InitializedComponents:
 
 
 class ApplicationState:
-    """Class to manage the state of the application."""
+    """Class to manage the state of the backend application."""
 
     def __init__(self) -> None:
         self._components: InitializedComponents | None = None
 
     @property
-    def components(self) -> InitializedComponents:
+    def croissant_store(self) -> CroissantStore:
         if self._components is None:
             raise RuntimeError("ApplicationState not initialized")
-        return self._components
+        return self._components.croissant_store
+
+    @property
+    def engine(self) -> Engine:
+        if self._components is None:
+            raise RuntimeError("ApplicationState not initialized")
+        return self._components.engine
+
+    @property
+    def settings(self) -> Settings:
+        if self._components is None:
+            raise RuntimeError("ApplicationState not initialized")
+        return self._components.settings
 
     def initialize(self) -> None:
         """Initialize all components of the application state."""
         try:
-            logger.info("Starting backend")
+            logger.info("Initializing application state")
             settings = Settings()  # type: ignore
 
             # NOTE: Potentially add more modules here if they are not intercepted by loguru
@@ -98,10 +101,10 @@ class ApplicationState:
 
         except Exception as e:
             logger.error(f"Failed to initialize application state: {e}")
-            raise
+            raise e
 
     def update_indices(self) -> None:
-        settings = self.components.settings
+        settings = self.settings
         (
             metadata,
             croissant_store,
@@ -135,7 +138,7 @@ class ApplicationState:
             cache_size=settings.croissant_cache_size,
         )
 
-        logger.info("Initializing tantivy index")
+        logger.info("Initializing Tantivy index")
         tantivy_index = TantivyIndex(settings.tantivy_path)
 
         logger.info("Initializing Fainder index")
@@ -167,7 +170,7 @@ class ApplicationState:
     def _recreate_indices(
         self, settings: Settings
     ) -> tuple[Metadata, CroissantStore, TantivyIndex, FainderIndex, HnswIndex, Engine]:
-        """Create all indices from the croissant files."""
+        """Recreate all indices from the croissant files."""
         # Generate metadata first
         hists, name_to_vector, _, tantivy_index = generate_metadata(
             croissant_path=settings.croissant_path,
@@ -186,7 +189,7 @@ class ApplicationState:
             doc_to_path=metadata.doc_to_path,
             dataset_slug=settings.dataset_slug,
             cache_size=settings.croissant_cache_size,
-            )
+        )
 
         tantivy_index = TantivyIndex(settings.tantivy_path)
 
