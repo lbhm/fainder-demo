@@ -84,17 +84,9 @@ must place your Croissant files into a folder and set the `DATA_DIR` and `COLLEC
 accordingly (see above, we recommend `./data/<collection_name/croissant` if you want to use the
 Docker setup).
 
-> [!NOTE]
-> Currently, you have to manually trigger the initial index creation. To do so, install the
-> `backend` dependencies and run the following command:
-
-```bash
-python -m backend.indexing
-```
-
-<!-- The backend automatically generates the necessary index files for Fainder, HNSW, and Tantivy if
+The backend automtically generates the necessary index files for Fainder, HNSW, and Tantivy if
 the respective folders do not exist. In order to recreate the indices, delete the folders and
-restart the application or call the `/update_indices` endpoint. -->
+restart the apllication or call the `/update_indices` endpoint.
 
 ### Run with Docker
 

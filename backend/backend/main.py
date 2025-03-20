@@ -3,7 +3,6 @@ import time
 import traceback
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from dataclasses import dataclass
 from typing import Any
 
 from backend.app_state import ApplicationState
@@ -13,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from lark import UnexpectedInput
 from loguru import logger
 
+from backend.app_state import ApplicationState
 from backend.config import (
     CacheInfo,
     ColumnHighlights,
@@ -22,24 +22,14 @@ from backend.config import (
     FainderError,
     IndexingError,
     MessageResponse,
-    Metadata,
     QueryRequest,
     QueryResponse,
-    Settings,
-    configure_logging,
 )
-from backend.croissant_store import Document, get_croissant_store
-from backend.engine import Engine
-from backend.indexing import (
-    generate_embedding_index,
-    generate_fainder_indices,
-    generate_metadata,
-)
-from backend.indices import FainderIndex, HnswIndex, TantivyIndex
-from backend.util import load_json
+from backend.croissant_store import Document
 
 app_state = ApplicationState()
 app_state.initialize()
+
 
 logger.info("Initializing FastAPI app")
 app = FastAPI()
