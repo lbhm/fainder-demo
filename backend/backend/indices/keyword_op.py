@@ -106,7 +106,7 @@ class TantivyIndex:
                     snippet_generator = tantivy.SnippetGenerator.create(
                         searcher, parsed_query, self.schema, field
                     )
-                    snippet_generator.set_max_num_chars(100000000000)
+                    snippet_generator.set_max_num_chars(10000)
                     snippet = snippet_generator.snippet_from_doc(doc)
                     highlighted = snippet.highlighted()
                     if len(highlighted) == 0:
