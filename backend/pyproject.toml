@@ -35,7 +35,7 @@ dependencies = [
     "pydantic~=2.10",
     "pydantic-settings~=2.7",
     "sentence-transformers~=3.3",
-    "tantivy~=0.22.0",
+    "tantivy~=0.22.2",
     "torch~=2.0",
 ]
 
