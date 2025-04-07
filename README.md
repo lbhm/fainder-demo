@@ -137,5 +137,5 @@ If you want to use Docker for development, you can use the following command to 
 components in development mode:
 
 ```bash
-FASTAPI_MODE=dev NUXT_MODE=dev docker compose up --build --watch
+COMPOSE_BAKE=true FASTAPI_MODE=dev NUXT_MODE=dev docker compose up --build --watch
 ```

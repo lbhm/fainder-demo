@@ -34,7 +34,7 @@ dependencies = [
     "orjson~=3.10",
     "pydantic~=2.10",
     "pydantic-settings~=2.7",
-    "sentence-transformers~=3.3",
+    "sentence-transformers[onnx]~=4.0",
     "tantivy~=0.22.2",
     "torch~=2.0",
 ]
@@ -50,7 +50,7 @@ dev = [
     "mypy~=1.13",
     "pre-commit~=4.0",
     "pytest~=8.3",
-    "pytest-cov~=6.0.0",
+    "pytest-cov~=6.0",
     "types-hnswlib~=0.8.0",
 ]
 

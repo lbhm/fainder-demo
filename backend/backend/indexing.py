@@ -215,7 +215,7 @@ def generate_fainder_indices(
 def generate_embedding_index(
     name_to_vector: dict[str, int],
     output_path: Path,
-    model_name: str = "all-MiniLM-L6-v2",
+    model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
     batch_size: int = 32,
     show_progress_bar: bool = True,
     precision: Literal["float32", "int8", "uint8", "binary", "ubinary"] = "float32",
@@ -229,7 +229,10 @@ def generate_embedding_index(
 
     logger.info("Generating embeddings")
     embedder = SentenceTransformer(
-        model_name, cache_folder=(output_path / "model_cache").as_posix()
+        model_name_or_path=model_name,
+        cache_folder=(output_path / "model_cache").as_posix(),
+        # backend="onnx",
+        # model_kwargs={"file_name": "onnx/model_O2.onnx"},
     )
     # Maybe remove the module compilation if it does not help with performance
     embedder.compile()  # type: ignore

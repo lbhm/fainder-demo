@@ -20,7 +20,7 @@ class HnswIndex:
         self,
         path: Path,
         metadata: Metadata,
-        model: str = "all-MiniLM-L6-v2",
+        model: str = "sentence-transformers/all-MiniLM-L6-v2",
         use_embeddings: bool = True,
         ef: int = 50,
     ) -> None:
@@ -39,7 +39,10 @@ class HnswIndex:
         # Embedding model
         logger.debug(f"Loading SentenceTransformer model '{model}'")
         self.embedder = SentenceTransformer(
-            model, cache_folder=(path.parent / "model_cache").as_posix()
+            model_name_or_path=model,
+            cache_folder=(path.parent / "model_cache").as_posix(),
+            # backend="onnx",
+            # model_kwargs={"file_name": "onnx/model_O2.onnx"},
         )
         dimension = self.embedder.get_sentence_embedding_dimension()
         if dimension is None:
