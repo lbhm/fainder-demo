@@ -130,9 +130,7 @@ class SimpleExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor):
         column = items[0]
         k = int(items[1])
 
-        result = self.hnsw_index.search(column, k, None)
-
-        return result  # noqa: RET504
+        return self.hnsw_index.search(column, k, None)
 
     def percentile_op(self, items: list[Token]) -> set[uint32]:
         logger.trace(f"Evaluating percentile term: {items}")
@@ -190,10 +188,10 @@ class SimpleExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor):
         return self.transform(tree)
 
 
-class IntermediaryResultGroups(Visitor_Recursive[Token]):
+class ResultGroupAnnotator(Visitor_Recursive[Token]):
     """
-    This visitor adds numbers for intermediary result groups to each node.
-    A node can have groups it writes to and possibly multiple it reads from.
+    This visitor adds numbers for intermediate result groups to each node.
+    A node has a write group and a list of read groups.
     """
 
     def __init__(self) -> None:
@@ -202,6 +200,7 @@ class IntermediaryResultGroups(Visitor_Recursive[Token]):
         self.write_groups: dict[int, int] = {}
         self.read_groups: dict[int, list[int]] = {}
         self.parent_write_group: dict[int, int] = {}  # node write group to parent write group
+        self.current_write_group: int = 0
 
     def apply(self, tree: ParseTree) -> None:
         # Initialize the root node with group 0
@@ -211,8 +210,9 @@ class IntermediaryResultGroups(Visitor_Recursive[Token]):
 
     def _create_group_id(self) -> int:
         """Create a new group ID."""
-        logger.trace(f"new group id: {max(self.write_groups.values()) + 1}")
-        return max(self.write_groups.values()) + 1
+        logger.trace(f"new group id: {self.current_write_group + 1}")
+        self.current_write_group += 1
+        return self.current_write_group
 
     def __default__(self, tree: ParseTree) -> None:
         # Set attributes for all children using the parent's values
@@ -291,22 +291,17 @@ class IntermediaryResultGroups(Visitor_Recursive[Token]):
 
 class IntermediateResult:
     """Intermediate results for prefiltering.
-    Only one of doc_ids, col_ids, or hist_ids should be set.
+    Only one of doc_ids or col_ids should be set.
     If multiple are set, this should result in an error.
     """
 
     doc_ids: set[int] | None = None
     col_ids: set[uint32] | None = None
-    hist_ids: set[uint32] | None = None
 
     def build_hist_filter(
         self, metadata: Metadata, fainder_mode: FainderMode
     ) -> set[uint32] | None:
         """Build a histogram filter from the intermediate results."""
-        if self.hist_ids is not None:
-            if self._exceeds_filtering_limit(self.hist_ids, "num_hist_ids", fainder_mode):
-                raise ValueError("Exceeded filtering limit for histogram IDs")
-            return self.hist_ids
         if self.col_ids is not None:
             if self._exceeds_filtering_limit(self.col_ids, "num_col_ids", fainder_mode):
                 raise ValueError("Exceeded filtering limit for column IDs")
@@ -321,7 +316,7 @@ class IntermediateResult:
     def _exceeds_filtering_limit(
         self,
         ids: set[uint32] | set[int],
-        id_type: Literal["num_hist_ids", "num_col_ids", "num_doc_ids"],
+        id_type: Literal["num_col_ids", "num_doc_ids"],
         fainder_mode: FainderMode,
     ) -> bool:
         """Check if the number of IDs exceeds the filtering limit for the current mode."""
@@ -332,20 +327,14 @@ class IntermediateResult:
         return f"""IntermediateResult(
         doc_ids={self.doc_ids},
         col_ids={self.col_ids},
-        hist_ids={self.hist_ids}
         )"""
 
 
-class IntermediateResults:
-    """Intermediate results for prefiltering."""
+class IntermediateDataStore:
+    """Store intermediate results for prefiltering per group."""
 
     def __init__(self) -> None:
         self.results: dict[int, IntermediateResult] = {}
-
-    def add_hist_id_results(self, write_group: int, hist_ids: set[uint32]) -> None:
-        logger.trace(f"Adding histogram IDs to write group {write_group}: {hist_ids}")
-        self.results[write_group] = IntermediateResult()
-        self.results[write_group].hist_ids = hist_ids.copy()
 
     def add_col_id_results(self, write_group: int, col_ids: set[uint32]) -> None:
         logger.trace(f"Adding column IDs to write group {write_group}: {col_ids}")
@@ -395,7 +384,7 @@ class PrefilteringExecutor(Transformer[Token, tuple[set[int], Highlights]], Exec
 
     fainder_mode: FainderMode
     scores: dict[int, float]
-    intermediate_results: IntermediateResults
+    intermediate_results: IntermediateDataStore
     write_groups: dict[int, int]  # Maps node ID to write group
     read_groups: dict[int, list[int]]  # Maps node ID to read groups
     parent_write_group: dict[int, int]  # Maps write group to parent write group
@@ -416,7 +405,7 @@ class PrefilteringExecutor(Transformer[Token, tuple[set[int], Highlights]], Exec
         self.hnsw_index = hnsw_index
         self.metadata = metadata
         self.write_groups = {}
-        self.intermediate_results = IntermediateResults()
+        self.intermediate_results = IntermediateDataStore()
         self.read_groups = {}
         self.parent_write_group = {}
         self.min_usability_score = min_usability_score
@@ -433,7 +422,7 @@ class PrefilteringExecutor(Transformer[Token, tuple[set[int], Highlights]], Exec
         self.scores = defaultdict(float)
         self.fainder_mode = fainder_mode
         self.enable_highlighting = enable_highlighting
-        self.intermediate_results = IntermediateResults()
+        self.intermediate_results = IntermediateDataStore()
         self.write_groups = {}
         self.read_groups = {}
 
@@ -471,6 +460,21 @@ class PrefilteringExecutor(Transformer[Token, tuple[set[int], Highlights]], Exec
         logger.warning(f"Write group {write_group} does not have a parent write group")
         logger.warning(f"Parent write groups: {self.parent_write_group}")
         raise ValueError("Write group does not have a parent write group")
+
+    def execute(self, tree: ParseTree) -> tuple[set[int], Highlights]:
+        """Start processing the parse tree."""
+        self.write_groups = {}
+        self.read_groups = {}
+        logger.trace(tree.pretty())
+        groups = ResultGroupAnnotator()
+        groups.apply(tree)
+        self.write_groups = groups.write_groups
+        self.read_groups = groups.read_groups
+        self.parent_write_group = groups.parent_write_group
+        logger.trace(f"Write groups: {self.write_groups}")
+        logger.trace(f"Read groups: {self.read_groups}")
+        logger.trace(f"Parent write groups: {self.parent_write_group}")
+        return self.transform(tree)
 
     ### Operator implementations ###
 
@@ -623,21 +627,6 @@ class PrefilteringExecutor(Transformer[Token, tuple[set[int], Highlights]], Exec
             raise ValueError("Query must have exactly one item")
         return items[0][0], items[0][1]
 
-    def execute(self, tree: ParseTree) -> tuple[set[int], Highlights]:
-        """Start processing the parse tree."""
-        self.write_groups = {}
-        self.read_groups = {}
-        logger.trace(tree.pretty())
-        groups = IntermediaryResultGroups()
-        groups.apply(tree)
-        self.write_groups = groups.write_groups
-        self.read_groups = groups.read_groups
-        self.parent_write_group = groups.parent_write_group
-        logger.trace(f"Write groups: {self.write_groups}")
-        logger.trace(f"Read groups: {self.read_groups}")
-        logger.trace(f"Parent write groups: {self.parent_write_group}")
-        return self.transform(tree)
-
 
 def create_executor(
     executor_type: ExecutorType,
@@ -651,32 +640,34 @@ def create_executor(
     rank_by_usability: bool = True,
 ) -> Executor:
     """Factory function to create the appropriate executor based on the executor type."""
-    if executor_type == ExecutorType.SIMPLE:
-        return SimpleExecutor(
-            tantivy_index=tantivy_index,
-            fainder_index=fainder_index,
-            hnsw_index=hnsw_index,
-            metadata=metadata,
-            fainder_mode=fainder_mode,
-            enable_highlighting=enable_highlighting,
-            min_usability_score=min_usability_score,
-            rank_by_usability=rank_by_usability,
-        )
-    if executor_type == ExecutorType.PREFILTERING:
-        return PrefilteringExecutor(
-            tantivy_index=tantivy_index,
-            fainder_index=fainder_index,
-            hnsw_index=hnsw_index,
-            metadata=metadata,
-            fainder_mode=fainder_mode,
-            enable_highlighting=enable_highlighting,
-            min_usability_score=min_usability_score,
-            rank_by_usability=rank_by_usability,
-        )
-    if executor_type == ExecutorType.PARALLEL:
-        # TODO: Implement ParallelExecutor
-        raise NotImplementedError("ParallelExecutor not implemented yet")
-    raise ValueError(f"Unknown executor type: {executor_type}")
+    match executor_type:
+        case ExecutorType.SIMPLE:
+            return SimpleExecutor(
+                tantivy_index=tantivy_index,
+                fainder_index=fainder_index,
+                hnsw_index=hnsw_index,
+                metadata=metadata,
+                fainder_mode=fainder_mode,
+                enable_highlighting=enable_highlighting,
+                min_usability_score=min_usability_score,
+                rank_by_usability=rank_by_usability,
+            )
+        case ExecutorType.PREFILTERING:
+            return PrefilteringExecutor(
+                tantivy_index=tantivy_index,
+                fainder_index=fainder_index,
+                hnsw_index=hnsw_index,
+                metadata=metadata,
+                fainder_mode=fainder_mode,
+                enable_highlighting=enable_highlighting,
+                min_usability_score=min_usability_score,
+                rank_by_usability=rank_by_usability,
+            )
+        case ExecutorType.PARALLEL:
+            # TODO: Implement ParallelExecutor
+            raise NotImplementedError("ParallelExecutor not implemented yet")
+        case _:
+            raise ValueError(f"Unknown executor type: {executor_type}")
 
 
 def is_table_result(val: list[Any]) -> TypeGuard[list[tuple[set[int], Highlights]]]:
