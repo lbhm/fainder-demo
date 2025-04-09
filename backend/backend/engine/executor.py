@@ -294,18 +294,16 @@ class IntermediateResult:
     If multiple are set, this should result in an error.
     """
 
-    _doc_ids: set[int] | None = None
-    _col_ids: set[uint32] | None = None
-
     def __init__(
         self, doc_ids: set[int] | None = None, col_ids: set[uint32] | None = None
     ) -> None:
         if doc_ids is None and col_ids is None:
-            raise ValueError("doc_ids and col_ids can not both be None")
+            raise ValueError("doc_ids and col_ids cannot both be None")
         if doc_ids is not None and col_ids is not None:
-            raise ValueError("doc_ids and col_ids can not both be sets")
-        self._col_ids = col_ids
-        self._doc_ids = doc_ids
+            raise ValueError("doc_ids and col_ids cannot both be set")
+
+        self._col_ids: set[uint32] | None = col_ids
+        self._doc_ids: set[int] | None = doc_ids
 
     def add_col_ids(self, col_ids: set[uint32]) -> None:
         self._col_ids = col_ids
@@ -341,10 +339,10 @@ class IntermediateResult:
 
     def __str__(self) -> str:
         """String representation of the intermediate result."""
-        return f"IntermediateResult(\n\tdoc_ids={self._doc_ids},\n\tcol_ids={self._col_ids},\n)"
+        return f"IntermediateResult(\n\tdoc_ids={self._doc_ids},\n\tcol_ids={self._col_ids}\n)"
 
 
-class IntermediateDataStore:
+class IntermediateResultStore:
     """Store intermediate results for prefiltering per group."""
 
     def __init__(self) -> None:
@@ -354,25 +352,27 @@ class IntermediateDataStore:
         logger.trace(f"Adding column IDs to write group {write_group}: {col_ids}")
         if write_group in self.results:
             self.results[write_group].add_col_ids(col_ids=col_ids)
-        self.results[write_group] = IntermediateResult(col_ids=col_ids)
+        else:
+            self.results[write_group] = IntermediateResult(col_ids=col_ids)
 
     def add_doc_id_results(self, write_group: int, doc_ids: set[int]) -> None:
         logger.trace(f"Adding document IDs to write group {write_group}: {doc_ids}")
         if write_group in self.results:
             self.results[write_group].add_doc_ids(doc_ids=doc_ids)
-        self.results[write_group] = IntermediateResult(doc_ids=doc_ids)
+        else:
+            self.results[write_group] = IntermediateResult(doc_ids=doc_ids)
 
     def build_hist_filter(
         self, read_groups: list[int], metadata: Metadata, fainder_mode: FainderMode
     ) -> set[uint32] | None:
         """Build a histogram filter from the intermediate results."""
-        hist_ids: set[uint32] = set()
+        hist_filter: set[uint32] = set()
         if len(read_groups) == 0:
-            raise ValueError("No read_groups ")
+            raise ValueError("Cannot build a hist filter without read groups")
 
-        logger.trace(f"read groups {read_groups}")
         for read_group in read_groups:
             if read_group not in self.results:
+                # TODO: Write a comment describing what it means if we enter this branch
                 return None
 
             logger.trace(
@@ -386,24 +386,17 @@ class IntermediateDataStore:
             if len(intermediate) == 0:
                 return set()
 
-            if len(hist_ids) == 0:
-                hist_ids = intermediate
+            if len(hist_filter) == 0:
+                hist_filter = intermediate
             else:
-                hist_ids &= intermediate
+                hist_filter &= intermediate
 
-        logger.trace(f"Hist IDs: {hist_ids}")
-        return hist_ids
+        logger.trace(f"Hist filter: {hist_filter}")
+        return hist_filter
 
 
 class PrefilteringExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor):
     """Uses prefiltering to reduce the number of documents before executing the query."""
-
-    fainder_mode: FainderMode
-    scores: dict[int, float]
-    intermediate_results: IntermediateDataStore
-    write_groups: dict[int, int]  # Maps node ID to write group
-    read_groups: dict[int, list[int]]  # Maps node ID to read groups
-    parent_write_group: dict[int, int]  # Maps write group to parent write group
 
     def __init__(
         self,
@@ -430,11 +423,11 @@ class PrefilteringExecutor(Transformer[Token, tuple[set[int], Highlights]], Exec
         fainder_mode: FainderMode,
         enable_highlighting: bool = False,
     ) -> None:
-        logger.trace("reset")
-        self.scores = defaultdict(float)
+        logger.trace("Resetting executor")
+        self.scores: dict[int, float] = defaultdict(float)
         self.fainder_mode = fainder_mode
         self.enable_highlighting = enable_highlighting
-        self.intermediate_results = IntermediateDataStore()
+        self.intermediate_results = IntermediateResultStore()
         self.write_groups: dict[int, int] = {}
         self.read_groups: dict[int, list[int]] = {}
         self.parent_write_group: dict[int, int] = {}
