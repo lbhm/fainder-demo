@@ -366,14 +366,14 @@ class IntermediateResultStore:
         self, read_groups: list[int], metadata: Metadata, fainder_mode: FainderMode
     ) -> set[uint32] | None:
         """Build a histogram filter from the intermediate results."""
-        hist_filter: set[uint32] = set()
+        hist_filter: set[uint32] | None = None
         if len(read_groups) == 0:
             raise ValueError("Cannot build a hist filter without read groups")
 
         for read_group in read_groups:
             if read_group not in self.results:
-                # TODO: Write a comment describing what it means if we enter this branch
-                return None
+                # This means this group does not have an intermediate result yet this happens alot
+                continue
 
             logger.trace(
                 f"Processing read group {read_group} with results {self.results[read_group]}"
@@ -386,7 +386,7 @@ class IntermediateResultStore:
             if len(intermediate) == 0:
                 return set()
 
-            if len(hist_filter) == 0:
+            if hist_filter is None:
                 hist_filter = intermediate
             else:
                 hist_filter &= intermediate
