@@ -73,6 +73,8 @@ class SimpleExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor):
         min_usability_score: float = 0.0,
         rank_by_usability: bool = True,
     ) -> None:
+        super().__init__(visit_tokens=False)
+
         self.tantivy_index = tantivy_index
         self.fainder_index = fainder_index
         self.hnsw_index = hnsw_index
@@ -90,6 +92,10 @@ class SimpleExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor):
         self.scores = defaultdict(float)
         self.fainder_mode = fainder_mode
         self.enable_highlighting = enable_highlighting
+
+    def execute(self, tree: ParseTree) -> tuple[set[int], Highlights]:
+        """Start processing the parse tree."""
+        return self.transform(tree)
 
     def updates_scores(self, doc_ids: Sequence[int], scores: Sequence[float]) -> None:
         logger.trace(f"Updating scores for {len(doc_ids)} documents")
@@ -183,10 +189,6 @@ class SimpleExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor):
             raise ValueError("Query must have exactly one item")
         return items[0]
 
-    def execute(self, tree: ParseTree) -> tuple[set[int], Highlights]:
-        """Start processing the parse tree."""
-        return self.transform(tree)
-
 
 class ResultGroupAnnotator(Visitor_Recursive[Token]):
     """
@@ -203,9 +205,6 @@ class ResultGroupAnnotator(Visitor_Recursive[Token]):
         self.current_write_group: int = 0
 
     def apply(self, tree: ParseTree) -> None:
-        # Initialize the root node with group 0
-        self.write_groups[id(tree)] = 0
-        self.read_groups[id(tree)] = [0]
         self.visit_topdown(tree)
 
     def _create_group_id(self) -> int:
@@ -219,17 +218,17 @@ class ResultGroupAnnotator(Visitor_Recursive[Token]):
         logger.trace(f"Processing default node: {tree}")
         if id(tree) in self.write_groups and id(tree) in self.read_groups:
             write_group = self.write_groups[id(tree)]
-            read_group = self.read_groups[id(tree)]
+            read_groups = self.read_groups[id(tree)]
 
             for child in tree.children:
                 # Store in our dictionaries rather than on the objects directly
                 self.write_groups[id(child)] = write_group
-                self.read_groups[id(child)] = read_group
+                self.read_groups[id(child)] = read_groups
                 logger.trace(
-                    f"Child {child} has write group {write_group} and read group {read_group}"
+                    f"Child {child} has write group {write_group} and read group {read_groups}"
                 )
         else:
-            logger.warning(f"Node {tree} does not have write or read groups")
+            raise ValueError(f"Node {tree} does not have write or read groups")
 
     def query(self, tree: ParseTree) -> None:
         logger.trace(f"Processing query node: {tree}")
@@ -255,7 +254,7 @@ class ResultGroupAnnotator(Visitor_Recursive[Token]):
                 self.read_groups[id(child)] = read_group
                 self.parent_write_group[write_group] = write_group
         else:
-            logger.warning(f"Node {tree} does not have write or read groups")
+            raise ValueError(f"Node {tree} does not have write or read groups")
 
     def disjunction(self, tree: ParseTree) -> None:
         logger.trace(f"Processing disjunction node: {tree}")
@@ -271,7 +270,7 @@ class ResultGroupAnnotator(Visitor_Recursive[Token]):
                 self.read_groups[id(child)] = [current_write_group, *parent_read_groups]
                 self.parent_write_group[current_write_group] = parent_write_group
         else:
-            logger.warning(f"Node {tree} does not have write or read groups")
+            raise ValueError(f"Node {tree} does not have write or read groups")
 
     def negation(self, tree: ParseTree) -> None:
         logger.trace(f"Processing negation node: {tree}")
@@ -286,7 +285,7 @@ class ResultGroupAnnotator(Visitor_Recursive[Token]):
                 self.read_groups[id(child)] = read_groups
                 self.parent_write_group[new_group] = parent_group
         else:
-            logger.warning(f"Node {tree} does not have write or read groups")
+            raise ValueError(f"Node {tree} does not have write or read groups")
 
 
 class IntermediateResult:
@@ -295,21 +294,39 @@ class IntermediateResult:
     If multiple are set, this should result in an error.
     """
 
-    doc_ids: set[int] | None = None
-    col_ids: set[uint32] | None = None
+    _doc_ids: set[int] | None = None
+    _col_ids: set[uint32] | None = None
+
+    def __init__(
+        self, doc_ids: set[int] | None = None, col_ids: set[uint32] | None = None
+    ) -> None:
+        if doc_ids is None and col_ids is None:
+            raise ValueError("doc_ids and col_ids can not both be None")
+        if doc_ids is not None and col_ids is not None:
+            raise ValueError("doc_ids and col_ids can not both be sets")
+        self._col_ids = col_ids
+        self._doc_ids = doc_ids
+
+    def add_col_ids(self, col_ids: set[uint32]) -> None:
+        self._col_ids = col_ids
+        self._doc_ids = None
+
+    def add_doc_ids(self, doc_ids: set[int]) -> None:
+        self._doc_ids = doc_ids
+        self._col_ids = None
 
     def build_hist_filter(
         self, metadata: Metadata, fainder_mode: FainderMode
     ) -> set[uint32] | None:
         """Build a histogram filter from the intermediate results."""
-        if self.col_ids is not None:
-            if self._exceeds_filtering_limit(self.col_ids, "num_col_ids", fainder_mode):
-                raise ValueError("Exceeded filtering limit for column IDs")
-            return col_to_hist_ids(self.col_ids, metadata.col_to_hist)
-        if self.doc_ids is not None:
-            if self._exceeds_filtering_limit(self.doc_ids, "num_doc_ids", fainder_mode):
-                raise ValueError("Exceeded filtering limit for document IDs")
-            col_ids = doc_to_col_ids(self.doc_ids, metadata.doc_to_cols)
+        if self._col_ids is not None:
+            if self._exceeds_filtering_limit(self._col_ids, "num_col_ids", fainder_mode):
+                return None
+            return col_to_hist_ids(self._col_ids, metadata.col_to_hist)
+        if self._doc_ids is not None:
+            if self._exceeds_filtering_limit(self._doc_ids, "num_doc_ids", fainder_mode):
+                return None
+            col_ids = doc_to_col_ids(self._doc_ids, metadata.doc_to_cols)
             return col_to_hist_ids(col_ids, metadata.col_to_hist)
         return None
 
@@ -324,10 +341,7 @@ class IntermediateResult:
 
     def __str__(self) -> str:
         """String representation of the intermediate result."""
-        return f"""IntermediateResult(
-        doc_ids={self.doc_ids},
-        col_ids={self.col_ids},
-        )"""
+        return f"IntermediateResult(\n\tdoc_ids={self._doc_ids},\n\tcol_ids={self._col_ids},\n)"
 
 
 class IntermediateDataStore:
@@ -338,45 +352,47 @@ class IntermediateDataStore:
 
     def add_col_id_results(self, write_group: int, col_ids: set[uint32]) -> None:
         logger.trace(f"Adding column IDs to write group {write_group}: {col_ids}")
-        self.results[write_group] = IntermediateResult()
-        self.results[write_group].col_ids = col_ids.copy()
+        if write_group in self.results:
+            self.results[write_group].add_col_ids(col_ids=col_ids)
+        self.results[write_group] = IntermediateResult(col_ids=col_ids)
 
     def add_doc_id_results(self, write_group: int, doc_ids: set[int]) -> None:
         logger.trace(f"Adding document IDs to write group {write_group}: {doc_ids}")
-        self.results[write_group] = IntermediateResult()
-        self.results[write_group].doc_ids = doc_ids.copy()
+        if write_group in self.results:
+            self.results[write_group].add_doc_ids(doc_ids=doc_ids)
+        self.results[write_group] = IntermediateResult(doc_ids=doc_ids)
 
-    def build_filter(
+    def build_hist_filter(
         self, read_groups: list[int], metadata: Metadata, fainder_mode: FainderMode
     ) -> set[uint32] | None:
         """Build a histogram filter from the intermediate results."""
         hist_ids: set[uint32] = set()
-        first = True
         if len(read_groups) == 0:
-            return hist_ids
+            raise ValueError("No read_groups ")
 
         logger.trace(f"read groups {read_groups}")
         for read_group in read_groups:
             if read_group not in self.results:
                 return None
 
-            try:
-                logger.trace(
-                    f"Processing read group {read_group} with results {self.results[read_group]}"
-                )
-                intermediate = self.results[read_group].build_hist_filter(metadata, fainder_mode)
-                if intermediate is not None:
-                    logger.trace(f"intermediate {intermediate}")
-                    if first:
-                        hist_ids = intermediate
-                        first = False
-                    else:
-                        hist_ids.intersection_update(intermediate)
-            except ValueError:
+            logger.trace(
+                f"Processing read group {read_group} with results {self.results[read_group]}"
+            )
+            intermediate = self.results[read_group].build_hist_filter(metadata, fainder_mode)
+            logger.trace(f"intermediate {intermediate}")
+
+            if intermediate is None:
                 return None
+            if len(intermediate) == 0:
+                return set()
+
+            if len(hist_ids) == 0:
+                hist_ids = intermediate
+            else:
+                hist_ids &= intermediate
 
         logger.trace(f"Hist IDs: {hist_ids}")
-        return hist_ids if not first else None
+        return hist_ids
 
 
 class PrefilteringExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor):
@@ -404,10 +420,6 @@ class PrefilteringExecutor(Transformer[Token, tuple[set[int], Highlights]], Exec
         self.fainder_index = fainder_index
         self.hnsw_index = hnsw_index
         self.metadata = metadata
-        self.write_groups = {}
-        self.intermediate_results = IntermediateDataStore()
-        self.read_groups = {}
-        self.parent_write_group = {}
         self.min_usability_score = min_usability_score
         self.rank_by_usability = rank_by_usability
 
@@ -423,8 +435,9 @@ class PrefilteringExecutor(Transformer[Token, tuple[set[int], Highlights]], Exec
         self.fainder_mode = fainder_mode
         self.enable_highlighting = enable_highlighting
         self.intermediate_results = IntermediateDataStore()
-        self.write_groups = {}
-        self.read_groups = {}
+        self.write_groups: dict[int, int] = {}
+        self.read_groups: dict[int, list[int]] = {}
+        self.parent_write_group: dict[int, int] = {}
 
     def updates_scores(self, doc_ids: Sequence[int], scores: Sequence[float]) -> None:
         logger.trace(f"Updating scores for {len(doc_ids)} documents")
@@ -527,7 +540,7 @@ class PrefilteringExecutor(Transformer[Token, tuple[set[int], Highlights]], Exec
         percentile = float(items[0])
         comparison: str = items[1]
         reference = float(items[2])
-        hist_filter = self.intermediate_results.build_filter(
+        hist_filter = self.intermediate_results.build_hist_filter(
             self._get_read_groups(items[0]), self.metadata, self.fainder_mode
         )
         logger.trace(f"Hist filter: {hist_filter}")
