@@ -105,8 +105,8 @@
           <Search_Component
             :key="searchComponentKey"
             :search-query="route.query.query"
-            :inline="true"
-            :lines="3"
+            :inline="false"
+            :lines="6"
             :query-builder="false"
             :simple-builder="true"
             @search-data="

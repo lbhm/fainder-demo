@@ -43,4 +43,20 @@ export default defineNuxtConfig({
       },
     },
   },
+  app: {
+    head: {
+      script: [
+        {
+          src: "https://cdn.jsdelivr.net/gh/WebCoder49/code-input@2.3/code-input.min.js",
+          body: true,
+        },
+      ],
+      link: [
+        {
+          rel: "stylesheet",
+          href: "https://cdn.jsdelivr.net/gh/WebCoder49/code-input@2.3/code-input.min.css",
+        },
+      ],
+    },
+  },
 });
