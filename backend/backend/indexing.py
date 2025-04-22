@@ -231,6 +231,7 @@ def generate_embedding_index(
     embedder = SentenceTransformer(
         model_name_or_path=model_name,
         cache_folder=(output_path / "model_cache").as_posix(),
+        # Possibly use ONNX, see: https://github.com/lbhm/fainder-demo/issues/102
         # backend="onnx",
         # model_kwargs={"file_name": "onnx/model_O2.onnx"},
     )
@@ -298,7 +299,7 @@ if __name__ == "__main__":
         logger.error(f"Error loading settings: {e}")
         sys.exit(1)
 
-    hists, name_to_vector, _, _ = generate_metadata(
+    hists, name_to_vector, _, _ = generate_metadata(  # type: ignore[assignment]
         settings.croissant_path,
         settings.metadata_path,
         settings.tantivy_path,

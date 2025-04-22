@@ -34,7 +34,7 @@ dependencies = [
     "orjson~=3.10",
     "pydantic~=2.10",
     "pydantic-settings~=2.7",
-    "sentence-transformers[onnx]~=4.0",
+    "sentence-transformers~=4.0",
     "tantivy~=0.22.2",
     "torch~=2.0",
 ]
@@ -114,15 +114,13 @@ explicit = true
 torch = { index = "pytorch" }
 
 [tool.pyright]
-inlucde = ["backend", "tests"]
+include = ["backend", "tests"]
 # reportUnnecessaryTypeIgnoreComment = true
 typeCheckingMode = "strict"
 venvPath = "."
 venv = ".venv"
 
 [tool.mypy]
-ignore_missing_imports = true
-plugins = ["numpy.typing.mypy_plugin"]
-strict = true
-warn_unused_ignores = false
 files = ["backend", "tests"]
+strict = true
+plugins = ["numpy.typing.mypy_plugin"]

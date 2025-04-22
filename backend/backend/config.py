@@ -112,47 +112,47 @@ class Settings(BaseSettings):
             raise ValueError("metadata_file must point to a .json file")
         return value
 
-    @computed_field  # type: ignore[misc]
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def croissant_path(self) -> DirectoryPath:
         return self.data_dir / self.collection_name / self.croissant_dir
 
-    @computed_field  # type: ignore[misc]
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def embedding_path(self) -> DirectoryPath:
         return self.data_dir / self.collection_name / self.embedding_dir
 
-    @computed_field  # type: ignore[misc]
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def tantivy_path(self) -> DirectoryPath:
         return self.data_dir / self.collection_name / self.tantivy_dir
 
-    @computed_field  # type: ignore[misc]
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def fainder_path(self) -> DirectoryPath:
         return self.data_dir / self.collection_name / self.fainder_dir
 
-    @computed_field  # type: ignore[misc]
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def hnsw_index_path(self) -> Path:
         return self.embedding_path / "index.bin"
 
-    @computed_field  # type: ignore[misc]
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def rebinning_index_path(self) -> Path:
         return self.fainder_path / "rebinning.zst"
 
-    @computed_field  # type: ignore[misc]
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def conversion_index_path(self) -> Path:
         return self.fainder_path / "conversion.zst"
 
-    @computed_field  # type: ignore[misc]
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def histogram_path(self) -> Path:
         return self.fainder_path / "histograms.zst"
 
-    @computed_field  # type: ignore[misc]
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def metadata_path(self) -> Path:
         return self.data_dir / self.collection_name / self.metadata_file

@@ -3,7 +3,7 @@ from typing import TypedDict
 
 import numpy as np
 
-from backend.engine.executor import Highlights
+from backend.config import Highlights
 
 
 class HighlightingCase(TypedDict):

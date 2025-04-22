@@ -41,6 +41,7 @@ class HnswIndex:
         self.embedder = SentenceTransformer(
             model_name_or_path=model,
             cache_folder=(path.parent / "model_cache").as_posix(),
+            # Possibly use ONNX, see: https://github.com/lbhm/fainder-demo/issues/102
             # backend="onnx",
             # model_kwargs={"file_name": "onnx/model_O2.onnx"},
         )
