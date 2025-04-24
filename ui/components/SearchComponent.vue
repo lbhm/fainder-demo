@@ -433,35 +433,25 @@ const percentileFilter = ref({
   value: "",
 });
 
-watch(
-  number_of_rows, (_) => {
-    console.log("changed number_of_rows", number_of_rows.value);
-    registerTemplate();
-  },
-)
 
-// on change of highlightEnabled value, update syntax highlighting
+// on change of highlightEnabled value, update isValid
 watch(highlightEnabled, (value) => {
   if (!value) {
     isValid.value = true;
   } else {
     isValid.value = !syntaxError.value;
   }
-  highlightSyntax(searchQuery.value);
 });
 
-const first_time = ref(true);
 
 // Add a watch for showSimpleBuilder
 watch(showSimpleBuilder, (isOpen) => {
-  if (isOpen && first_time.value) {
+  if (isOpen) {
     // Clear existing terms
-    first_time.value = false;
     searchTerms.value = [];
 
     if (searchQuery.value) {
       parseExistingQuery(searchQuery.value);
-      highlightSyntax(searchQuery.value);
     }
   }
 });
@@ -796,6 +786,7 @@ function saveSettings() {
   max-height: v-bind(textareaMaxHeight);
   overflow: v-bind("number_of_rows === 1 ? 'hidden' : 'auto'") !important;
   overflow-y : v-bind("number_of_rows === 1 ? 'hidden' : 'auto'") !important;
+  scrollbar-width: v-bind("number_of_rows === 1 ? 'none' : 'auto'") !important;
 }
 
 .error-message {
