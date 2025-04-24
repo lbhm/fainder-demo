@@ -272,18 +272,18 @@ function highlightSyntax(value: string) {
   let highlighted = String(value);
   // console.log(value);
 
+  // Highlight strings
+    highlighted = highlighted.replace(
+    /(['"])(.*?)\1/g,
+    '<span class="string">$&</span>',
+  );
+
   // Highlight all function names consistently
   highlighted = highlighted.replace(
     /\b(kw|keyword|name|pp|percentile|col|column)\s*\(/gi,
     '<span class="function">$1</span>(',
   );
 
-  // Highlight quoted strings in kw() and name()
-  highlighted = highlighted.replace(
-    /(kw|keyword|name)\s*\(\s*'([^']+)'/gi,
-    (match, func, content) =>
-      `<span class="function">${func}</span>(<span class="string">'${content}'</span>`,
-  );
 
   // Highlight content inside function calls
   highlighted = highlighted
@@ -313,7 +313,7 @@ function highlightSyntax(value: string) {
     }
   });
 
-  console.log(String(highlighted));
+  console.log("highlighted: ", String(highlighted));
 
   return highlighted;
 }
