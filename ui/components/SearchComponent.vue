@@ -794,6 +794,8 @@ function saveSettings() {
 
 .search-input {
   max-height: v-bind(textareaMaxHeight);
+  overflow: v-bind("number_of_rows === 1 ? 'hidden' : 'auto'") !important;
+  overflow-y : v-bind("number_of_rows === 1 ? 'hidden' : 'auto'") !important;
 }
 
 .error-message {
