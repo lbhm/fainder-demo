@@ -8,8 +8,9 @@ words # The search page will contain multiple search bars
         <v-col cols="10">
           <div class="input-wrapper">
             <code-input
-              language="custom"
+              language="DQL"
               template="syntax-highlighted"
+              class="search-input"
               placeholder="Search for datasets"
               :value="searchQuery"
               :style="{ height: heightCodeInput }"
@@ -248,7 +249,24 @@ words # The search page will contain multiple search bars
 import { onMounted, ref, watch, computed } from "vue";
 import parseQuery from "~/utils/queryParser";
 
+// Declare codeInput as a global variable from the loaded script
+declare global {
+  const codeInput: {
+    Template: new (
+      highlightFn: (element: HTMLElement) => string,
+      preStyled?: boolean,
+      setLanguageClass?: boolean,
+      passSelf?: boolean,
+      plugins?: any[]
+    ) => unknown;
+    registerTemplate: (name: string, template: unknown) => void;
+  };
+}
+
 function highlightSyntax(value: string) {
+  if (enable_highlighting.value === false) {
+    return value;
+  }
   //console.log(value);
 
   let highlighted = String(value);
@@ -300,34 +318,38 @@ function highlightSyntax(value: string) {
   return highlighted;
 }
 
-// codeInput.registerTemplate("syntax-highlighted", codeInput.templates.prism(hljs, [] /* Array of plugins (see below) */));
-codeInput.registerTemplate(
-  "syntax-highlighted",
-  new codeInput.Template(
-    function (result_element: HTMLElement) {
-      /* Highlight function - with `pre code` code element */
-      /* Highlight code in result_element - code is already escaped so it doesn't become HTML */
-      result_element.innerHTML = highlightSyntax(result_element.innerHTML);
-      return result_element.innerHTML;
-    },
+function registerTemplate(){ 
+  // codeInput.registerTemplate("syntax-highlighted", codeInput.templates.prism(hljs, [] /* Array of plugins (see below) */));
+  codeInput.registerTemplate(
+    "syntax-highlighted",
+    new codeInput.Template(
+      function (result_element: HTMLElement) {
+        /* Highlight function - with `pre code` code element */
+        /* Highlight code in result_element - code is already escaped so it doesn't become HTML */
+        result_element.innerHTML = highlightSyntax(result_element.innerHTML);
+        return result_element.innerHTML;
+      },
 
-    true /* Optional - Is the `pre` element styled as well as the `code` element?
-     * Changing this to false uses the code element as the scrollable one rather
-     * than the pre element */,
+      true /* Optional - Is the `pre` element styled as well as the `code` element?
+      * Changing this to false uses the code element as the scrollable one rather
+      * than the pre element */,
 
-    true /* Optional - This is used for editing code - setting this to true sets the `code`
-     * element's class to `language-<the code-input's lang attribute>` */,
+      true /* Optional - This is used for editing code - setting this to true sets the `code`
+      * element's class to `language-<the code-input's lang attribute>` */,
 
-    false /* Optional - Setting this to true passes the `<code-input>` element as a second
-     * argument to the highlight function to be used for getting data- attribute values
-     * and using the DOM for the code-input */,
+      false /* Optional - Setting this to true passes the `<code-input>` element as a second
+      * argument to the highlight function to be used for getting data- attribute values
+      * and using the DOM for the code-input */,
 
-    [], // Array of plugins (see below)
-  ),
-);
+      [], // Array of plugins (see below)
+    ),
+  );
+};
+
+registerTemplate();
 
 const heightCodeInput = computed(() => {
-  return `${current_rows.value * 48}px`;
+  return `${visable_rows.value * 48}px`;
 });
 
 const props = defineProps({
@@ -355,7 +377,8 @@ const temp_fainder_mode = ref(route.query.fainder_mode || "low_memory");
 const temp_enable_highlighting = ref(
   route.query.enable_highlighting === "true",
 ); // Default to false
-const current_rows = ref(props.lines);
+const visable_rows = ref(props.lines);
+const number_of_rows = ref(props.lines);
 
 const searchTerms = ref<Term[]>([]);
 
@@ -410,6 +433,13 @@ const percentileFilter = ref({
   value: "",
 });
 
+watch(
+  number_of_rows, (_) => {
+    console.log("changed number_of_rows", number_of_rows.value);
+    registerTemplate();
+  },
+)
+
 // on change of highlightEnabled value, update syntax highlighting
 watch(highlightEnabled, (value) => {
   if (!value) {
@@ -457,10 +487,11 @@ const handleKeyDown = (
     } else if (event.shiftKey) {
       if (!props.inline) {
         console.log("Shift+Enter key pressed increasing rows");
-        current_rows.value += 1; // on shift+enter, increase the number of rows
+        visable_rows.value += 1; // on shift+enter, increase the number of rows
       }
+      number_of_rows.value += 1;
     }
-  } else if (event.key === "Backspace" && !props.inline) {
+  } else if (event.key === "Backspace") {
     // Check if cursor is at the end of the last line and the line is empty
     const cursorPos = event.target.selectionStart;
     const lastLineStart = event.target.value.lastIndexOf("\n") + 1;
@@ -468,8 +499,11 @@ const handleKeyDown = (
       event.target.value.substring(lastLineStart).trim() === "";
     const isAtEnd = cursorPos === event.target.value.length;
 
-    if (isLastLineEmpty && isAtEnd && current_rows.value > 1) {
-      current_rows.value -= 1;
+    if (isLastLineEmpty && isAtEnd && visable_rows.value > 1) {
+      if (!props.inline){
+        visable_rows.value -= 1;
+      }
+      number_of_rows.value -= 1;
       console.log("Backspace key pressed decreasing rows");
     }
   }
@@ -746,53 +780,20 @@ function saveSettings() {
   width: 100%;
 }
 
-.search-input {
-  margin-bottom: 4px;
-}
-
-.search-input :deep(textarea) {
-  position: relative;
-  color: transparent !important;
-  background: transparent !important;
-  caret-color: rgb(
-    var(--v-theme-on-surface)
-  ); /* Updated: theme-aware caret color */
-  z-index: 2;
-  white-space: pre;
-  font-family: "Roboto Mono", monospace;
-  font-size: 16px;
-  letter-spacing: normal;
-  line-height: normal;
-  padding: 8px 16px;
-  padding-top: 15px;
-  min-height: 50px;
-  resize: none;
-  overflow-y: auto;
-}
-
-/* Adjust max-height based on lines prop when in inline mode */
-.inline-layout .search-input :deep(textarea) {
-  max-height: v-bind(textareaMaxHeight);
-  overflow: auto;
-}
-
-.syntax-highlight {
-  position: absolute;
-  padding-top: 15px;
-  top: 0px;
-  left: 16px;
-  right: 48px;
-  pointer-events: none;
-  font-family: "Roboto Mono", monospace;
-  font-size: 16px;
-  z-index: 1;
-  color: rgba(var(--v-theme-on-surface), 0.87);
-  mix-blend-mode: normal;
-  white-space: pre;
+.no-scrollbar {
   overflow: hidden;
-  text-overflow: ellipsis;
-  letter-spacing: normal;
-  line-height: normal;
+  overflow-y: hidden;
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  /* Hide scrollbar for IE, Edge and Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.search-input {
+  max-height: v-bind(textareaMaxHeight);
 }
 
 .error-message {
