@@ -312,8 +312,6 @@ function highlightSyntax(value: string) {
     }
   });
 
-  // console.log("highlighted: ", String(highlighted));
-
   return highlighted;
 }
 
@@ -439,6 +437,20 @@ watch(highlightEnabled, (value) => {
   } else {
     isValid.value = !syntaxError.value;
   }
+  enable_highlighting.value = value;
+  // update query param without changing anything else
+  const router = useRouter();
+  const route = useRoute();
+  router.replace({
+    path: route.path,
+    query: {
+      ...route.query,
+      enable_highlighting: String(value),
+    },
+  });
+  // update searchQuery to trigger update
+  searchQuery.value = searchQuery.value + " ";
+  searchQuery.value = searchQuery.value.slice(0, -1);
 });
 
 // Add a watch for showSimpleBuilder
