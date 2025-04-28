@@ -6,7 +6,7 @@
       </div>
       <Search_Component
         :search-query="query"
-        :inline="true"
+        :inline="false"
         :lines="1"
         :query-builder="false"
         :simple-builder="true"

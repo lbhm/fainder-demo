@@ -379,12 +379,20 @@ const searchTerms = ref<Term[]>([]);
 
 const { fainder_mode, enable_highlighting } = useSearchState();
 
+const highlightEnabled = useCookie("fainder_highlight_enabled", {
+  default: () => false,
+});
+console.log("Initial by cookie highlightEnabled: ", highlightEnabled.value);
+console.log("Initial by url: ", enable_highlighting.value);
+
 // Initialize fainder_mode if not already set
 if (!fainder_mode.value) {
   fainder_mode.value = String(route.query.fainder_mode) || "low_memory";
 }
 if (enable_highlighting.value === undefined) {
-  enable_highlighting.value = route.query.enable_highlighting === "true"; // Default to false
+  enable_highlighting.value = highlightEnabled.value;
+} else {
+  highlightEnabled.value = enable_highlighting.value;
 }
 
 const searchQuery = ref(props.searchQuery);
@@ -399,9 +407,7 @@ const syntaxError = computed(() => {
   }
   return validateSyntax(searchQuery.value);
 });
-const highlightEnabled = useCookie("fainder_highlight_enabled", {
-  default: () => false,
-});
+
 const isValid = ref(true);
 
 console.log("Initial fainder_mode:", fainder_mode?.value);
@@ -779,23 +785,10 @@ function saveSettings() {
   width: 100%;
 }
 
-.no-scrollbar {
-  overflow: hidden;
-  overflow-y: hidden;
-  /* Hide scrollbar for Chrome, Safari and Opera */
-  &::-webkit-scrollbar {
-    display: none;
-  }
-  /* Hide scrollbar for IE, Edge and Firefox */
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
-}
-
 .search-input {
   max-height: v-bind(textareaMaxHeight);
-  overflow: v-bind("number_of_rows === 1 ? 'hidden' : 'auto'") !important;
   overflow-y: v-bind("number_of_rows === 1 ? 'hidden' : 'auto'") !important;
-  scrollbar-width: v-bind("number_of_rows === 1 ? 'none' : 'auto'") !important;
+  overflow-x: auto;
 }
 
 .error-message {
