@@ -789,6 +789,22 @@ function saveSettings() {
   max-height: v-bind(textareaMaxHeight);
   overflow-y: v-bind("number_of_rows === 1 ? 'hidden' : 'auto'") !important;
   overflow-x: auto;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.12);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Style for code-input element to ensure it shows all content */
+:deep(.search-input textarea) {
+  min-height: 48px;
+  padding: 8px 12px;
+  line-height: 1.5;
+}
+
+/* Add focus styles for better UX */
+:deep(.search-input:focus-within) {
+  border-color: rgb(var(--v-theme-primary));
+  box-shadow: 0 0 0 1px rgba(var(--v-theme-primary), 0.2);
 }
 
 .error-message {
