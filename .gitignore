@@ -53,3 +53,5 @@ logs/
 
 # tantivy lock
 *.lock
+/backend/logs
+*.log

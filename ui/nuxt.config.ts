@@ -47,14 +47,13 @@ export default defineNuxtConfig({
     head: {
       script: [
         {
-          src: '/assets/code-input/code-input.min.js',
-          body: true,
+          src: "/assets/code-input/code-input.min.js",
         },
       ],
       link: [
         {
           rel: "stylesheet",
-          href: '/assets/code-input/code-input.min.css',
+          href: "/assets/code-input/code-input.min.css",
         },
       ],
     },

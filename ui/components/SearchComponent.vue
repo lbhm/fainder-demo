@@ -257,7 +257,7 @@ declare global {
       preStyled?: boolean,
       setLanguageClass?: boolean,
       passSelf?: boolean,
-      plugins?: any[]
+      plugins?: unknown[],
     ) => unknown;
     registerTemplate: (name: string, template: unknown) => void;
   };
@@ -273,7 +273,7 @@ function highlightSyntax(value: string) {
   // console.log(value);
 
   // Highlight strings
-    highlighted = highlighted.replace(
+  highlighted = highlighted.replace(
     /(['"])(.*?)\1/g,
     '<span class="string">$&</span>',
   );
@@ -283,7 +283,6 @@ function highlightSyntax(value: string) {
     /\b(kw|keyword|name|pp|percentile|col|column)\s*\(/gi,
     '<span class="function">$1</span>(',
   );
-
 
   // Highlight content inside function calls
   highlighted = highlighted
@@ -313,12 +312,12 @@ function highlightSyntax(value: string) {
     }
   });
 
-  console.log("highlighted: ", String(highlighted));
+  // console.log("highlighted: ", String(highlighted));
 
   return highlighted;
 }
 
-function registerTemplate(){ 
+function registerTemplate() {
   // codeInput.registerTemplate("syntax-highlighted", codeInput.templates.prism(hljs, [] /* Array of plugins (see below) */));
   codeInput.registerTemplate(
     "syntax-highlighted",
@@ -331,20 +330,20 @@ function registerTemplate(){
       },
 
       true /* Optional - Is the `pre` element styled as well as the `code` element?
-      * Changing this to false uses the code element as the scrollable one rather
-      * than the pre element */,
+       * Changing this to false uses the code element as the scrollable one rather
+       * than the pre element */,
 
       true /* Optional - This is used for editing code - setting this to true sets the `code`
-      * element's class to `language-<the code-input's lang attribute>` */,
+       * element's class to `language-<the code-input's lang attribute>` */,
 
       false /* Optional - Setting this to true passes the `<code-input>` element as a second
-      * argument to the highlight function to be used for getting data- attribute values
-      * and using the DOM for the code-input */,
+       * argument to the highlight function to be used for getting data- attribute values
+       * and using the DOM for the code-input */,
 
       [], // Array of plugins (see below)
     ),
   );
-};
+}
 
 registerTemplate();
 
@@ -394,7 +393,7 @@ if (enable_highlighting.value === undefined) {
 
 const searchQuery = ref(props.searchQuery);
 const syntaxError = computed(() => {
-  console.log(searchQuery.value);
+  // console.log(searchQuery.value);
   if (
     !searchQuery.value ||
     searchQuery.value.trim() === "" ||
@@ -433,7 +432,6 @@ const percentileFilter = ref({
   value: "",
 });
 
-
 // on change of highlightEnabled value, update isValid
 watch(highlightEnabled, (value) => {
   if (!value) {
@@ -442,7 +440,6 @@ watch(highlightEnabled, (value) => {
     isValid.value = !syntaxError.value;
   }
 });
-
 
 // Add a watch for showSimpleBuilder
 watch(showSimpleBuilder, (isOpen) => {
@@ -490,7 +487,7 @@ const handleKeyDown = (
     const isAtEnd = cursorPos === event.target.value.length;
 
     if (isLastLineEmpty && isAtEnd && visable_rows.value > 1) {
-      if (!props.inline){
+      if (!props.inline) {
         visable_rows.value -= 1;
       }
       number_of_rows.value -= 1;
@@ -785,7 +782,7 @@ function saveSettings() {
 .search-input {
   max-height: v-bind(textareaMaxHeight);
   overflow: v-bind("number_of_rows === 1 ? 'hidden' : 'auto'") !important;
-  overflow-y : v-bind("number_of_rows === 1 ? 'hidden' : 'auto'") !important;
+  overflow-y: v-bind("number_of_rows === 1 ? 'hidden' : 'auto'") !important;
   scrollbar-width: v-bind("number_of_rows === 1 ? 'none' : 'auto'") !important;
 }
 
