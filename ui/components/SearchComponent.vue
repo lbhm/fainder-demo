@@ -343,8 +343,6 @@ function registerTemplate() {
   );
 }
 
-registerTemplate();
-
 const heightCodeInput = computed(() => {
   return `${visable_rows.value * 48}px`;
 });
@@ -429,6 +427,8 @@ const percentileFilter = ref({
   comparison: "",
   value: "",
 });
+
+registerTemplate();
 
 // on change of highlightEnabled value, update isValid
 watch(highlightEnabled, (value) => {
