@@ -369,9 +369,7 @@ const props = defineProps({
 const emit = defineEmits(["searchData"]);
 const route = useRoute();
 const temp_fainder_mode = ref(route.query.fainder_mode || "low_memory");
-const temp_enable_highlighting = ref(
-  route.query.enable_highlighting === "true",
-); // Default to false
+
 const visable_rows = ref(props.lines);
 const number_of_rows = ref(props.lines);
 
@@ -380,10 +378,11 @@ const searchTerms = ref<Term[]>([]);
 const { fainder_mode, enable_highlighting } = useSearchState();
 
 const highlightEnabled = useCookie("fainder_highlight_enabled", {
-  default: () => false,
+  default: () => true,
 });
-console.log("Initial by cookie highlightEnabled: ", highlightEnabled.value);
-console.log("Initial by url: ", enable_highlighting.value);
+
+console.debug("Initial by cookie highlightEnabled: ", highlightEnabled.value);
+console.debug("Initial by url: ", enable_highlighting.value);
 
 // Initialize fainder_mode if not already set
 if (!fainder_mode.value) {
@@ -394,6 +393,8 @@ if (enable_highlighting.value === undefined) {
 } else {
   highlightEnabled.value = enable_highlighting.value;
 }
+
+const temp_enable_highlighting = ref(enable_highlighting.value); // Default to true
 
 const searchQuery = ref(props.searchQuery);
 const syntaxError = computed(() => {
@@ -482,16 +483,15 @@ const handleKeyDown = (
 ): void => {
   // Update searchQuery immediately
   searchQuery.value = event.target.value;
-  //console.log("Key pressed:", event.key);
 
   if (event.key === "Enter") {
     if (!event.shiftKey) {
       event.preventDefault();
-      console.log("Enter key pressed searching", searchQuery.value);
+      console.debug("Enter key pressed searching", searchQuery.value);
       searchData();
     } else if (event.shiftKey) {
       if (!props.inline) {
-        console.log("Shift+Enter key pressed increasing rows");
+        console.debug("Shift+Enter key pressed increasing rows");
         visable_rows.value += 1; // on shift+enter, increase the number of rows
       }
       number_of_rows.value += 1;
@@ -509,7 +509,7 @@ const handleKeyDown = (
         visable_rows.value -= 1;
       }
       number_of_rows.value -= 1;
-      console.log("Backspace key pressed decreasing rows");
+      console.debug("Backspace key pressed decreasing rows");
     }
   }
 };
@@ -525,7 +525,7 @@ const parseExistingQuery = (query: string) => {
   searchTerms.value = terms;
   searchQuery.value = remainingQuery;
 
-  console.log("Parsed query results:", {
+  console.debug("Parsed query results:", {
     searchTerms: searchTerms.value,
     remainingQuery: searchQuery.value,
   });
