@@ -1,7 +1,9 @@
 import os
 from collections import defaultdict
+from collections.abc import Sequence
 from concurrent.futures import Future, ThreadPoolExecutor
 from operator import and_, or_
+from typing import TypeVar
 
 from lark import ParseTree, Token, Transformer
 from loguru import logger
@@ -23,8 +25,11 @@ from backend.engine.conversion import (
 )
 from backend.indices import FainderIndex, HnswIndex, TantivyIndex
 
-from .common import ResultGroupAnnotator, exceeds_filtering_limit, junction
+from .common import ResultGroupAnnotator, TResultSet, exceeds_filtering_limit, junction
 from .executor import Executor
+
+# Threaded-prefiltering result set TypeVar
+TTPResultSet = TypeVar("TTPResultSet", tuple[set[int], Highlights, int], tuple[set[uint32], int])
 
 
 class IntermediateResultFuture:
@@ -478,11 +483,7 @@ class ParallelPrefilteringExecutor(Transformer[Token, tuple[set[int], Highlights
             return result[0], result[1], parent_write_group
         return result, parent_write_group
 
-    def disjunction(
-        self,
-        items: list[tuple[set[int], Highlights, int] | Future[tuple[set[int], Highlights, int]]]
-        | list[tuple[set[uint32], int] | Future[tuple[set[uint32], int]]],
-    ) -> tuple[set[int], Highlights, int] | tuple[set[uint32], int]:
+    def disjunction(self, items: Sequence[TResultSet | Future[TResultSet]]) -> TResultSet:
         logger.trace(f"Evaluating disjunction with items: {items}")
 
         clean_items, write_group = self._resolve_items(items)

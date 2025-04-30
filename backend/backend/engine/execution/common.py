@@ -1,5 +1,5 @@
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from functools import reduce
 from typing import Any, Literal, TypeGuard, TypeVar
 
@@ -18,7 +18,7 @@ from backend.engine.conversion import (
     doc_to_col_ids,
 )
 
-T = TypeVar("T", tuple[set[int], Highlights], set[uint32])
+TResultSet = TypeVar("TResultSet", tuple[set[int], Highlights], set[uint32])
 
 
 class ResultGroupAnnotator(Visitor_Recursive[Token]):
@@ -166,7 +166,7 @@ def exceeds_filtering_limit(
     return len(ids) > FILTERING_STOP_POINTS[fainder_mode][id_type]
 
 
-def is_table_result(val: list[Any]) -> TypeGuard[list[tuple[set[int], Highlights]]]:
+def is_table_result(val: Sequence[Any]) -> TypeGuard[Sequence[tuple[set[int], Highlights]]]:
     """Check if a list contains table results (document IDs and highlights)."""
     return all(isinstance(item, tuple) for item in val)
 
@@ -225,11 +225,11 @@ def merge_highlights(
 
 
 def junction(
-    items: list[tuple[set[int], Highlights]] | list[set[uint32]],
+    items: Sequence[TResultSet],
     operator: Callable[[Any, Any], Any],
     enable_highlighting: bool = False,
     doc_to_cols: dict[int, set[int]] | None = None,
-) -> tuple[set[int], Highlights] | set[uint32]:
+) -> TResultSet:
     """Combine query results using a junction operator (AND/OR)."""
     if len(items) < 2:
         raise ValueError("Junction must have at least two items")
@@ -246,9 +246,9 @@ def junction(
                 doc_ids = operator(doc_ids, item[0])
                 highlights = merge_highlights(highlights, item[1], doc_ids, doc_to_cols)
 
-            return doc_ids, highlights
+            return doc_ids, highlights  # type: ignore
 
-        return reduce(operator, [item[0] for item in items]), ({}, set())
+        return reduce(operator, [item[0] for item in items]), ({}, set())  # type: ignore
 
     # Items contains column results (i.e., set[uint32])
     return reduce(operator, items)  # type: ignore

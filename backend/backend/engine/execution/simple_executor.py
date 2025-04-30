@@ -1,4 +1,5 @@
 from collections import defaultdict
+from collections.abc import Sequence
 from operator import and_, or_
 
 from lark import ParseTree, Token, Transformer
@@ -18,8 +19,8 @@ from backend.engine.conversion import (
 )
 from backend.indices import FainderIndex, HnswIndex, TantivyIndex
 
-from .common import junction
-from .executor import Executor, T
+from .common import TResultSet, junction
+from .executor import Executor
 
 
 class SimpleExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor):
@@ -49,11 +50,7 @@ class SimpleExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor):
 
         self.reset(fainder_mode, enable_highlighting)
 
-    def reset(
-        self,
-        fainder_mode: FainderMode,
-        enable_highlighting: bool = False,
-    ) -> None:
+    def reset(self, fainder_mode: FainderMode, enable_highlighting: bool = False) -> None:
         self.scores = defaultdict(float)
         self.fainder_mode = fainder_mode
         self.enable_highlighting = enable_highlighting
@@ -106,21 +103,17 @@ class SimpleExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor):
         )
         return hist_to_col_ids(result_hists, self.metadata.hist_to_col)
 
-    def conjunction(
-        self, items: list[tuple[set[int], Highlights]] | list[set[uint32]]
-    ) -> tuple[set[int], Highlights] | set[uint32]:
+    def conjunction(self, items: Sequence[TResultSet]) -> TResultSet:
         logger.trace(f"Evaluating conjunction with items: {items}")
 
         return junction(items, and_, self.enable_highlighting, self.metadata.doc_to_cols)
 
-    def disjunction(
-        self, items: list[tuple[set[int], Highlights]] | list[set[uint32]]
-    ) -> tuple[set[int], Highlights] | set[uint32]:
+    def disjunction(self, items: Sequence[TResultSet]) -> TResultSet:
         logger.trace(f"Evaluating disjunction with items: {items}")
 
         return junction(items, or_, self.enable_highlighting, self.metadata.doc_to_cols)
 
-    def negation(self, items: list[T]) -> T:
+    def negation(self, items: Sequence[TResultSet]) -> TResultSet:
         logger.trace(f"Evaluating negation with {len(items)} items")
 
         if len(items) != 1:
@@ -138,7 +131,7 @@ class SimpleExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor):
         all_columns = {uint32(col_id) for col_id in range(len(self.metadata.col_to_doc))}
         return all_columns - to_negate_cols
 
-    def query(self, items: list[tuple[set[int], Highlights]]) -> tuple[set[int], Highlights]:
+    def query(self, items: Sequence[tuple[set[int], Highlights]]) -> tuple[set[int], Highlights]:
         logger.trace(f"Evaluating query with {len(items)} items")
 
         if len(items) != 1:

@@ -1,10 +1,8 @@
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from typing import TypeVar
 
 from lark import ParseTree
 from loguru import logger
-from numpy import uint32
 
 from backend.config import (
     FainderMode,
@@ -12,8 +10,6 @@ from backend.config import (
     Metadata,
 )
 from backend.indices import FainderIndex, HnswIndex, TantivyIndex
-
-T = TypeVar("T", tuple[set[int], Highlights], set[uint32])
 
 
 class Executor(ABC):

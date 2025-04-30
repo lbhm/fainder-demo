@@ -1,5 +1,6 @@
 import os
 from collections import defaultdict
+from collections.abc import Sequence
 from concurrent.futures import Future, ThreadPoolExecutor
 from operator import and_, or_
 from typing import Any
@@ -21,7 +22,7 @@ from backend.engine.conversion import (
 )
 from backend.indices import FainderIndex, HnswIndex, TantivyIndex
 
-from .common import junction
+from .common import TResultSet, junction
 from .executor import Executor
 
 
@@ -54,14 +55,11 @@ class ThreadedExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor
 
     def __del__(self) -> None:
         # Shutdown the thread pool if it is still running
+        # TODO: Migrate this to using the weakref module and a finalizer
         if self._thread_pool:
             self._thread_pool.shutdown(wait=True)
 
-    def reset(
-        self,
-        fainder_mode: FainderMode,
-        enable_highlighting: bool = False,
-    ) -> None:
+    def reset(self, fainder_mode: FainderMode, enable_highlighting: bool = False) -> None:
         self.scores = defaultdict(float)
         self.fainder_mode = fainder_mode
         self.enable_highlighting = enable_highlighting
@@ -77,6 +75,14 @@ class ThreadedExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor
         logger.debug("Result of query execution: ", result)
 
         return result
+
+    def _resolve_item(self, item: TResultSet | Future[TResultSet]) -> TResultSet:
+        """Resolve item if it's a Future, otherwise return the item itself"""
+        return item.result() if isinstance(item, Future) else item
+
+    def _resolve_items(self, items: Sequence[TResultSet | Future[TResultSet]]) -> list[TResultSet]:
+        """Resolve all items in the list if they are futures."""
+        return [self._resolve_item(item) for item in items]
 
     ### Operator implementations ###
 
@@ -144,51 +150,8 @@ class ThreadedExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor
         # Return future (non-blocking)
         return future
 
-    def _resolve_item(
-        self,
-        item: Future[tuple[set[int], Highlights]]
-        | tuple[set[int], Highlights]
-        | Future[set[uint32]]
-        | set[uint32],
-    ) -> tuple[set[int], Highlights] | set[uint32]:
-        """Resolve item if it's a Future, otherwise return the item itself"""
-        return item.result() if isinstance(item, Future) else item
-
-    def _resolve_col_result(self, item: Future[set[uint32]] | set[uint32]) -> set[uint32]:
-        """Resolve column result from a Future if needed"""
-        return item.result() if isinstance(item, Future) else item
-
-    def _resolve_doc_result(
-        self, item: Future[tuple[set[int], Highlights]] | tuple[set[int], Highlights]
-    ) -> tuple[set[int], Highlights]:
-        """Resolve document result from a Future if needed"""
-        return item.result() if isinstance(item, Future) else item
-
-    def _resolve_items(
-        self,
-        items: list[tuple[set[int], Highlights] | Future[tuple[set[int], Highlights]]]
-        | list[set[uint32] | Future[set[uint32]]],
-    ) -> list[tuple[set[int], Highlights]] | list[set[uint32]]:
-        """Resolve all items in the list if they are futures"""
-        doc_results: list[tuple[set[int], Highlights]] = []
-        col_results: list[set[uint32]] = []
-
-        for item in items:
-            resolved = self._resolve_item(item)
-            if isinstance(resolved, tuple):
-                doc_results.append(resolved)
-            else:
-                col_results.append(resolved)
-
-        # We should only have one type of result
-        if doc_results and col_results:
-            raise ValueError("Cannot mix document and column results")
-        if doc_results:
-            return doc_results
-        return col_results
-
     def col_op(
-        self, items: list[set[uint32] | Future[set[uint32]]]
+        self, items: Sequence[set[uint32] | Future[set[uint32]]]
     ) -> tuple[set[int], Highlights]:
         logger.trace(f"Evaluating column term: {items}")
 
@@ -196,7 +159,7 @@ class ThreadedExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor
             raise ValueError("Column term must have exactly one item")
 
         # Get actual result if it's a future
-        col_ids = self._resolve_col_result(items[0])
+        col_ids = self._resolve_item(items[0])
 
         doc_ids = col_to_doc_ids(col_ids, self.metadata.col_to_doc)
         if self.enable_highlighting:
@@ -204,25 +167,15 @@ class ThreadedExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor
 
         return doc_ids, ({}, set())
 
-    def conjunction(
-        self,
-        items: list[tuple[set[int], Highlights] | Future[tuple[set[int], Highlights]]]
-        | list[set[uint32] | Future[set[uint32]]],
-    ) -> tuple[set[int], Highlights] | set[uint32]:
+    def conjunction(self, items: Sequence[TResultSet | Future[TResultSet]]) -> TResultSet:
         logger.trace(f"Evaluating conjunction with items: {items}")
 
         # Resolve all futures in items
-        resolved_items: list[tuple[set[int], Highlights]] | list[set[uint32]] = (
-            self._resolve_items(items)
-        )
+        resolved_items = self._resolve_items(items)
 
         return junction(resolved_items, and_, self.enable_highlighting, self.metadata.doc_to_cols)
 
-    def disjunction(
-        self,
-        items: list[tuple[set[int], Highlights] | Future[tuple[set[int], Highlights]]]
-        | list[set[uint32] | Future[set[uint32]]],
-    ) -> tuple[set[int], Highlights] | set[uint32]:
+    def disjunction(self, items: Sequence[TResultSet | Future[TResultSet]]) -> TResultSet:
         logger.trace(f"Evaluating disjunction with items: {items}")
 
         # Resolve all futures in items
@@ -230,11 +183,7 @@ class ThreadedExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor
 
         return junction(resolved_items, or_, self.enable_highlighting, self.metadata.doc_to_cols)
 
-    def negation(
-        self,
-        items: list[tuple[set[int], Highlights] | Future[tuple[set[int], Highlights]]]
-        | list[set[uint32] | Future[set[uint32]]],
-    ) -> tuple[set[int], Highlights] | set[uint32]:
+    def negation(self, items: Sequence[TResultSet | Future[TResultSet]]) -> TResultSet:
         logger.trace(f"Evaluating negation with {len(items)} items")
 
         if len(items) != 1:
@@ -257,7 +206,7 @@ class ThreadedExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor
         return all_columns - to_negate_cols
 
     def query(
-        self, items: list[tuple[set[int], Highlights] | Future[tuple[set[int], Highlights]]]
+        self, items: Sequence[tuple[set[int], Highlights] | Future[tuple[set[int], Highlights]]]
     ) -> tuple[set[int], Highlights]:
         logger.trace(f"Evaluating query with {len(items)} items")
 
@@ -265,4 +214,4 @@ class ThreadedExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor
             raise ValueError("Query must have exactly one item")
 
         # Resolve the item if it's a future
-        return self._resolve_doc_result(items[0])
+        return self._resolve_item(items[0])
