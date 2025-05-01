@@ -219,8 +219,8 @@ words # The search page will contain multiple search bars
             variant="outlined"
           />
           <v-switch
-            v-model="temp_enable_highlighting"
-            label="Enable Highlighting"
+            v-model="temp_results_highlighting"
+            label="Enable Results Highlighting"
             color="primary"
           />
         </v-card-text>
@@ -264,7 +264,7 @@ declare global {
 }
 
 function highlightSyntax(value: string) {
-  if (enable_highlighting.value === false) {
+  if (syntax_highlighting.value === false) {
     return value;
   }
   //console.log(value);
@@ -375,26 +375,23 @@ const number_of_rows = ref(props.lines);
 
 const searchTerms = ref<Term[]>([]);
 
-const { fainder_mode, enable_highlighting } = useSearchState();
+const { fainder_mode, results_highlighting } = useSearchState();
 
-const highlightEnabled = useCookie("fainder_highlight_enabled", {
+const syntax_highlighting = useCookie("fainder_syntax_highlighting", {
   default: () => true,
 });
 
-console.debug("Initial by cookie highlightEnabled: ", highlightEnabled.value);
-console.debug("Initial by url: ", enable_highlighting.value);
+console.debug(
+  "Initial by cookie syntax_highlighting: ",
+  syntax_highlighting.value,
+);
 
 // Initialize fainder_mode if not already set
 if (!fainder_mode.value) {
   fainder_mode.value = String(route.query.fainder_mode) || "low_memory";
 }
-if (enable_highlighting.value === undefined) {
-  enable_highlighting.value = highlightEnabled.value;
-} else {
-  highlightEnabled.value = enable_highlighting.value;
-}
 
-const temp_enable_highlighting = ref(enable_highlighting.value); // Default to true
+const temp_results_highlighting = ref(results_highlighting.value); // Default to true
 
 const searchQuery = ref(props.searchQuery);
 const syntaxError = computed(() => {
@@ -402,7 +399,7 @@ const syntaxError = computed(() => {
   if (
     !searchQuery.value ||
     searchQuery.value.trim() === "" ||
-    !highlightEnabled.value
+    !syntax_highlighting.value
   ) {
     return "";
   }
@@ -437,14 +434,13 @@ const percentileFilter = ref({
 
 registerTemplate();
 
-// on change of highlightEnabled value, update isValid
-watch(highlightEnabled, (value) => {
+// on change of syntax_highlighting value, update isValid
+watch(syntax_highlighting, (value) => {
   if (!value) {
     isValid.value = true;
   } else {
     isValid.value = !syntaxError.value;
   }
-  enable_highlighting.value = value;
   // update query param without changing anything else
   const router = useRouter();
   const route = useRoute();
@@ -581,11 +577,11 @@ async function searchData() {
   const s_query = query;
   console.log("Search query:", s_query);
   console.log("Index type:", fainder_mode.value);
-  console.log("Highlighting enabled:", enable_highlighting.value);
+  console.log("Results Highlighting enabled:", results_highlighting.value);
   emit("searchData", {
     query: s_query,
     fainder_mode: fainder_mode.value,
-    enable_highlighting: enable_highlighting.value,
+    results_highlighting: results_highlighting.value,
   });
 }
 
@@ -735,9 +731,9 @@ function cancelSettings() {
 function saveSettings() {
   showSettings.value = false;
   fainder_mode.value = String(temp_fainder_mode.value);
-  enable_highlighting.value = temp_enable_highlighting.value;
+  results_highlighting.value = temp_results_highlighting.value;
   console.log("New fainder_mode:", fainder_mode.value);
-  console.log("New highlighting enabled:", enable_highlighting.value);
+  console.log("New results highlighting enabled:", results_highlighting.value);
   // update route
   const route = useRoute();
   navigateTo({
@@ -745,7 +741,7 @@ function saveSettings() {
     query: {
       ...route.query,
       fainder_mode: temp_fainder_mode.value,
-      enable_highlighting: String(temp_enable_highlighting.value),
+      results_highlighting: String(temp_results_highlighting.value),
     },
   });
 }

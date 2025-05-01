@@ -565,7 +565,7 @@ const {
   query,
   fainder_mode,
   perPage,
-  enable_highlighting,
+  results_highlighting,
 } = useSearchState();
 
 console.log(selectedResultIndex.value);
@@ -649,7 +649,7 @@ watch(windowHeight, (newHeight) => {
       query.value,
       currentPage.value,
       fainder_mode.value,
-      enable_highlighting.value,
+      results_highlighting.value,
     );
   }
 });
@@ -685,7 +685,7 @@ watch(currentPage, async (newPage) => {
     query.value,
     newPage,
     fainder_mode.value,
-    enable_highlighting.value,
+    results_highlighting.value,
   );
 
   // Update URL with new page
@@ -696,7 +696,7 @@ watch(currentPage, async (newPage) => {
       page: newPage,
       index: selectedResultIndex.value,
       fainder_mode: fainder_mode.value,
-      enable_highlighting: enable_highlighting.value,
+      results_highlighting: results_highlighting.value,
       theme: theme.global.name.value,
     },
   });
@@ -739,7 +739,7 @@ const retrySearch = async () => {
     query.value,
     currentPage.value,
     fainder_mode.value,
-    enable_highlighting.value,
+    results_highlighting.value,
   );
 };
 
@@ -748,7 +748,7 @@ await searchOperations.loadResults(
   query.value,
   currentPage.value,
   fainder_mode.value,
-  enable_highlighting.value,
+  results_highlighting.value,
 );
 
 const chartOptions = ref({

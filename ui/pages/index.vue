@@ -24,7 +24,7 @@ const query = ref(q.query);
 async function searchData({
   query: searchQuery,
   fainder_mode: newfainder_mode,
-  enable_highlighting,
+  results_highlighting,
 }) {
   // If query is empty or undefined, reset the URL without query parameters
   if (!searchQuery || searchQuery.trim() === "") {
@@ -39,7 +39,7 @@ async function searchData({
     query: {
       query: searchQuery,
       fainder_mode: newfainder_mode,
-      enable_highlighting: enable_highlighting,
+      results_highlighting: results_highlighting,
     },
   });
 }
