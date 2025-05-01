@@ -1,4 +1,6 @@
-# about page
+<!--
+  This is a placeholder for the about page.
+-->
 
 <template>
   <v-main>

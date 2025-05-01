@@ -163,7 +163,7 @@ class QueryRequest(BaseModel):
     page: int = 1
     per_page: int = 10
     fainder_mode: FainderMode = FainderMode.LOW_MEMORY
-    results_highlighting: bool = False
+    result_highlighting: bool = False
 
 
 class QueryResponse(BaseModel):

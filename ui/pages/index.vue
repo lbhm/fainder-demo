@@ -1,3 +1,7 @@
+<!--
+  This page allows users to upload new dataset profiles to the search engine.
+-->
+
 <template>
   <v-main class="d-flex align-center justify-center">
     <div class="search-wrapper">
@@ -24,7 +28,7 @@ const query = ref(q.query);
 async function searchData({
   query: searchQuery,
   fainder_mode: newfainder_mode,
-  results_highlighting,
+  result_highlighting,
 }) {
   // If query is empty or undefined, reset the URL without query parameters
   if (!searchQuery || searchQuery.trim() === "") {
@@ -39,7 +43,7 @@ async function searchData({
     query: {
       query: searchQuery,
       fainder_mode: newfainder_mode,
-      results_highlighting: results_highlighting,
+      result_highlighting: result_highlighting,
     },
   });
 }

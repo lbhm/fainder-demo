@@ -18,13 +18,13 @@ export const useSearchOperations = () => {
     queryStr: string,
     page = 1,
     fainder_mode?: string,
-    results_highlighting?: boolean,
+    result_highlighting?: boolean,
   ) => {
     isLoading.value = true;
     error.value = { message: "", details: null };
 
     console.log(
-      `Loading results for query: ${queryStr}, page: ${page}, fainder_mode: ${fainder_mode}, enable_highlighting: ${results_highlighting}`,
+      `Loading results for query: ${queryStr}, page: ${page}, fainder_mode: ${fainder_mode}, result_highlighting: ${result_highlighting}`,
     );
 
     try {
@@ -42,7 +42,7 @@ export const useSearchOperations = () => {
           page: page,
           per_page: perPage.value,
           fainder_mode: fainder_mode || "low_memory",
-          enable_highlighting: results_highlighting,
+          result_highlighting: result_highlighting,
         }),
       });
 

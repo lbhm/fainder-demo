@@ -219,8 +219,8 @@ words # The search page will contain multiple search bars
             variant="outlined"
           />
           <v-switch
-            v-model="temp_results_highlighting"
-            label="Enable Results Highlighting"
+            v-model="temp_result_highlighting"
+            label="Enable Result Highlighting"
             color="primary"
           />
         </v-card-text>
@@ -267,10 +267,7 @@ function highlightSyntax(value: string) {
   if (syntax_highlighting.value === false) {
     return value;
   }
-  //console.log(value);
-
   let highlighted = String(value);
-  // console.log(value);
 
   // Highlight strings
   highlighted = highlighted.replace(
@@ -316,7 +313,6 @@ function highlightSyntax(value: string) {
 }
 
 function registerTemplate() {
-  // codeInput.registerTemplate("syntax-highlighted", codeInput.templates.prism(hljs, [] /* Array of plugins (see below) */));
   codeInput.registerTemplate(
     "syntax-highlighted",
     new codeInput.Template(
@@ -375,14 +371,14 @@ const number_of_rows = ref(props.lines);
 
 const searchTerms = ref<Term[]>([]);
 
-const { fainder_mode, results_highlighting } = useSearchState();
+const { fainder_mode, result_highlighting } = useSearchState();
 
 const syntax_highlighting = useCookie("fainder_syntax_highlighting", {
   default: () => true,
 });
 
 console.debug(
-  "Initial by cookie syntax_highlighting: ",
+  "`fainder_syntax_highlighting` cookie: ",
   syntax_highlighting.value,
 );
 
@@ -390,12 +386,12 @@ console.debug(
 if (!fainder_mode.value) {
   fainder_mode.value = String(route.query.fainder_mode) || "low_memory";
 }
+console.debug("Initial fainder_mode:", fainder_mode?.value);
 
-const temp_results_highlighting = ref(results_highlighting.value); // Default to true
+const temp_result_highlighting = ref(result_highlighting.value); // Default to true
 
 const searchQuery = ref(props.searchQuery);
 const syntaxError = computed(() => {
-  // console.log(searchQuery.value);
   if (
     !searchQuery.value ||
     searchQuery.value.trim() === "" ||
@@ -407,9 +403,6 @@ const syntaxError = computed(() => {
 });
 
 const isValid = ref(true);
-
-console.log("Initial fainder_mode:", fainder_mode?.value);
-
 const showSettings = ref(false);
 const fainder_modes = [
   { title: "Low Memory", value: "low_memory" },
@@ -448,7 +441,7 @@ watch(syntax_highlighting, (value) => {
     path: route.path,
     query: {
       ...route.query,
-      enable_highlighting: String(value),
+      syntax_highlighting: String(value),
     },
   });
   // update searchQuery to trigger update
@@ -577,11 +570,11 @@ async function searchData() {
   const s_query = query;
   console.log("Search query:", s_query);
   console.log("Index type:", fainder_mode.value);
-  console.log("Results Highlighting enabled:", results_highlighting.value);
+  console.log("Result Highlighting status:", result_highlighting.value);
   emit("searchData", {
     query: s_query,
     fainder_mode: fainder_mode.value,
-    results_highlighting: results_highlighting.value,
+    result_highlighting: result_highlighting.value,
   });
 }
 
@@ -731,9 +724,9 @@ function cancelSettings() {
 function saveSettings() {
   showSettings.value = false;
   fainder_mode.value = String(temp_fainder_mode.value);
-  results_highlighting.value = temp_results_highlighting.value;
+  result_highlighting.value = temp_result_highlighting.value;
   console.log("New fainder_mode:", fainder_mode.value);
-  console.log("New results highlighting enabled:", results_highlighting.value);
+  console.log("New result highlighting state:", result_highlighting.value);
   // update route
   const route = useRoute();
   navigateTo({
@@ -741,7 +734,7 @@ function saveSettings() {
     query: {
       ...route.query,
       fainder_mode: temp_fainder_mode.value,
-      results_highlighting: String(temp_results_highlighting.value),
+      result_highlighting: String(temp_result_highlighting.value),
     },
   });
 }

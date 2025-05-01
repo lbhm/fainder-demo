@@ -93,7 +93,7 @@ async def query(request: QueryRequest) -> QueryResponse:
         doc_ids, (doc_highlights, col_highlights) = app_state.engine.execute(
             query=request.query,
             fainder_mode=request.fainder_mode,
-            enable_highlighting=request.results_highlighting,
+            enable_highlighting=request.result_highlighting,
         )
 
         # Calculate pagination
@@ -103,7 +103,7 @@ async def query(request: QueryRequest) -> QueryResponse:
         total_pages = (len(doc_ids) + request.per_page - 1) // request.per_page
 
         docs = app_state.croissant_store.get_documents(paginated_doc_ids)
-        if request.results_highlighting:
+        if request.result_highlighting:
             # Make a deep copy of the documents to avoid modifying the original
             docs = copy.deepcopy(docs)
             # Only add highlights if enabled and they exist for the document

@@ -48,10 +48,10 @@ model_cache/
 pytest.xml
 
 # Local project folders
+/backend/logs
 data/
 logs/
+*.log
 
 # tantivy lock
 *.lock
-/backend/logs
-*.log

@@ -62,8 +62,8 @@
             <v-list-item-title>
               {{
                 syntax_highlighting
-                  ? "Disable Syntax Highlight"
-                  : "Enable Syntax Highlight"
+                  ? "Disable Syntax Highlighting"
+                  : "Enable Syntax Highlighting"
               }}
             </v-list-item-title>
           </v-list-item>
@@ -177,7 +177,7 @@ const showSearchDialog = ref(false);
 async function searchData({
   query: searchQuery,
   fainder_mode: newfainder_mode,
-  results_highlighting,
+  result_highlighting,
 }) {
   query.value = searchQuery;
   fainder_mode.value = newfainder_mode;
@@ -185,7 +185,7 @@ async function searchData({
   currentPage.value = 1;
   selectedResultIndex.value = 0;
 
-  await loadResults(searchQuery, 1, newfainder_mode, results_highlighting);
+  await loadResults(searchQuery, 1, newfainder_mode, result_highlighting);
 
   await navigateTo({
     path: "/results",
@@ -194,7 +194,7 @@ async function searchData({
       page: 1,
       index: 0,
       fainder_mode: newfainder_mode,
-      results_highlighting: results_highlighting,
+      result_highlighting: result_highlighting,
       theme: theme.global.name.value,
     },
   });
