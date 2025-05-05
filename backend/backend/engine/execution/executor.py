@@ -5,8 +5,8 @@ from lark import ParseTree
 from loguru import logger
 
 from backend.config import (
+    DOC_RESULTS,
     FainderMode,
-    Highlights,
     Metadata,
 )
 from backend.indices import FainderIndex, HnswIndex, TantivyIndex
@@ -38,7 +38,7 @@ class Executor(ABC):
         """Reset the executor's state."""
 
     @abstractmethod
-    def execute(self, tree: ParseTree) -> tuple[set[int], Highlights]:
+    def execute(self, tree: ParseTree) -> DOC_RESULTS:
         """Start processing the parse tree."""
 
     def updates_scores(self, doc_ids: Sequence[int], scores: Sequence[float]) -> None:

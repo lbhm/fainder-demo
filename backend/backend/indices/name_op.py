@@ -6,7 +6,7 @@ from loguru import logger
 from numpy import uint32
 from sentence_transformers import SentenceTransformer
 
-from backend.config import ColumnSearchError, Metadata
+from backend.config import COLUMN_RESULTS, ColumnSearchError, Metadata
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -73,11 +73,13 @@ class HnswIndex:
         self.index.load_index(str(path))
         self.index.set_ef(self.ef)
 
-    def search(self, column_name: str, k: int, column_filter: set[uint32] | None) -> set[uint32]:
+    def search(
+        self, column_name: str, k: int, column_filter: COLUMN_RESULTS | None
+    ) -> COLUMN_RESULTS:
         if k < 0:
             raise ColumnSearchError(f"k must be a non-negative integer: {k}")
 
-        result: set[uint32] = set()
+        result: COLUMN_RESULTS = set()
         if k == 0:
             # Exact search
             vector_id = self.name_to_vector.get(column_name, None)

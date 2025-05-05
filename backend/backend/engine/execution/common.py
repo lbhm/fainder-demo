@@ -6,9 +6,10 @@ from typing import Any, Literal, TypeGuard, TypeVar
 from lark import ParseTree, Token
 from lark.visitors import Visitor_Recursive
 from loguru import logger
-from numpy import uint32
 
 from backend.config import (
+    COLUMN_RESULTS,
+    DOC_RESULTS,
     DocumentHighlights,
     FainderMode,
     Highlights,
@@ -18,7 +19,7 @@ from backend.engine.conversion import (
     doc_to_col_ids,
 )
 
-TResultSet = TypeVar("TResultSet", tuple[set[int], Highlights], set[uint32])
+TResultSet = TypeVar("TResultSet", DOC_RESULTS, COLUMN_RESULTS)
 
 
 class ResultGroupAnnotator(Visitor_Recursive[Token]):
@@ -158,7 +159,7 @@ class ResultGroupAnnotator(Visitor_Recursive[Token]):
 
 
 def exceeds_filtering_limit(
-    ids: set[uint32] | set[int],
+    ids: COLUMN_RESULTS | set[int],
     id_type: Literal["num_hist_ids", "num_col_ids", "num_doc_ids"],
     fainder_mode: FainderMode,
 ) -> bool:
@@ -166,7 +167,7 @@ def exceeds_filtering_limit(
     return len(ids) > FILTERING_STOP_POINTS[fainder_mode][id_type]
 
 
-def is_table_result(val: Sequence[Any]) -> TypeGuard[Sequence[tuple[set[int], Highlights]]]:
+def is_table_result(val: Sequence[Any]) -> TypeGuard[Sequence[DOC_RESULTS]]:
     """Check if a list contains table results (document IDs and highlights)."""
     return all(isinstance(item, tuple) for item in val)
 
@@ -234,7 +235,7 @@ def junction(
     if len(items) < 2:
         raise ValueError("Junction must have at least two items")
 
-    # Items contains table results (i.e., tuple[set[int], Highlights])
+    # Items contains table results (i.e., DOC_RESULTS)
     if is_table_result(items):
         if enable_highlighting and doc_to_cols is not None:
             # Initialize result with first item
@@ -250,5 +251,5 @@ def junction(
 
         return reduce(operator, [item[0] for item in items]), ({}, set())  # type: ignore
 
-    # Items contains column results (i.e., set[uint32])
+    # Items contains column results (i.e., COLUMN_RESULTS)
     return reduce(operator, items)  # type: ignore

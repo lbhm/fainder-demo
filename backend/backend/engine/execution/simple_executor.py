@@ -7,10 +7,11 @@ from loguru import logger
 from numpy import uint32
 
 from backend.config import (
+    COLUMN_RESULTS,
+    DOC_RESULTS,
     ColumnHighlights,
     DocumentHighlights,
     FainderMode,
-    Highlights,
     Metadata,
 )
 from backend.engine.conversion import (
@@ -23,7 +24,7 @@ from .common import TResultSet, junction
 from .executor import Executor
 
 
-class SimpleExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor):
+class SimpleExecutor(Transformer[Token, DOC_RESULTS], Executor):
     """This transformer evaluates a parse tree bottom-up and computes the query result."""
 
     fainder_mode: FainderMode
@@ -55,13 +56,13 @@ class SimpleExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor):
         self.fainder_mode = fainder_mode
         self.enable_highlighting = enable_highlighting
 
-    def execute(self, tree: ParseTree) -> tuple[set[int], Highlights]:
+    def execute(self, tree: ParseTree) -> DOC_RESULTS:
         """Start processing the parse tree."""
         return self.transform(tree)
 
     ### Operator implementations ###
 
-    def keyword_op(self, items: list[Token]) -> tuple[set[int], Highlights]:
+    def keyword_op(self, items: list[Token]) -> DOC_RESULTS:
         logger.trace(f"Evaluating keyword term: {items}")
 
         result_docs, scores, highlights = self.tantivy_index.search(
@@ -71,7 +72,7 @@ class SimpleExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor):
 
         return set(result_docs), (highlights, set())  # Return empty set for column highlights
 
-    def col_op(self, items: list[set[uint32]]) -> tuple[set[int], Highlights]:
+    def col_op(self, items: list[COLUMN_RESULTS]) -> DOC_RESULTS:
         logger.trace(f"Evaluating column term: {items}")
 
         if len(items) != 1:
@@ -83,7 +84,7 @@ class SimpleExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor):
 
         return doc_ids, ({}, set())
 
-    def name_op(self, items: list[Token]) -> set[uint32]:
+    def name_op(self, items: list[Token]) -> COLUMN_RESULTS:
         logger.trace(f"Evaluating column term: {items}")
 
         column = items[0]
@@ -91,7 +92,7 @@ class SimpleExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor):
 
         return self.hnsw_index.search(column, k, None)
 
-    def percentile_op(self, items: list[Token]) -> set[uint32]:
+    def percentile_op(self, items: list[Token]) -> COLUMN_RESULTS:
         logger.trace(f"Evaluating percentile term: {items}")
 
         percentile = float(items[0])
@@ -131,7 +132,7 @@ class SimpleExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor):
         all_columns = {uint32(col_id) for col_id in range(len(self.metadata.col_to_doc))}
         return all_columns - to_negate_cols
 
-    def query(self, items: Sequence[tuple[set[int], Highlights]]) -> tuple[set[int], Highlights]:
+    def query(self, items: Sequence[DOC_RESULTS]) -> DOC_RESULTS:
         logger.trace(f"Evaluating query with {len(items)} items")
 
         if len(items) != 1:

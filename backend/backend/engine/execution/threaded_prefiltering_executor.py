@@ -3,7 +3,6 @@ from collections import defaultdict
 from collections.abc import Sequence
 from concurrent.futures import Future, ThreadPoolExecutor
 from operator import and_, or_
-from typing import TypeVar
 
 from lark import ParseTree, Token, Transformer
 from loguru import logger
@@ -11,10 +10,11 @@ from numpy import uint32
 from numpy.typing import NDArray
 
 from backend.config import (
+    COLUMN_RESULTS,
+    DOC_RESULTS,
     ColumnHighlights,
     DocumentHighlights,
     FainderMode,
-    Highlights,
     Metadata,
 )
 from backend.engine.conversion import (
@@ -28,39 +28,39 @@ from backend.indices import FainderIndex, HnswIndex, TantivyIndex
 from .common import ResultGroupAnnotator, TResultSet, exceeds_filtering_limit, junction
 from .executor import Executor
 
-# Threaded-prefiltering result set TypeVar
-TTPResultSet = TypeVar("TTPResultSet", tuple[set[int], Highlights, int], tuple[set[uint32], int])
-
 
 class IntermediateResultFuture:
     """Stores futures and results for intermediate results during parallel execution."""
 
     def __init__(
-        self, write_group: int, doc_ids: set[int] | None = None, col_ids: set[uint32] | None = None
+        self,
+        write_group: int,
+        doc_ids: set[int] | None = None,
+        col_ids: COLUMN_RESULTS | None = None,
     ) -> None:
         # resolved results trump futures
         self.write_group = write_group
-        self.kw_result_futures: list[Future[tuple[set[int], Highlights, int]]] = []
-        self.column_result_futures: list[Future[tuple[set[uint32], int]]] = []
-        self.pp_result_futures: list[Future[tuple[set[uint32], int]]] = []
+        self.kw_result_futures: list[Future[tuple[DOC_RESULTS, int]]] = []
+        self.column_result_futures: list[Future[tuple[COLUMN_RESULTS, int]]] = []
+        self.pp_result_futures: list[Future[tuple[COLUMN_RESULTS, int]]] = []
 
         # Store resolved results only one of these should be set
-        self._col_ids: set[uint32] | None = col_ids
+        self._col_ids: COLUMN_RESULTS | None = col_ids
         self._doc_ids: set[int] | None = doc_ids
 
-    def add_doc_future(self, future: Future[tuple[set[int], Highlights, int]]) -> None:
+    def add_doc_future(self, future: Future[tuple[DOC_RESULTS, int]]) -> None:
         """Add a future that will resolve to document IDs"""
         self.kw_result_futures.append(future)
 
-    def add_col_future(self, future: Future[tuple[set[uint32], int]]) -> None:
+    def add_col_future(self, future: Future[tuple[COLUMN_RESULTS, int]]) -> None:
         """Add a future that will resolve to column IDs"""
         self.column_result_futures.append(future)
 
-    def add_hist_future(self, future: Future[tuple[set[uint32], int]]) -> None:
+    def add_hist_future(self, future: Future[tuple[COLUMN_RESULTS, int]]) -> None:
         """Add a future that will resolve to histogram IDs"""
         self.pp_result_futures.append(future)
 
-    def add_col_ids(self, col_ids: set[uint32], doc_to_cols: dict[int, set[int]]) -> None:
+    def add_col_ids(self, col_ids: COLUMN_RESULTS, doc_to_cols: dict[int, set[int]]) -> None:
         if self._doc_ids is not None:
             helper_col_ids = doc_to_col_ids(self._doc_ids, doc_to_cols)
             col_ids = col_ids.intersection(helper_col_ids)
@@ -80,7 +80,7 @@ class IntermediateResultFuture:
 
     def _build_hist_filter_resolved(
         self, metadata: Metadata, fainder_mode: FainderMode
-    ) -> set[uint32] | None:
+    ) -> COLUMN_RESULTS | None:
         if self._doc_ids is not None:
             if exceeds_filtering_limit(self._doc_ids, "num_doc_ids", fainder_mode):
                 return None
@@ -94,14 +94,14 @@ class IntermediateResultFuture:
 
     def _build_hist_filter_future(
         self, metadata: Metadata, fainder_mode: FainderMode
-    ) -> set[uint32] | None:
-        hist_ids: set[uint32] = set()
+    ) -> COLUMN_RESULTS | None:
+        hist_ids: COLUMN_RESULTS = set()
         first = True
         for kw_future in self.kw_result_futures:
-            doc_ids, _, _ = kw_future.result()
-            if exceeds_filtering_limit(doc_ids, "num_doc_ids", fainder_mode):
+            doc_ids, _ = kw_future.result()
+            if exceeds_filtering_limit(doc_ids[0], "num_doc_ids", fainder_mode):
                 return None
-            col_ids = doc_to_col_ids(doc_ids, metadata.doc_to_cols)
+            col_ids = doc_to_col_ids(doc_ids[0], metadata.doc_to_cols)
             new_hist_ids = col_to_hist_ids(col_ids, metadata.col_to_hist)
             if first:
                 hist_ids = new_hist_ids
@@ -128,7 +128,7 @@ class IntermediateResultFuture:
 
     def build_hist_filter(
         self, metadata: Metadata, fainder_mode: FainderMode
-    ) -> set[uint32] | None:
+    ) -> COLUMN_RESULTS | None:
         """Build a histogram filter from the intermediate results."""
         hist_ids_resolved = self._build_hist_filter_resolved(metadata, fainder_mode)
         if hist_ids_resolved is not None:
@@ -163,7 +163,7 @@ class IntermediateResultStoreFuture:
         self.fainder_mode = fainder_mode
 
     def add_future_kw_result(
-        self, write_group: int, future: Future[tuple[set[int], Highlights, int]]
+        self, write_group: int, future: Future[tuple[DOC_RESULTS, int]]
     ) -> None:
         """Add a future that will resolve to document IDs"""
         if write_group not in self.results:
@@ -171,7 +171,7 @@ class IntermediateResultStoreFuture:
         self.results[write_group].add_doc_future(future)
 
     def add_future_col_result(
-        self, write_group: int, future: Future[tuple[set[uint32], int]]
+        self, write_group: int, future: Future[tuple[COLUMN_RESULTS, int]]
     ) -> None:
         """Add a future that will resolve to column IDs"""
         if write_group not in self.results:
@@ -179,7 +179,7 @@ class IntermediateResultStoreFuture:
         self.results[write_group].add_col_future(future)
 
     def add_future_hist_result(
-        self, write_group: int, future: Future[tuple[set[uint32], int]]
+        self, write_group: int, future: Future[tuple[COLUMN_RESULTS, int]]
     ) -> None:
         """Add a future that will resolve to histogram IDs"""
         if write_group not in self.results:
@@ -187,7 +187,7 @@ class IntermediateResultStoreFuture:
         self.results[write_group].add_hist_future(future)
 
     def add_col_ids(
-        self, write_group: int, col_ids: set[uint32], doc_to_cols: dict[int, set[int]]
+        self, write_group: int, col_ids: COLUMN_RESULTS, doc_to_cols: dict[int, set[int]]
     ) -> None:
         """Add column IDs to the intermediate result."""
         if write_group not in self.results:
@@ -206,9 +206,9 @@ class IntermediateResultStoreFuture:
 
     def get_hist_filter(
         self, read_groups: list[int], metadata: Metadata, fainder_mode: FainderMode
-    ) -> set[uint32] | None:
+    ) -> COLUMN_RESULTS | None:
         """Build a histogram filter from the intermediate results."""
-        hist_filter: set[uint32] | None = None
+        hist_filter: COLUMN_RESULTS | None = None
         if len(read_groups) == 0:
             return hist_filter
 
@@ -238,7 +238,7 @@ class IntermediateResultStoreFuture:
         return hist_filter
 
 
-class ParallelPrefilteringExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor):
+class ParallelPrefilteringExecutor(Transformer[Token, DOC_RESULTS], Executor):
     """This transformer evaluates a parse tree bottom-up
     and computes the query result in parallel using Threading.
     It also uses prefiltering to reduce the number of documents
@@ -287,7 +287,7 @@ class ParallelPrefilteringExecutor(Transformer[Token, tuple[set[int], Highlights
         self.enable_highlighting = enable_highlighting
         self.intermediate_results = IntermediateResultStoreFuture(fainder_mode=fainder_mode)
 
-    def execute(self, tree: ParseTree) -> tuple[set[int], Highlights]:
+    def execute(self, tree: ParseTree) -> DOC_RESULTS:
         """Start processing the parse tree."""
         self.write_groups = {}
         self.read_groups = {}
@@ -338,40 +338,29 @@ class ParallelPrefilteringExecutor(Transformer[Token, tuple[set[int], Highlights
         raise ValueError("Write group does not have a parent write group")
 
     def _resolve_items(
-        self,
-        items: list[tuple[set[int], Highlights, int] | Future[tuple[set[int], Highlights, int]]]
-        | list[tuple[set[uint32], int] | Future[tuple[set[uint32], int]]],
-    ) -> tuple[list[tuple[set[int], Highlights]] | list[set[uint32]], int]:
+        self, items: Sequence[tuple[TResultSet, int] | Future[tuple[TResultSet, int]]]
+    ) -> tuple[Sequence[TResultSet], int]:
         """Resolve items from futures."""
-        doc_results: list[tuple[set[int], Highlights]] = []
-        col_results: list[set[uint32]] = []
+        clean_item: list[TResultSet] = []
         write_group: int = 0
         for item in items:
-            if isinstance(item, Future):
-                resolved_item = item.result()
-                if len(resolved_item) == 3:
-                    doc_results.append((resolved_item[0], resolved_item[1]))
-                    write_group = resolved_item[2]
-                else:
-                    col_results.append(resolved_item[0])
-                    write_group = resolved_item[1]
-            else:
-                if len(item) == 3:
-                    doc_results.append((item[0], item[1]))
-                    write_group = item[2]
-                else:
-                    col_results.append(item[0])
-                    write_group = item[1]
-        if len(doc_results) > 0 and len(col_results) > 0:
-            raise ValueError("Cannot mix document and column results")
-        if len(doc_results) > 0:
-            return doc_results, write_group
-        return col_results, write_group
+            resolved_item = item.result() if isinstance(item, Future) else item
+            clean_item.append(resolved_item[0])
+            write_group = resolved_item[1]
+        return clean_item, write_group
+
+    def _resolve_item(
+        self, item: tuple[TResultSet, int] | Future[tuple[TResultSet, int]]
+    ) -> tuple[TResultSet, int]:
+        """Resolve item from future."""
+        if isinstance(item, Future):
+            return item.result()
+        return item
 
     ### Operator implementations ###
 
-    def keyword_op(self, items: list[Token]) -> Future[tuple[set[int], Highlights, int]]:
-        def _keyword_task(token: Token) -> tuple[set[int], Highlights, int]:
+    def keyword_op(self, items: list[Token]) -> Future[tuple[DOC_RESULTS, int]]:
+        def _keyword_task(token: Token) -> tuple[DOC_RESULTS, int]:
             """Task function for keyword search to be run in a thread"""
             logger.trace(f"Thread executing keyword search for: {token}")
             write_group = self._get_write_group(token)
@@ -380,7 +369,7 @@ class ParallelPrefilteringExecutor(Transformer[Token, tuple[set[int], Highlights
             )
             self.updates_scores(result_docs, scores)
             parent_write_group = self._get_parent_write_group(write_group)
-            return set(result_docs), (highlights, set()), parent_write_group
+            return (set(result_docs), (highlights, set())), parent_write_group
 
         logger.trace(f"Evaluating keyword term: {items}")
 
@@ -391,8 +380,8 @@ class ParallelPrefilteringExecutor(Transformer[Token, tuple[set[int], Highlights
         self.intermediate_results.add_future_kw_result(write_group, future)
         return future
 
-    def name_op(self, items: list[Token]) -> Future[tuple[set[uint32], int]]:
-        def _name_task(column: Token, k: int) -> tuple[set[uint32], int]:
+    def name_op(self, items: list[Token]) -> Future[tuple[COLUMN_RESULTS, int]]:
+        def _name_task(column: Token, k: int) -> tuple[COLUMN_RESULTS, int]:
             """Task function for column name search to be run in a thread"""
             logger.trace(f"Thread executing column name search for: {column}")
             write_group = self._get_write_group(column)
@@ -410,8 +399,8 @@ class ParallelPrefilteringExecutor(Transformer[Token, tuple[set[int], Highlights
         self.intermediate_results.add_future_col_result(write_group, future)
         return future
 
-    def percentile_op(self, items: list[Token]) -> Future[tuple[set[uint32], int]]:
-        def _percentile_task(items: list[Token]) -> tuple[set[uint32], int]:
+    def percentile_op(self, items: list[Token]) -> Future[tuple[COLUMN_RESULTS, int]]:
+        def _percentile_task(items: list[Token]) -> tuple[COLUMN_RESULTS, int]:
             """Task function for percentile search to be run in a thread"""
             percentile = float(items[0])
             comparison: str = items[1]
@@ -442,8 +431,8 @@ class ParallelPrefilteringExecutor(Transformer[Token, tuple[set[int], Highlights
         return future
 
     def col_op(
-        self, items: list[tuple[set[uint32], int] | Future[tuple[set[uint32], int]]]
-    ) -> tuple[set[int], Highlights, int]:
+        self, items: list[tuple[COLUMN_RESULTS, int] | Future[tuple[COLUMN_RESULTS, int]]]
+    ) -> tuple[DOC_RESULTS, int]:
         logger.trace(f"Evaluating column term: {items}")
 
         if len(items) != 1:
@@ -458,15 +447,13 @@ class ParallelPrefilteringExecutor(Transformer[Token, tuple[set[int], Highlights
         self.intermediate_results.add_doc_ids(write_group, doc_ids, self.metadata.col_to_doc)
         parent_write_group = self._get_parent_write_group(write_group)
         if self.enable_highlighting:
-            return doc_ids, ({}, col_ids), parent_write_group
+            return (doc_ids, ({}, col_ids)), parent_write_group
 
-        return doc_ids, ({}, set()), parent_write_group
+        return (doc_ids, ({}, set())), parent_write_group
 
     def conjunction(
-        self,
-        items: list[tuple[set[int], Highlights, int] | Future[tuple[set[int], Highlights, int]]]
-        | list[tuple[set[uint32], int] | Future[tuple[set[uint32], int]]],
-    ) -> tuple[set[int], Highlights, int] | tuple[set[uint32], int]:
+        self, items: Sequence[tuple[TResultSet, int] | Future[tuple[TResultSet, int]]]
+    ) -> tuple[TResultSet, int]:
         logger.trace(f"Evaluating conjunction with items: {items}")
 
         clean_items, write_group = self._resolve_items(items)
@@ -479,11 +466,12 @@ class ParallelPrefilteringExecutor(Transformer[Token, tuple[set[int], Highlights
             self.intermediate_results.add_col_ids(write_group, result, self.metadata.doc_to_cols)
 
         parent_write_group = self._get_parent_write_group(write_group)
-        if isinstance(result, tuple):
-            return result[0], result[1], parent_write_group
+
         return result, parent_write_group
 
-    def disjunction(self, items: Sequence[TResultSet | Future[TResultSet]]) -> TResultSet:
+    def disjunction(
+        self, items: Sequence[tuple[TResultSet, int] | Future[tuple[TResultSet, int]]]
+    ) -> tuple[TResultSet, int]:
         logger.trace(f"Evaluating disjunction with items: {items}")
 
         clean_items, write_group = self._resolve_items(items)
@@ -496,55 +484,48 @@ class ParallelPrefilteringExecutor(Transformer[Token, tuple[set[int], Highlights
             self.intermediate_results.add_col_ids(write_group, result, self.metadata.doc_to_cols)
 
         parent_write_group = self._get_parent_write_group(write_group)
-        if isinstance(result, tuple):
-            return result[0], result[1], parent_write_group
         return result, parent_write_group
 
     def negation(
-        self,
-        items: list[tuple[set[int], Highlights, int] | Future[tuple[set[int], Highlights, int]]]
-        | list[tuple[set[uint32], int] | Future[tuple[set[uint32], int]]],
-    ) -> tuple[set[int], Highlights, int] | tuple[set[uint32], int]:
+        self, items: Sequence[tuple[TResultSet, int] | Future[tuple[TResultSet, int]]]
+    ) -> tuple[TResultSet, int]:
         logger.trace(f"Evaluating negation with {len(items)} items")
 
         if len(items) != 1:
             raise ValueError("Negation term must have exactly one item")
         # Resolve the item if it's a future
-        item = items[0]
-        if isinstance(item, Future):
-            item = item.result()
-        if len(item) == 3:
-            to_negate, _, write_group = item
+        item, write_group = self._resolve_item(items[0])
+
+        if isinstance(item, tuple):
+            to_negate, _ = item
             all_docs = set(self.metadata.doc_to_cols.keys())
             # Result highlights are reset for negated results
             doc_highlights: DocumentHighlights = {}
             col_highlights: ColumnHighlights = set()
             parent_write_group = self._get_parent_write_group(write_group)
-            result = (all_docs - to_negate, (doc_highlights, col_highlights), parent_write_group)
-            self.intermediate_results.add_doc_ids(write_group, result[0], self.metadata.col_to_doc)
-            return result
-        if len(item) == 2:
-            to_negate_cols: set[uint32] = item[0]
-            write_group_cols: int = item[1]
-            # For column expressions, we negate using the set of all column IDs
-            all_columns = {uint32(col_id) for col_id in range(len(self.metadata.col_to_doc))}
-            result_col = all_columns - to_negate_cols
-            self.intermediate_results.add_col_ids(
-                write_group_cols, result_col, self.metadata.doc_to_cols
+            doc_result = all_docs.difference(to_negate)
+            result = (doc_result, (doc_highlights, col_highlights))
+            self.intermediate_results.add_doc_ids(
+                write_group, doc_result, self.metadata.col_to_doc
             )
-            parent_write_group_cols = self._get_parent_write_group(write_group_cols)
-            return result_col, parent_write_group_cols
+            return result, parent_write_group
 
-        raise ValueError("Negation term must have exactly one item")
+        to_negate_cols: COLUMN_RESULTS = item
+        # For column expressions, we negate using the set of all column IDs
+        all_columns = {uint32(col_id) for col_id in range(len(self.metadata.col_to_doc))}
+        result_col = all_columns - to_negate_cols
+        self.intermediate_results.add_col_ids(write_group, result_col, self.metadata.doc_to_cols)
+        parent_write_group_cols = self._get_parent_write_group(write_group)
+        return result_col, parent_write_group_cols
 
     def query(
         self,
-        items: list[tuple[set[int], Highlights, int] | Future[tuple[set[int], Highlights, int]]],
-    ) -> tuple[set[int], Highlights]:
+        items: list[tuple[DOC_RESULTS, int] | Future[tuple[DOC_RESULTS, int]]],
+    ) -> DOC_RESULTS:
         logger.trace(f"Evaluating query with {len(items)} items")
 
         clean_item = items[0].result() if isinstance(items[0], Future) else items[0]
 
         if len(items) != 1:
             raise ValueError("Query must have exactly one item")
-        return clean_item[0], clean_item[1]
+        return clean_item[0]
