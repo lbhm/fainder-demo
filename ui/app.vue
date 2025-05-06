@@ -146,7 +146,9 @@ const highlightEnabled = useCookie("fainder_highlight_enabled", {
   default: () => false,
 });
 
-const internalSearchQuery = computed(() => route.query.query as string | undefined);
+const internalSearchQuery = computed(
+  () => route.query.query as string | undefined,
+);
 const searchComponentKey = ref(0);
 
 const currentTheme = route.query.theme || colorMode.value;

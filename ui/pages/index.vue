@@ -17,8 +17,8 @@
 </template>
 
 <script setup lang="ts">
-import { useRoute, navigateTo } from '#imports';
-import { ref } from 'vue';
+import { useRoute, navigateTo } from "#imports";
+import { ref } from "vue";
 
 // type for route query
 interface RouteQuery {
@@ -55,7 +55,9 @@ async function searchData({
     query: {
       query: searchQuery,
       fainder_mode: newfainder_mode,
-      enable_highlighting: enable_highlighting ? enable_highlighting.toString() : "false",
+      enable_highlighting: enable_highlighting
+        ? enable_highlighting.toString()
+        : "false",
     },
   });
 }

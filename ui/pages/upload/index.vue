@@ -48,7 +48,7 @@
 </template>
 
 <script setup lang="ts">
-import {ref, type Ref} from "vue";
+import { ref, type Ref } from "vue";
 
 interface Alert {
   type: "success" | "error";
