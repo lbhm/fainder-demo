@@ -1,7 +1,8 @@
+import * as Types from "~/types/types";
 export const useSearchState = () => {
   const route = useRoute();
 
-  const results = useState("search-results", () => null);
+  const results = useState<Types.Result[] | null>("search-results", () => null);
   const selectedResultIndex = useState("selected-result-index", () => {
     const indexFromRoute = route.query.index;
     return indexFromRoute ? parseInt(indexFromRoute as string) : 0;

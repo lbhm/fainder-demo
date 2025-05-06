@@ -230,7 +230,7 @@ page
             </v-expansion-panels>
 
             <v-expansion-panels
-              v-if="selectedResult?.recordSet?.length > 0"
+              v-if="(selectedResult?.recordSet ?? []).length > 0"
               v-model="recordSetPanel"
               elevation="0"
             >
@@ -271,7 +271,7 @@ page
                         <div v-if="field.histogram" class="field-content">
                           <div class="histogram-container">
                             <Bar
-                              :data="getChartData(field, fieldIndex)"
+                              :data="getChartData(field, fieldIndex) || { datasets: [] }"
                               :options="chartOptions"
                             />
                           </div>
@@ -510,7 +510,7 @@ page
                         <td
                           class="highlight-text"
                           v-html="
-                            selectedResult?.datePublished.substring(0, 10) ||
+                            selectedResult?.datePublished?.substring(0, 10) ||
                             '-'
                           "
                         />
@@ -520,7 +520,7 @@ page
                         <td
                           class="highlight-text"
                           v-html="
-                            selectedResult?.dateModified.substring(0, 10) || '-'
+                            selectedResult?.dateModified?.substring(0, 10) || '-'
                           "
                         />
                       </tr>
@@ -544,9 +544,14 @@ page
   </v-main>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { Bar } from "vue-chartjs";
 import { useTheme } from "vuetify";
+import { useRoute, navigateTo } from "#imports";
+import { useSearchState } from "~/composables/useSearchState";
+import { useSearchOperations } from "~/composables/useSearchOperations";
+import * as Types from "~/types/types";
 
 const route = useRoute();
 const theme = useTheme();
@@ -571,25 +576,29 @@ const {
 console.log(selectedResultIndex.value);
 
 // Add computed for selected result
-const selectedResult = computed(() =>
+const selectedResult = computed<Types.Result | null>(() =>
   results.value ? results.value[selectedResultIndex.value] : null,
 );
 
 // Initialize state from route
-query.value = route.query.query;
-fainder_mode.value = route.query.fainder_mode || "low_memory";
+query.value = Array.isArray(route.query.query) 
+  ? route.query.query[0] || '' 
+  : route.query.query || '';
+fainder_mode.value = Array.isArray(route.query.fainder_mode) 
+  ? route.query.fainder_mode[0] || "low_memory" 
+  : route.query.fainder_mode || "low_memory";
 
-const descriptionPanel = ref([0]); // Array with 0 means first panel is open
-const recordSetPanel = ref([0]); // Single panel
-const metadataPanel = ref([0]); // Initialize metadata panel
-const totalVisible = ref(7);
-const selectedFileIndex = ref(0);
+const descriptionPanel = ref<number[]>([0]); // Array with 0 means first panel is open
+const recordSetPanel = ref<number[]>([0]); // Single panel
+const metadataPanel = ref<number[]>([0]); // Initialize metadata panel
+const totalVisible = ref<number>(7);
+const selectedFileIndex = ref<number>(0);
 
-const showFullDescription = ref(false);
+const showFullDescription = ref<boolean>(false);
 const maxLength = 750;
 
 const isLongDescription = computed(() => {
-  return selectedResult.value?.description?.length > maxLength;
+  return (selectedResult.value?.description ?? "").length > maxLength;
 });
 
 const displayedContent = computed(() => {
@@ -619,12 +628,12 @@ const recordSetItems = computed(() => {
 });
 
 // Computed property for the currently selected file
-const selectedFile = computed(() => {
+const selectedFile = computed<Types.RecordSetFile | null>(() => {
   if (!selectedResult.value?.recordSet) return null;
   return selectedResult.value.recordSet[selectedFileIndex.value];
 });
 
-const calculatePerPage = (height) => {
+const calculatePerPage = (height: number): number => {
   const availableHeight = height - headerHeight - paginationHeight;
   const itemsPerPage = Math.floor(availableHeight / itemHeight);
   // Ensure we show at least 3 items and at most 15 items
@@ -632,7 +641,7 @@ const calculatePerPage = (height) => {
 };
 
 // Add ref for window height
-const windowHeight = ref(window.innerHeight);
+const windowHeight = ref<number>(window.innerHeight);
 const itemHeight = 80; // Height of each result card in pixels
 const headerHeight = 200; // Approximate height of header elements (search + stats)
 const paginationHeight = 56; // Height of pagination controls
@@ -696,19 +705,19 @@ watch(currentPage, async (newPage) => {
       page: newPage,
       index: selectedResultIndex.value,
       fainder_mode: fainder_mode.value,
-      enable_highlighting: enable_highlighting.value,
+      enable_highlighting: enable_highlighting.value.toString(),
       theme: theme.global.name.value,
     },
   });
 });
 
-const selectResult = (result) => {
-  const index = results.value.indexOf(result);
+const selectResult = (result: Types.Result) => {
+  const index = results.value ? (results.value as Types.Result[]).indexOf(result) : -1;
   selectedResultIndex.value = index;
 
   if (result.recordSet) {
     descriptionPanel.value = [0];
-    recordSetPanel.value = result.recordSet.map(() => [0]);
+    recordSetPanel.value = result.recordSet.map(() => 0);
     showFullDescription.value = false;
     selectedFileIndex.value = 0; // Reset to first file when selecting new result
   }
@@ -726,7 +735,7 @@ const selectResult = (result) => {
 // Initialize from route on mount
 onMounted(() => {
   if (route.query.index && results.value) {
-    const index = parseInt(route.query.index);
+    const index = parseInt(route.query.index as string);
     if (index >= 0 && index < results.value.length) {
       selectedResultIndex.value = index;
     }
@@ -787,7 +796,7 @@ const chartOptions = ref({
   plugins: {
     tooltip: {
       callbacks: {
-        title: (items) => {
+        title: (items: any) => {
           if (!items.length) return "";
           const item = items[0];
           const index = item.dataIndex;
@@ -797,7 +806,7 @@ const chartOptions = ref({
             index + 1
           ].toFixed(2)}`;
         },
-        label: (item) => {
+        label: (item: any) => {
           return `Density: ${item.parsed.y.toFixed(4)}`;
         },
       },
@@ -831,7 +840,7 @@ const chartColors = [
   "rgba(186, 104, 200, 0.6)", // purple
 ];
 
-const getChartData = (field, index) => {
+const getChartData = (field: Types.Field, index: number) => {
   if (!field.histogram) return null;
 
   const binEdges = field.histogram.bins;
@@ -859,7 +868,7 @@ const getChartData = (field, index) => {
         barPercentage: 1,
         categoryPercentage: 1,
         segment: {
-          backgroundColor: (_) => chartColors[index % chartColors.length],
+          backgroundColor: (_: any) => chartColors[index % chartColors.length],
         },
         parsing: {
           xAxisKey: "x0",
@@ -870,7 +879,7 @@ const getChartData = (field, index) => {
   };
 };
 
-const getBooleanChartData = (field) => {
+const getBooleanChartData = (field: Types.Field) => {
   return {
     labels: ["True", "False"],
     datasets: [
@@ -883,7 +892,7 @@ const getBooleanChartData = (field) => {
         borderColor: "rgba(0, 0, 0, 0.1)",
         borderWidth: 1,
         borderRadius: 0,
-        data: [field.counts.Yes, field.counts.No],
+        data: [field.counts?.Yes ?? 0, field.counts?.No ?? 0],
       },
     ],
   };
@@ -920,7 +929,7 @@ const booleanChartOptions = ref({
   plugins: {
     tooltip: {
       callbacks: {
-        label: (context) => {
+        label: (context: any) => {
           return `${context.dataset.label}: ${context.raw}`;
         },
       },
@@ -941,7 +950,7 @@ const booleanChartOptions = ref({
   },
 });
 
-const formatNumber = (value) => {
+const formatNumber = (value: number | null | undefined): string => {
   if (value === undefined || value === null) return "-";
   // Check if the value is an integer
   if (Number.isInteger(value)) return value.toLocaleString();
@@ -953,7 +962,7 @@ const formatNumber = (value) => {
 };
 
 // Format date as YYYY-MM-DD
-const formatDate = (dateString) => {
+const formatDate = (dateString: string | undefined): string => {
   if (!dateString) return "-";
   const date = new Date(dateString);
   if (isNaN(date.getTime())) return dateString; // Return as-is if invalid
@@ -962,15 +971,15 @@ const formatDate = (dateString) => {
 };
 
 // Format date with both date and time
-const formatDateFull = (dateString) => {
+const formatDateFull = (dateString: string | undefined): string => {
   if (!dateString) return "-";
   const date = new Date(dateString);
   if (isNaN(date.getTime())) return dateString; // Return as-is if invalid
 
   const options = {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
+    year: "numeric" as const,
+    month: "long" as const,
+    day: "numeric" as const,
   };
 
   return new Intl.DateTimeFormat("en-US", options).format(date);
@@ -978,10 +987,10 @@ const formatDateFull = (dateString) => {
 
 // Calculate the difference between two dates in a human-readable format
 const calculateDateDifference = (
-  startDateStr,
-  endDateStr,
+  startDateStr: string | undefined,
+  endDateStr: string | undefined,
   detailed = false,
-) => {
+): string => {
   if (!startDateStr || !endDateStr) return "-";
 
   const startDate = new Date(startDateStr);
@@ -992,7 +1001,7 @@ const calculateDateDifference = (
   }
 
   // Calculate difference in milliseconds
-  const diffMs = Math.abs(endDate - startDate);
+  const diffMs = Math.abs(endDate.getTime() - startDate.getTime());
 
   // Convert to days, months, years
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));

@@ -16,30 +16,46 @@
   </v-main>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import { useRoute, navigateTo } from '#imports';
+import { ref } from 'vue';
+
+// type for route query
+interface RouteQuery {
+  query?: string;
+}
+
+// types for search data
+interface SearchParams {
+  query: string;
+  fainder_mode?: string;
+  enable_highlighting?: boolean;
+}
+
 const route = useRoute();
-const q = route.query;
-const query = ref(q.query);
+const q = route.query as RouteQuery;
+const query = ref<string | undefined>(q.query);
 
 async function searchData({
   query: searchQuery,
   fainder_mode: newfainder_mode,
   enable_highlighting,
-}) {
+}: SearchParams): Promise<void> {
   // If query is empty or undefined, reset the URL without query parameters
   if (!searchQuery || searchQuery.trim() === "") {
-    return await navigateTo({
+    await navigateTo({
       path: "/",
       replace: true,
     });
+    return;
   }
 
-  return await navigateTo({
+  await navigateTo({
     path: "/results",
     query: {
       query: searchQuery,
       fainder_mode: newfainder_mode,
-      enable_highlighting: enable_highlighting,
+      enable_highlighting: enable_highlighting ? enable_highlighting.toString() : "false",
     },
   });
 }
