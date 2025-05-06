@@ -4,12 +4,10 @@ from collections.abc import Sequence
 from lark import ParseTree
 from loguru import logger
 
-from backend.config import (
-    DOC_RESULTS,
-    FainderMode,
-    Metadata,
-)
+from backend.config import FainderMode, Metadata
 from backend.indices import FainderIndex, HnswIndex, TantivyIndex
+
+from .common import DocResult
 
 
 class Executor(ABC):
@@ -30,15 +28,11 @@ class Executor(ABC):
         """Initialize the executor with the necessary indices and metadata."""
 
     @abstractmethod
-    def reset(
-        self,
-        fainder_mode: FainderMode,
-        enable_highlighting: bool = False,
-    ) -> None:
+    def reset(self, fainder_mode: FainderMode, enable_highlighting: bool = False) -> None:
         """Reset the executor's state."""
 
     @abstractmethod
-    def execute(self, tree: ParseTree) -> DOC_RESULTS:
+    def execute(self, tree: ParseTree) -> DocResult:
         """Start processing the parse tree."""
 
     def updates_scores(self, doc_ids: Sequence[int], scores: Sequence[float]) -> None:

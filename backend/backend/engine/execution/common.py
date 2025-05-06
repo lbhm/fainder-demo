@@ -1,25 +1,21 @@
 import re
 from collections.abc import Callable, Sequence
+from collections.abc import Set as AbstractSet
 from functools import reduce
 from typing import Any, Literal, TypeGuard, TypeVar
 
 from lark import ParseTree, Token
 from lark.visitors import Visitor_Recursive
 from loguru import logger
+from numpy import uint32
 
-from backend.config import (
-    COLUMN_RESULTS,
-    DOC_RESULTS,
-    DocumentHighlights,
-    FainderMode,
-    Highlights,
-)
+from backend.config import DocumentHighlights, FainderMode, Highlights
 from backend.engine.constants import FILTERING_STOP_POINTS
-from backend.engine.conversion import (
-    doc_to_col_ids,
-)
+from backend.engine.conversion import doc_to_col_ids
 
-TResultSet = TypeVar("TResultSet", DOC_RESULTS, COLUMN_RESULTS)
+DocResult = tuple[set[int], Highlights]
+ColResult = set[uint32]
+TResult = TypeVar("TResult", DocResult, ColResult)
 
 
 class ResultGroupAnnotator(Visitor_Recursive[Token]):
@@ -159,7 +155,7 @@ class ResultGroupAnnotator(Visitor_Recursive[Token]):
 
 
 def exceeds_filtering_limit(
-    ids: COLUMN_RESULTS | set[int],
+    ids: AbstractSet[int | uint32],
     id_type: Literal["num_hist_ids", "num_col_ids", "num_doc_ids"],
     fainder_mode: FainderMode,
 ) -> bool:
@@ -167,8 +163,8 @@ def exceeds_filtering_limit(
     return len(ids) > FILTERING_STOP_POINTS[fainder_mode][id_type]
 
 
-def is_table_result(val: Sequence[Any]) -> TypeGuard[Sequence[DOC_RESULTS]]:
-    """Check if a list contains table results (document IDs and highlights)."""
+def is_doc_result(val: Sequence[Any]) -> TypeGuard[Sequence[DocResult]]:
+    """Check if a list contains document results (document IDs and highlights)."""
     return all(isinstance(item, tuple) for item in val)
 
 
@@ -226,17 +222,17 @@ def merge_highlights(
 
 
 def junction(
-    items: Sequence[TResultSet],
+    items: Sequence[TResult],
     operator: Callable[[Any, Any], Any],
     enable_highlighting: bool = False,
     doc_to_cols: dict[int, set[int]] | None = None,
-) -> TResultSet:
+) -> TResult:
     """Combine query results using a junction operator (AND/OR)."""
     if len(items) < 2:
         raise ValueError("Junction must have at least two items")
 
-    # Items contains table results (i.e., DOC_RESULTS)
-    if is_table_result(items):
+    # Items contains document results (i.e., DocResult)
+    if is_doc_result(items):
         if enable_highlighting and doc_to_cols is not None:
             # Initialize result with first item
             doc_ids: set[int] = items[0][0]
@@ -251,5 +247,5 @@ def junction(
 
         return reduce(operator, [item[0] for item in items]), ({}, set())  # type: ignore
 
-    # Items contains column results (i.e., COLUMN_RESULTS)
+    # Items contains column results (i.e., ColResult)
     return reduce(operator, items)  # type: ignore

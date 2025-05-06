@@ -1,19 +1,13 @@
 import os
 
-from backend.config import (
-    ExecutorType,
-    FainderMode,
-    Metadata,
-)
+from backend.config import ExecutorType, FainderMode, Metadata
 from backend.indices import FainderIndex, HnswIndex, TantivyIndex
 
-from .executor import (
-    Executor,
-)
+from .executor import Executor
 from .prefiltering_executor import PrefilteringExecutor
 from .simple_executor import SimpleExecutor
 from .threaded_executor import ThreadedExecutor
-from .threaded_prefiltering_executor import ParallelPrefilteringExecutor
+from .threaded_prefiltering_executor import ThreadedPrefilteringExecutor
 
 
 def create_executor(
@@ -65,7 +59,7 @@ def create_executor(
                 max_workers=max_workers,
             )
         case ExecutorType.THREADED_PREFILTERING:
-            return ParallelPrefilteringExecutor(
+            return ThreadedPrefilteringExecutor(
                 tantivy_index=tantivy_index,
                 fainder_index=fainder_index,
                 hnsw_index=hnsw_index,

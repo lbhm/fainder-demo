@@ -32,8 +32,6 @@ IntegerArray = Annotated[
     BeforeValidator(lambda data: np.array(data, dtype=np.uint32)),
     PlainSerializer(lambda data: data.tolist()),
 ]
-DOC_RESULTS = tuple[set[int], Highlights]
-COLUMN_RESULTS = set[np.uint32]
 
 
 class ExecutorType(str, Enum):

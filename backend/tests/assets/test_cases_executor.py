@@ -181,8 +181,7 @@ EXECUTOR_CASES: dict[str, dict[str, ExecutorCase]] = {
                 Token("RULE", "query"),
                 [
                     Tree(
-                        Token("RULE", "keyword_op"),
-                        [Token("STRING", "'alternateName:(Weather)'")],
+                        Token("RULE", "keyword_op"), [Token("STRING", "'alternateName:(Weather)'")]
                     )
                 ],
             ),
@@ -428,8 +427,7 @@ EXECUTOR_CASES: dict[str, dict[str, ExecutorCase]] = {
                                 "negation",
                                 [
                                     Tree(
-                                        Token("RULE", "keyword_op"),
-                                        [Token("STRING", "'germany'")],
+                                        Token("RULE", "keyword_op"), [Token("STRING", "'germany'")]
                                     )
                                 ],
                             ),
@@ -450,8 +448,7 @@ EXECUTOR_CASES: dict[str, dict[str, ExecutorCase]] = {
                                         ],
                                     ),
                                     Tree(
-                                        Token("RULE", "keyword_op"),
-                                        [Token("STRING", "'weather'")],
+                                        Token("RULE", "keyword_op"), [Token("STRING", "'weather'")]
                                     ),
                                 ],
                             ),
@@ -916,44 +913,15 @@ EXECUTOR_CASES: dict[str, dict[str, ExecutorCase]] = {
 }
 
 INVALID_QUERIES: dict[str, dict[str, list[str]]] = {
-    "invalid_syntax": {
-        "queries": [
-            "keyword()",
-            "pp()",
-            "kw()",
-        ]
-    },
-    "missing_parentheses": {
-        "queries": [
-            "keyword(test",
-            "pp(0.5;ge;20.0",
-        ]
-    },
+    "invalid_syntax": {"queries": ["keyword()", "pp()", "kw()"]},
+    "missing_parentheses": {"queries": ["keyword(test", "pp(0.5;ge;20.0"]},
     "invalid_operators": {
-        "queries": [
-            "kw(test) INVALID pp(0.5;ge;20.0)",
-            "kw(test) AND OR pp(0.5;ge;20.0)",
-        ]
+        "queries": ["kw(test) INVALID pp(0.5;ge;20.0)", "kw(test) AND OR pp(0.5;ge;20.0)"]
     },
-    "incomplete_expressions": {
-        "queries": [
-            "kw(test) AND",
-            "NOT",
-        ]
-    },
-    "invalid_percentile": {
-        "queries": [
-            "pp(a;ge;20.0)",
-            "pp(0.5;invalid;20.0)",
-            "pp(0.5;ge;abc)",
-        ]
-    },
+    "incomplete_expressions": {"queries": ["kw(test) AND", "NOT"]},
+    "invalid_percentile": {"queries": ["pp(a;ge;20.0)", "pp(0.5;invalid;20.0)", "pp(0.5;ge;abc)"]},
     "malformed_compound": {
-        "queries": [
-            "(kw(test) AND",
-            "kw(test)) OR pp(0.5;ge;20.0)",
-            "AND kw(test)",
-        ]
+        "queries": ["(kw(test) AND", "kw(test)) OR pp(0.5;ge;20.0)", "AND kw(test)"]
     },
     "invalid_column": {
         "queries": [

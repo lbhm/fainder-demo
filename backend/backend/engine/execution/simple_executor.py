@@ -6,25 +6,15 @@ from lark import ParseTree, Token, Transformer
 from loguru import logger
 from numpy import uint32
 
-from backend.config import (
-    COLUMN_RESULTS,
-    DOC_RESULTS,
-    ColumnHighlights,
-    DocumentHighlights,
-    FainderMode,
-    Metadata,
-)
-from backend.engine.conversion import (
-    col_to_doc_ids,
-    hist_to_col_ids,
-)
+from backend.config import ColumnHighlights, DocumentHighlights, FainderMode, Metadata
+from backend.engine.conversion import col_to_doc_ids, hist_to_col_ids
 from backend.indices import FainderIndex, HnswIndex, TantivyIndex
 
-from .common import TResultSet, junction
+from .common import ColResult, DocResult, TResult, junction
 from .executor import Executor
 
 
-class SimpleExecutor(Transformer[Token, DOC_RESULTS], Executor):
+class SimpleExecutor(Transformer[Token, DocResult], Executor):
     """This transformer evaluates a parse tree bottom-up and computes the query result."""
 
     fainder_mode: FainderMode
@@ -56,13 +46,13 @@ class SimpleExecutor(Transformer[Token, DOC_RESULTS], Executor):
         self.fainder_mode = fainder_mode
         self.enable_highlighting = enable_highlighting
 
-    def execute(self, tree: ParseTree) -> DOC_RESULTS:
+    def execute(self, tree: ParseTree) -> DocResult:
         """Start processing the parse tree."""
         return self.transform(tree)
 
     ### Operator implementations ###
 
-    def keyword_op(self, items: list[Token]) -> DOC_RESULTS:
+    def keyword_op(self, items: list[Token]) -> DocResult:
         logger.trace(f"Evaluating keyword term: {items}")
 
         result_docs, scores, highlights = self.tantivy_index.search(
@@ -72,7 +62,7 @@ class SimpleExecutor(Transformer[Token, DOC_RESULTS], Executor):
 
         return set(result_docs), (highlights, set())  # Return empty set for column highlights
 
-    def col_op(self, items: list[COLUMN_RESULTS]) -> DOC_RESULTS:
+    def col_op(self, items: list[ColResult]) -> DocResult:
         logger.trace(f"Evaluating column term: {items}")
 
         if len(items) != 1:
@@ -84,7 +74,7 @@ class SimpleExecutor(Transformer[Token, DOC_RESULTS], Executor):
 
         return doc_ids, ({}, set())
 
-    def name_op(self, items: list[Token]) -> COLUMN_RESULTS:
+    def name_op(self, items: list[Token]) -> ColResult:
         logger.trace(f"Evaluating column term: {items}")
 
         column = items[0]
@@ -92,7 +82,7 @@ class SimpleExecutor(Transformer[Token, DOC_RESULTS], Executor):
 
         return self.hnsw_index.search(column, k, None)
 
-    def percentile_op(self, items: list[Token]) -> COLUMN_RESULTS:
+    def percentile_op(self, items: list[Token]) -> ColResult:
         logger.trace(f"Evaluating percentile term: {items}")
 
         percentile = float(items[0])
@@ -104,17 +94,17 @@ class SimpleExecutor(Transformer[Token, DOC_RESULTS], Executor):
         )
         return hist_to_col_ids(result_hists, self.metadata.hist_to_col)
 
-    def conjunction(self, items: Sequence[TResultSet]) -> TResultSet:
+    def conjunction(self, items: Sequence[TResult]) -> TResult:
         logger.trace(f"Evaluating conjunction with items: {items}")
 
         return junction(items, and_, self.enable_highlighting, self.metadata.doc_to_cols)
 
-    def disjunction(self, items: Sequence[TResultSet]) -> TResultSet:
+    def disjunction(self, items: Sequence[TResult]) -> TResult:
         logger.trace(f"Evaluating disjunction with items: {items}")
 
         return junction(items, or_, self.enable_highlighting, self.metadata.doc_to_cols)
 
-    def negation(self, items: Sequence[TResultSet]) -> TResultSet:
+    def negation(self, items: Sequence[TResult]) -> TResult:
         logger.trace(f"Evaluating negation with {len(items)} items")
 
         if len(items) != 1:
@@ -132,7 +122,7 @@ class SimpleExecutor(Transformer[Token, DOC_RESULTS], Executor):
         all_columns = {uint32(col_id) for col_id in range(len(self.metadata.col_to_doc))}
         return all_columns - to_negate_cols
 
-    def query(self, items: Sequence[DOC_RESULTS]) -> DOC_RESULTS:
+    def query(self, items: Sequence[DocResult]) -> DocResult:
         logger.trace(f"Evaluating query with {len(items)} items")
 
         if len(items) != 1:

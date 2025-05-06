@@ -9,25 +9,15 @@ from lark import ParseTree, Token, Transformer
 from loguru import logger
 from numpy import uint32
 
-from backend.config import (
-    COLUMN_RESULTS,
-    DOC_RESULTS,
-    ColumnHighlights,
-    DocumentHighlights,
-    FainderMode,
-    Metadata,
-)
-from backend.engine.conversion import (
-    col_to_doc_ids,
-    hist_to_col_ids,
-)
+from backend.config import ColumnHighlights, DocumentHighlights, FainderMode, Metadata
+from backend.engine.conversion import col_to_doc_ids, hist_to_col_ids
 from backend.indices import FainderIndex, HnswIndex, TantivyIndex
 
-from .common import TResultSet, junction
+from .common import ColResult, DocResult, TResult, junction
 from .executor import Executor
 
 
-class ThreadedExecutor(Transformer[Token, DOC_RESULTS], Executor):
+class ThreadedExecutor(Transformer[Token, DocResult], Executor):
     """This transformer evaluates a parse tree bottom-up
     and computes the query result in parallel using Threading."""
 
@@ -65,7 +55,7 @@ class ThreadedExecutor(Transformer[Token, DOC_RESULTS], Executor):
         self.fainder_mode = fainder_mode
         self.enable_highlighting = enable_highlighting
 
-    def execute(self, tree: ParseTree) -> DOC_RESULTS:
+    def execute(self, tree: ParseTree) -> DocResult:
         """Start processing the parse tree."""
         # Create a new thread pool for this execution
 
@@ -77,18 +67,18 @@ class ThreadedExecutor(Transformer[Token, DOC_RESULTS], Executor):
 
         return result
 
-    def _resolve_item(self, item: TResultSet | Future[TResultSet]) -> TResultSet:
+    def _resolve_item(self, item: TResult | Future[TResult]) -> TResult:
         """Resolve item if it's a Future, otherwise return the item itself"""
         return item.result() if isinstance(item, Future) else item
 
-    def _resolve_items(self, items: Sequence[TResultSet | Future[TResultSet]]) -> list[TResultSet]:
+    def _resolve_items(self, items: Sequence[TResult | Future[TResult]]) -> list[TResult]:
         """Resolve all items in the list if they are futures."""
         return [self._resolve_item(item) for item in items]
 
     ### Operator implementations ###
 
-    def keyword_op(self, items: list[Token]) -> Future[DOC_RESULTS]:
-        def _keyword_task(token: Token) -> DOC_RESULTS:
+    def keyword_op(self, items: list[Token]) -> Future[DocResult]:
+        def _keyword_task(token: Token) -> DocResult:
             """Task function for keyword search to be run in a thread"""
             logger.trace(f"Thread executing keyword search for: {token}")
             result_docs, scores, highlights = self.tantivy_index.search(
@@ -107,8 +97,8 @@ class ThreadedExecutor(Transformer[Token, DOC_RESULTS], Executor):
         # Get result from future (immediate, non-blocking as result might not be ready yet)
         return future
 
-    def name_op(self, items: list[Token]) -> Future[COLUMN_RESULTS]:
-        def _name_task(column: Token, k: int) -> COLUMN_RESULTS:
+    def name_op(self, items: list[Token]) -> Future[ColResult]:
+        def _name_task(column: Token, k: int) -> ColResult:
             """Task function for column name search to be run in a thread"""
             logger.trace(f"Thread executing column name search for: {column}")
             return self.hnsw_index.search(column, k, None)
@@ -126,10 +116,8 @@ class ThreadedExecutor(Transformer[Token, DOC_RESULTS], Executor):
         # Return future (non-blocking)
         return future
 
-    def percentile_op(self, items: list[Token]) -> Future[COLUMN_RESULTS]:
-        def _percentile_task(
-            percentile: float, comparison: str, reference: float
-        ) -> COLUMN_RESULTS:
+    def percentile_op(self, items: list[Token]) -> Future[ColResult]:
+        def _percentile_task(percentile: float, comparison: str, reference: float) -> ColResult:
             """Task function for percentile search to be run in a thread"""
             logger.trace(
                 f"Thread executing percentile search with {percentile} {comparison} {reference}"
@@ -153,7 +141,7 @@ class ThreadedExecutor(Transformer[Token, DOC_RESULTS], Executor):
         # Return future (non-blocking)
         return future
 
-    def col_op(self, items: Sequence[COLUMN_RESULTS | Future[COLUMN_RESULTS]]) -> DOC_RESULTS:
+    def col_op(self, items: Sequence[ColResult | Future[ColResult]]) -> DocResult:
         logger.trace(f"Evaluating column term: {items}")
 
         if len(items) != 1:
@@ -168,7 +156,7 @@ class ThreadedExecutor(Transformer[Token, DOC_RESULTS], Executor):
 
         return doc_ids, ({}, set())
 
-    def conjunction(self, items: Sequence[TResultSet | Future[TResultSet]]) -> TResultSet:
+    def conjunction(self, items: Sequence[TResult | Future[TResult]]) -> TResult:
         logger.trace(f"Evaluating conjunction with items: {items}")
 
         # Resolve all futures in items
@@ -176,7 +164,7 @@ class ThreadedExecutor(Transformer[Token, DOC_RESULTS], Executor):
 
         return junction(resolved_items, and_, self.enable_highlighting, self.metadata.doc_to_cols)
 
-    def disjunction(self, items: Sequence[TResultSet | Future[TResultSet]]) -> TResultSet:
+    def disjunction(self, items: Sequence[TResult | Future[TResult]]) -> TResult:
         logger.trace(f"Evaluating disjunction with items: {items}")
 
         # Resolve all futures in items
@@ -184,7 +172,7 @@ class ThreadedExecutor(Transformer[Token, DOC_RESULTS], Executor):
 
         return junction(resolved_items, or_, self.enable_highlighting, self.metadata.doc_to_cols)
 
-    def negation(self, items: Sequence[TResultSet | Future[TResultSet]]) -> TResultSet:
+    def negation(self, items: Sequence[TResult | Future[TResult]]) -> TResult:
         logger.trace(f"Evaluating negation with {len(items)} items")
 
         if len(items) != 1:
@@ -206,7 +194,7 @@ class ThreadedExecutor(Transformer[Token, DOC_RESULTS], Executor):
         all_columns = {uint32(col_id) for col_id in range(len(self.metadata.col_to_doc))}
         return all_columns - to_negate_cols
 
-    def query(self, items: Sequence[DOC_RESULTS | Future[DOC_RESULTS]]) -> DOC_RESULTS:
+    def query(self, items: Sequence[DocResult | Future[DocResult]]) -> DocResult:
         logger.trace(f"Evaluating query with {len(items)} items")
 
         if len(items) != 1:

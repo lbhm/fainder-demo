@@ -7,14 +7,7 @@ from loguru import logger
 from numpy import uint32
 from numpy.typing import NDArray
 
-from backend.config import (
-    COLUMN_RESULTS,
-    DOC_RESULTS,
-    ColumnHighlights,
-    DocumentHighlights,
-    FainderMode,
-    Metadata,
-)
+from backend.config import ColumnHighlights, DocumentHighlights, FainderMode, Metadata
 from backend.engine.conversion import (
     col_to_doc_ids,
     col_to_hist_ids,
@@ -23,7 +16,14 @@ from backend.engine.conversion import (
 )
 from backend.indices import FainderIndex, HnswIndex, TantivyIndex
 
-from .common import ResultGroupAnnotator, TResultSet, exceeds_filtering_limit, junction
+from .common import (
+    ColResult,
+    DocResult,
+    ResultGroupAnnotator,
+    TResult,
+    exceeds_filtering_limit,
+    junction,
+)
 from .executor import Executor
 
 
@@ -34,17 +34,17 @@ class IntermediateResult:
     """
 
     def __init__(
-        self, doc_ids: set[int] | None = None, col_ids: COLUMN_RESULTS | None = None
+        self, doc_ids: set[int] | None = None, col_ids: set[uint32] | None = None
     ) -> None:
         if doc_ids is None and col_ids is None:
             raise ValueError("doc_ids and col_ids cannot both be None")
         if doc_ids is not None and col_ids is not None:
             raise ValueError("doc_ids and col_ids cannot both be set")
 
-        self._col_ids: COLUMN_RESULTS | None = col_ids
+        self._col_ids: set[uint32] | None = col_ids
         self._doc_ids: set[int] | None = doc_ids
 
-    def add_col_ids(self, col_ids: COLUMN_RESULTS, doc_to_cols: dict[int, set[int]]) -> None:
+    def add_col_ids(self, col_ids: set[uint32], doc_to_cols: dict[int, set[int]]) -> None:
         if self._doc_ids is not None:
             helper_col_ids = doc_to_col_ids(self._doc_ids, doc_to_cols)
             col_ids = col_ids.intersection(helper_col_ids)
@@ -64,7 +64,7 @@ class IntermediateResult:
 
     def build_hist_filter(
         self, metadata: Metadata, fainder_mode: FainderMode
-    ) -> COLUMN_RESULTS | None:
+    ) -> set[uint32] | None:
         """Build a histogram filter from the intermediate results."""
         if self._col_ids is not None:
             if exceeds_filtering_limit(self._col_ids, "num_col_ids", fainder_mode):
@@ -93,7 +93,7 @@ class IntermediateResultStore:
         self.results: dict[int, IntermediateResult] = {}
 
     def add_col_id_results(
-        self, write_group: int, col_ids: COLUMN_RESULTS, doc_to_cols: dict[int, set[int]]
+        self, write_group: int, col_ids: set[uint32], doc_to_cols: dict[int, set[int]]
     ) -> None:
         logger.trace(f"Adding column IDs to write group {write_group}: {col_ids}")
         if write_group in self.results:
@@ -112,9 +112,9 @@ class IntermediateResultStore:
 
     def build_hist_filter(
         self, read_groups: list[int], metadata: Metadata, fainder_mode: FainderMode
-    ) -> COLUMN_RESULTS | None:
+    ) -> set[uint32] | None:
         """Build a histogram filter from the intermediate results."""
-        hist_filter: COLUMN_RESULTS | None = None
+        hist_filter: set[uint32] | None = None
         if len(read_groups) == 0:
             raise ValueError("Cannot build a hist filter without read groups")
 
@@ -144,7 +144,7 @@ class IntermediateResultStore:
         return hist_filter
 
 
-class PrefilteringExecutor(Transformer[Token, DOC_RESULTS], Executor):
+class PrefilteringExecutor(Transformer[Token, DocResult], Executor):
     """Uses prefiltering to reduce the number of documents before executing the query."""
 
     def __init__(
@@ -167,11 +167,7 @@ class PrefilteringExecutor(Transformer[Token, DOC_RESULTS], Executor):
 
         self.reset(fainder_mode, enable_highlighting)
 
-    def reset(
-        self,
-        fainder_mode: FainderMode,
-        enable_highlighting: bool = False,
-    ) -> None:
+    def reset(self, fainder_mode: FainderMode, enable_highlighting: bool = False) -> None:
         logger.trace("Resetting executor")
         self.scores: dict[int, float] = defaultdict(float)
         self.fainder_mode = fainder_mode
@@ -207,7 +203,18 @@ class PrefilteringExecutor(Transformer[Token, DOC_RESULTS], Executor):
         logger.warning(f"Parent write groups: {self.parent_write_group}")
         raise ValueError("Write group does not have a parent write group")
 
-    def execute(self, tree: ParseTree) -> DOC_RESULTS:
+    def _clean_items(self, items: Sequence[tuple[TResult, int]]) -> tuple[Sequence[TResult], int]:
+        """Helper function to clean items for conjunction and disjunction."""
+        clean_times: list[TResult] = []
+        write_group = 0
+        for item in items:
+            clean_times.append(item[0])
+            # NOTE: The write group is the same for all items in the input sequence
+            write_group = item[1]
+
+        return clean_times, write_group
+
+    def execute(self, tree: ParseTree) -> DocResult:
         """Start processing the parse tree."""
         self.write_groups = {}
         self.read_groups = {}
@@ -224,7 +231,7 @@ class PrefilteringExecutor(Transformer[Token, DOC_RESULTS], Executor):
 
     ### Operator implementations ###
 
-    def keyword_op(self, items: list[Token]) -> tuple[DOC_RESULTS, int]:
+    def keyword_op(self, items: list[Token]) -> tuple[DocResult, int]:
         logger.trace(f"Evaluating keyword term: {items}")
 
         result_docs, scores, highlights = self.tantivy_index.search(
@@ -241,7 +248,7 @@ class PrefilteringExecutor(Transformer[Token, DOC_RESULTS], Executor):
 
         return (set(result_docs), (highlights, set())), parent_write_group
 
-    def col_op(self, items: list[tuple[COLUMN_RESULTS, int]]) -> tuple[DOC_RESULTS, int]:
+    def col_op(self, items: list[tuple[ColResult, int]]) -> tuple[DocResult, int]:
         logger.trace(f"Evaluating column term: {items}")
 
         if len(items) != 1:
@@ -258,7 +265,7 @@ class PrefilteringExecutor(Transformer[Token, DOC_RESULTS], Executor):
 
         return (doc_ids, ({}, set())), parent_write_group
 
-    def name_op(self, items: list[Token]) -> tuple[COLUMN_RESULTS, int]:
+    def name_op(self, items: list[Token]) -> tuple[ColResult, int]:
         logger.trace(f"Evaluating column term: {items}")
 
         column = items[0]
@@ -273,7 +280,7 @@ class PrefilteringExecutor(Transformer[Token, DOC_RESULTS], Executor):
         parent_write_group = self._get_parent_write_group(write_group)
         return result, parent_write_group
 
-    def percentile_op(self, items: list[Token]) -> tuple[COLUMN_RESULTS, int]:
+    def percentile_op(self, items: list[Token]) -> tuple[ColResult, int]:
         logger.trace(f"Evaluating percentile term: {items}")
 
         percentile = float(items[0])
@@ -301,26 +308,10 @@ class PrefilteringExecutor(Transformer[Token, DOC_RESULTS], Executor):
         parent_write_group = self._get_parent_write_group(write_group)
         return result, parent_write_group
 
-    def _clean_items(
-        self, items: Sequence[tuple[TResultSet, int]]
-    ) -> tuple[Sequence[TResultSet], int]:
-        """Helper function to clean items for conjunction and disjunction."""
-        clean_times: list[TResultSet] = []
-        write_group = 0
-        for item in items:
-            clean_times.append(item[0])
-            write_group = item[1]
-
-        return clean_times, write_group
-
-    def conjunction(self, items: Sequence[tuple[TResultSet, int]]) -> tuple[TResultSet, int]:
+    def conjunction(self, items: Sequence[tuple[TResult, int]]) -> tuple[TResult, int]:
         logger.trace(f"Evaluating conjunction with items: {items}")
 
-        clean_items: Sequence[TResultSet]
-        write_group: int
-
         clean_items, write_group = self._clean_items(items)
-
         result = junction(clean_items, and_, self.enable_highlighting, self.metadata.doc_to_cols)
         if isinstance(result, tuple):
             self.intermediate_results.add_doc_id_results(
@@ -331,19 +322,13 @@ class PrefilteringExecutor(Transformer[Token, DOC_RESULTS], Executor):
                 write_group, result, self.metadata.doc_to_cols
             )
 
-        parent_write_group = self._get_parent_write_group(write_group)
-        return result, parent_write_group
+        return result, self._get_parent_write_group(write_group)
 
-    def disjunction(self, items: Sequence[tuple[TResultSet, int]]) -> tuple[TResultSet, int]:
+    def disjunction(self, items: Sequence[tuple[TResult, int]]) -> tuple[TResult, int]:
         logger.trace(f"Evaluating disjunction with items: {items}")
 
-        clean_items: Sequence[TResultSet]
-        write_group: int
-
         clean_items, write_group = self._clean_items(items)
-
         result = junction(clean_items, or_, self.enable_highlighting, self.metadata.doc_to_cols)
-        write_group = items[0][2] if len(items[0]) == 3 else items[0][1]
 
         if isinstance(result, tuple):
             self.intermediate_results.add_doc_id_results(
@@ -354,45 +339,40 @@ class PrefilteringExecutor(Transformer[Token, DOC_RESULTS], Executor):
                 write_group, result, self.metadata.doc_to_cols
             )
 
-        parent_write_group = self._get_parent_write_group(write_group)
-        return result, parent_write_group
+        return result, self._get_parent_write_group(write_group)
 
-    def negation(self, items: Sequence[tuple[TResultSet, int]]) -> tuple[TResultSet, int]:
+    def negation(self, items: Sequence[tuple[TResult, int]]) -> tuple[TResult, int]:
         logger.trace(f"Evaluating negation with {len(items)} items")
 
         if len(items) != 1:
             raise ValueError("Negation term must have exactly one item")
 
-        clean_items: Sequence[TResultSet]
-        write_group: int
-
         clean_items, write_group = self._clean_items(items)
-
         if isinstance(clean_items[0], tuple):
             to_negate, _ = clean_items[0]
             all_docs = set(self.metadata.doc_to_cols.keys())
             # Result highlights are reset for negated results
             doc_highlights: DocumentHighlights = {}
             col_highlights: ColumnHighlights = set()
-            parent_write_group = self._get_parent_write_group(write_group)
             doc_result = all_docs.difference(to_negate)
-            result = (doc_result, (doc_highlights, col_highlights))
             self.intermediate_results.add_doc_id_results(
                 write_group, doc_result, self.metadata.col_to_doc
             )
-            return result, parent_write_group
 
-        to_negate_cols: COLUMN_RESULTS = clean_items[0]
+            result = (doc_result, (doc_highlights, col_highlights))
+            return result, self._get_parent_write_group(write_group)
+
+        to_negate_cols: ColResult = clean_items[0]
         # For column expressions, we negate using the set of all column IDs
         all_columns = {uint32(col_id) for col_id in range(len(self.metadata.col_to_doc))}
         result_col = all_columns - to_negate_cols
         self.intermediate_results.add_col_id_results(
             write_group, result_col, self.metadata.doc_to_cols
         )
-        parent_write_group_cols = self._get_parent_write_group(write_group)
-        return result_col, parent_write_group_cols
 
-    def query(self, items: list[tuple[DOC_RESULTS, int]]) -> DOC_RESULTS:
+        return result_col, self._get_parent_write_group(write_group)
+
+    def query(self, items: list[tuple[DocResult, int]]) -> DocResult:
         logger.trace(f"Evaluating query with {len(items)} items")
 
         if len(items) != 1:
