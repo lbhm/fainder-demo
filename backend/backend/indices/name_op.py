@@ -110,5 +110,5 @@ class HnswIndex:
                 f"{[self.vector_to_name[vector_id] for vector_id in vector_ids[0]]} with "
                 f"distances {distances[0]}"
             )
-        # TODO: add column filter
+
         return result

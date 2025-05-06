@@ -106,9 +106,7 @@ OPTIMIZER_CASES: dict[str, OptimizerCase] = {
                     [
                         Tree(
                             Token("RULE", "negation"),
-                            [
-                                Tree(Token("RULE", "keyword_op"), [Token("STRING", "'germany'")]),
-                            ],
+                            [Tree(Token("RULE", "keyword_op"), [Token("STRING", "'germany'")])],
                         ),
                         Tree(Token("RULE", "keyword_op"), [Token("STRING", "'france'")]),
                     ],
@@ -131,9 +129,7 @@ OPTIMIZER_CASES: dict[str, OptimizerCase] = {
                     [
                         Tree(
                             Token("RULE", "negation"),
-                            [
-                                Tree(Token("RULE", "keyword_op"), [Token("STRING", "germany")]),
-                            ],
+                            [Tree(Token("RULE", "keyword_op"), [Token("STRING", "germany")])],
                         ),
                         Tree(Token("RULE", "keyword_op"), [Token("STRING", "france")]),
                     ],
@@ -228,12 +224,7 @@ OPTIMIZER_CASES: dict[str, OptimizerCase] = {
                             [
                                 Tree(
                                     "negation",
-                                    [
-                                        Tree(
-                                            Token("RULE", "keyword_op"),
-                                            [Token("STRING", '"d"')],
-                                        )
-                                    ],
+                                    [Tree(Token("RULE", "keyword_op"), [Token("STRING", '"d"')])],
                                 ),
                                 Tree(
                                     "negation",
@@ -243,10 +234,7 @@ OPTIMIZER_CASES: dict[str, OptimizerCase] = {
                                             [
                                                 Tree(
                                                     Token("RULE", "name_op"),
-                                                    [
-                                                        Token("STRING", '"y"'),
-                                                        Token("INT", "0"),
-                                                    ],
+                                                    [Token("STRING", '"y"'), Token("INT", "0")],
                                                 )
                                             ],
                                         )
@@ -266,10 +254,7 @@ OPTIMIZER_CASES: dict[str, OptimizerCase] = {
                                         )
                                     ],
                                 ),
-                                Tree(
-                                    Token("RULE", "keyword_op"),
-                                    [Token("STRING", '"f"')],
-                                ),
+                                Tree(Token("RULE", "keyword_op"), [Token("STRING", '"f"')]),
                             ],
                         ),
                     ],
@@ -302,8 +287,7 @@ OPTIMIZER_CASES: dict[str, OptimizerCase] = {
                             "conjunction",
                             [
                                 Tree(
-                                    Token("RULE", "keyword_op"),
-                                    [Token("STRING", "-(d) AND (f)")],
+                                    Token("RULE", "keyword_op"), [Token("STRING", "-(d) AND (f)")]
                                 ),
                                 Tree(
                                     "negation",
@@ -313,10 +297,7 @@ OPTIMIZER_CASES: dict[str, OptimizerCase] = {
                                             [
                                                 Tree(
                                                     Token("RULE", "name_op"),
-                                                    [
-                                                        Token("STRING", "y"),
-                                                        Token("INT", "0"),
-                                                    ],
+                                                    [Token("STRING", "y"), Token("INT", "0")],
                                                 )
                                             ],
                                         )
@@ -368,8 +349,7 @@ OPTIMIZER_CASES: dict[str, OptimizerCase] = {
                             "conjunction",
                             [
                                 Tree(
-                                    Token("RULE", "keyword_op"),
-                                    [Token("STRING", "-(d) AND (f)")],
+                                    Token("RULE", "keyword_op"), [Token("STRING", "-(d) AND (f)")]
                                 ),
                                 Tree(
                                     "negation",
@@ -393,10 +373,7 @@ OPTIMIZER_CASES: dict[str, OptimizerCase] = {
                                             [
                                                 Tree(
                                                     Token("RULE", "name_op"),
-                                                    [
-                                                        Token("STRING", "y"),
-                                                        Token("INT", "0"),
-                                                    ],
+                                                    [Token("STRING", "y"), Token("INT", "0")],
                                                 )
                                             ],
                                         )
@@ -436,12 +413,7 @@ OPTIMIZER_CASES: dict[str, OptimizerCase] = {
                             [
                                 Tree(
                                     "negation",
-                                    [
-                                        Tree(
-                                            Token("RULE", "keyword_op"),
-                                            [Token("STRING", "d")],
-                                        )
-                                    ],
+                                    [Tree(Token("RULE", "keyword_op"), [Token("STRING", "d")])],
                                 ),
                                 Tree(
                                     "negation",
@@ -457,10 +429,7 @@ OPTIMIZER_CASES: dict[str, OptimizerCase] = {
                                         )
                                     ],
                                 ),
-                                Tree(
-                                    Token("RULE", "keyword_op"),
-                                    [Token("STRING", "f")],
-                                ),
+                                Tree(Token("RULE", "keyword_op"), [Token("STRING", "f")]),
                                 Tree(
                                     "negation",
                                     [
@@ -469,10 +438,7 @@ OPTIMIZER_CASES: dict[str, OptimizerCase] = {
                                             [
                                                 Tree(
                                                     Token("RULE", "name_op"),
-                                                    [
-                                                        Token("STRING", "y"),
-                                                        Token("INT", "0"),
-                                                    ],
+                                                    [Token("STRING", "y"), Token("INT", "0")],
                                                 )
                                             ],
                                         )

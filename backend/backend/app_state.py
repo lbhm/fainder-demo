@@ -70,24 +70,14 @@ class ApplicationState:
 
             try:
                 # Try to load existing metadata and indices
-                (
-                    metadata,
-                    croissant_store,
-                    tantivy_index,
-                    fainder_index,
-                    hnsw_index,
-                    engine,
-                ) = self._load_indices(settings)
+                (metadata, croissant_store, tantivy_index, fainder_index, hnsw_index, engine) = (
+                    self._load_indices(settings)
+                )
             except (FileNotFoundError, IndexingError) as e:
                 logger.warning(f"Failed to load indices: {e}. Recreating...")
-                (
-                    metadata,
-                    croissant_store,
-                    tantivy_index,
-                    fainder_index,
-                    hnsw_index,
-                    engine,
-                ) = self._recreate_indices(settings)
+                (metadata, croissant_store, tantivy_index, fainder_index, hnsw_index, engine) = (
+                    self._recreate_indices(settings)
+                )
 
             self._components = InitializedComponents(
                 settings=settings,
@@ -105,14 +95,9 @@ class ApplicationState:
 
     def update_indices(self) -> None:
         settings = self.settings
-        (
-            metadata,
-            croissant_store,
-            tantivy_index,
-            fainder_index,
-            hnsw_index,
-            engine,
-        ) = self._recreate_indices(settings)
+        (metadata, croissant_store, tantivy_index, fainder_index, hnsw_index, engine) = (
+            self._recreate_indices(settings)
+        )
         self._components = InitializedComponents(
             settings=settings,
             metadata=metadata,

@@ -1,5 +1,6 @@
 import os
 from collections import defaultdict
+from collections.abc import Sequence
 from concurrent.futures import Future, ThreadPoolExecutor
 from operator import and_, or_
 from typing import Any
@@ -8,24 +9,15 @@ from lark import ParseTree, Token, Transformer
 from loguru import logger
 from numpy import uint32
 
-from backend.config import (
-    ColumnHighlights,
-    DocumentHighlights,
-    FainderMode,
-    Highlights,
-    Metadata,
-)
-from backend.engine.conversion import (
-    col_to_doc_ids,
-    hist_to_col_ids,
-)
+from backend.config import ColumnHighlights, DocumentHighlights, FainderMode, Metadata
+from backend.engine.conversion import col_to_doc_ids, hist_to_col_ids
 from backend.indices import FainderIndex, HnswIndex, TantivyIndex
 
-from .common import junction
+from .common import ColResult, DocResult, TResult, junction
 from .executor import Executor
 
 
-class ThreadedExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor):
+class ThreadedExecutor(Transformer[Token, DocResult], Executor):
     """This transformer evaluates a parse tree bottom-up
     and computes the query result in parallel using Threading."""
 
@@ -54,19 +46,16 @@ class ThreadedExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor
 
     def __del__(self) -> None:
         # Shutdown the thread pool if it is still running
+        # TODO: Migrate this to using the weakref module and a finalizer
         if self._thread_pool:
             self._thread_pool.shutdown(wait=True)
 
-    def reset(
-        self,
-        fainder_mode: FainderMode,
-        enable_highlighting: bool = False,
-    ) -> None:
+    def reset(self, fainder_mode: FainderMode, enable_highlighting: bool = False) -> None:
         self.scores = defaultdict(float)
         self.fainder_mode = fainder_mode
         self.enable_highlighting = enable_highlighting
 
-    def execute(self, tree: ParseTree) -> tuple[set[int], Highlights]:
+    def execute(self, tree: ParseTree) -> DocResult:
         """Start processing the parse tree."""
         # Create a new thread pool for this execution
 
@@ -78,10 +67,18 @@ class ThreadedExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor
 
         return result
 
+    def _resolve_item(self, item: TResult | Future[TResult]) -> TResult:
+        """Resolve item if it's a Future, otherwise return the item itself"""
+        return item.result() if isinstance(item, Future) else item
+
+    def _resolve_items(self, items: Sequence[TResult | Future[TResult]]) -> list[TResult]:
+        """Resolve all items in the list if they are futures."""
+        return [self._resolve_item(item) for item in items]
+
     ### Operator implementations ###
 
-    def keyword_op(self, items: list[Token]) -> Future[tuple[set[int], Highlights]]:
-        def _keyword_task(token: Token) -> tuple[set[int], Highlights]:
+    def keyword_op(self, items: list[Token]) -> Future[DocResult]:
+        def _keyword_task(token: Token) -> DocResult:
             """Task function for keyword search to be run in a thread"""
             logger.trace(f"Thread executing keyword search for: {token}")
             result_docs, scores, highlights = self.tantivy_index.search(
@@ -100,8 +97,8 @@ class ThreadedExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor
         # Get result from future (immediate, non-blocking as result might not be ready yet)
         return future
 
-    def name_op(self, items: list[Token]) -> Future[set[uint32]]:
-        def _name_task(column: Token, k: int) -> set[uint32]:
+    def name_op(self, items: list[Token]) -> Future[ColResult]:
+        def _name_task(column: Token, k: int) -> ColResult:
             """Task function for column name search to be run in a thread"""
             logger.trace(f"Thread executing column name search for: {column}")
             return self.hnsw_index.search(column, k, None)
@@ -119,8 +116,8 @@ class ThreadedExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor
         # Return future (non-blocking)
         return future
 
-    def percentile_op(self, items: list[Token]) -> Future[set[uint32]]:
-        def _percentile_task(percentile: float, comparison: str, reference: float) -> set[uint32]:
+    def percentile_op(self, items: list[Token]) -> Future[ColResult]:
+        def _percentile_task(percentile: float, comparison: str, reference: float) -> ColResult:
             """Task function for percentile search to be run in a thread"""
             logger.trace(
                 f"Thread executing percentile search with {percentile} {comparison} {reference}"
@@ -144,59 +141,14 @@ class ThreadedExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor
         # Return future (non-blocking)
         return future
 
-    def _resolve_item(
-        self,
-        item: Future[tuple[set[int], Highlights]]
-        | tuple[set[int], Highlights]
-        | Future[set[uint32]]
-        | set[uint32],
-    ) -> tuple[set[int], Highlights] | set[uint32]:
-        """Resolve item if it's a Future, otherwise return the item itself"""
-        return item.result() if isinstance(item, Future) else item
-
-    def _resolve_col_result(self, item: Future[set[uint32]] | set[uint32]) -> set[uint32]:
-        """Resolve column result from a Future if needed"""
-        return item.result() if isinstance(item, Future) else item
-
-    def _resolve_doc_result(
-        self, item: Future[tuple[set[int], Highlights]] | tuple[set[int], Highlights]
-    ) -> tuple[set[int], Highlights]:
-        """Resolve document result from a Future if needed"""
-        return item.result() if isinstance(item, Future) else item
-
-    def _resolve_items(
-        self,
-        items: list[tuple[set[int], Highlights] | Future[tuple[set[int], Highlights]]]
-        | list[set[uint32] | Future[set[uint32]]],
-    ) -> list[tuple[set[int], Highlights]] | list[set[uint32]]:
-        """Resolve all items in the list if they are futures"""
-        doc_results: list[tuple[set[int], Highlights]] = []
-        col_results: list[set[uint32]] = []
-
-        for item in items:
-            resolved = self._resolve_item(item)
-            if isinstance(resolved, tuple):
-                doc_results.append(resolved)
-            else:
-                col_results.append(resolved)
-
-        # We should only have one type of result
-        if doc_results and col_results:
-            raise ValueError("Cannot mix document and column results")
-        if doc_results:
-            return doc_results
-        return col_results
-
-    def col_op(
-        self, items: list[set[uint32] | Future[set[uint32]]]
-    ) -> tuple[set[int], Highlights]:
+    def col_op(self, items: Sequence[ColResult | Future[ColResult]]) -> DocResult:
         logger.trace(f"Evaluating column term: {items}")
 
         if len(items) != 1:
             raise ValueError("Column term must have exactly one item")
 
         # Get actual result if it's a future
-        col_ids = self._resolve_col_result(items[0])
+        col_ids = self._resolve_item(items[0])
 
         doc_ids = col_to_doc_ids(col_ids, self.metadata.col_to_doc)
         if self.enable_highlighting:
@@ -204,25 +156,15 @@ class ThreadedExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor
 
         return doc_ids, ({}, set())
 
-    def conjunction(
-        self,
-        items: list[tuple[set[int], Highlights] | Future[tuple[set[int], Highlights]]]
-        | list[set[uint32] | Future[set[uint32]]],
-    ) -> tuple[set[int], Highlights] | set[uint32]:
+    def conjunction(self, items: Sequence[TResult | Future[TResult]]) -> TResult:
         logger.trace(f"Evaluating conjunction with items: {items}")
 
         # Resolve all futures in items
-        resolved_items: list[tuple[set[int], Highlights]] | list[set[uint32]] = (
-            self._resolve_items(items)
-        )
+        resolved_items = self._resolve_items(items)
 
         return junction(resolved_items, and_, self.enable_highlighting, self.metadata.doc_to_cols)
 
-    def disjunction(
-        self,
-        items: list[tuple[set[int], Highlights] | Future[tuple[set[int], Highlights]]]
-        | list[set[uint32] | Future[set[uint32]]],
-    ) -> tuple[set[int], Highlights] | set[uint32]:
+    def disjunction(self, items: Sequence[TResult | Future[TResult]]) -> TResult:
         logger.trace(f"Evaluating disjunction with items: {items}")
 
         # Resolve all futures in items
@@ -230,11 +172,7 @@ class ThreadedExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor
 
         return junction(resolved_items, or_, self.enable_highlighting, self.metadata.doc_to_cols)
 
-    def negation(
-        self,
-        items: list[tuple[set[int], Highlights] | Future[tuple[set[int], Highlights]]]
-        | list[set[uint32] | Future[set[uint32]]],
-    ) -> tuple[set[int], Highlights] | set[uint32]:
+    def negation(self, items: Sequence[TResult | Future[TResult]]) -> TResult:
         logger.trace(f"Evaluating negation with {len(items)} items")
 
         if len(items) != 1:
@@ -256,13 +194,11 @@ class ThreadedExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor
         all_columns = {uint32(col_id) for col_id in range(len(self.metadata.col_to_doc))}
         return all_columns - to_negate_cols
 
-    def query(
-        self, items: list[tuple[set[int], Highlights] | Future[tuple[set[int], Highlights]]]
-    ) -> tuple[set[int], Highlights]:
+    def query(self, items: Sequence[DocResult | Future[DocResult]]) -> DocResult:
         logger.trace(f"Evaluating query with {len(items)} items")
 
         if len(items) != 1:
             raise ValueError("Query must have exactly one item")
 
         # Resolve the item if it's a future
-        return self._resolve_doc_result(items[0])
+        return self._resolve_item(items[0])

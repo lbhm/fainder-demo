@@ -8,8 +8,7 @@ from .assets.test_cases_optimizer import OPTIMIZER_CASES, OptimizerCase
 
 
 @pytest.mark.parametrize(
-    ("test_name", "test_case"),
-    [(name, case) for name, case in OPTIMIZER_CASES.items()],
+    ("test_name", "test_case"), [(name, case) for name, case in OPTIMIZER_CASES.items()]
 )
 def test_cost_sorting(test_name: str, test_case: OptimizerCase) -> None:
     optimizer = Optimizer(cost_sorting=True, keyword_merging=False)
@@ -19,8 +18,7 @@ def test_cost_sorting(test_name: str, test_case: OptimizerCase) -> None:
 
 
 @pytest.mark.parametrize(
-    ("test_name", "test_case"),
-    [(name, case) for name, case in OPTIMIZER_CASES.items()],
+    ("test_name", "test_case"), [(name, case) for name, case in OPTIMIZER_CASES.items()]
 )
 def test_kw_merging(test_name: str, test_case: OptimizerCase) -> None:
     optimizer = Optimizer(cost_sorting=False, keyword_merging=True)
@@ -30,8 +28,7 @@ def test_kw_merging(test_name: str, test_case: OptimizerCase) -> None:
 
 
 @pytest.mark.parametrize(
-    ("test_name", "test_case"),
-    [(name, case) for name, case in OPTIMIZER_CASES.items()],
+    ("test_name", "test_case"), [(name, case) for name, case in OPTIMIZER_CASES.items()]
 )
 def test_all_rules(test_name: str, test_case: OptimizerCase) -> None:
     optimizer = Optimizer(cost_sorting=True, keyword_merging=True)

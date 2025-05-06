@@ -1,28 +1,20 @@
 from collections import defaultdict
+from collections.abc import Sequence
 from operator import and_, or_
 
 from lark import ParseTree, Token, Transformer
 from loguru import logger
 from numpy import uint32
 
-from backend.config import (
-    ColumnHighlights,
-    DocumentHighlights,
-    FainderMode,
-    Highlights,
-    Metadata,
-)
-from backend.engine.conversion import (
-    col_to_doc_ids,
-    hist_to_col_ids,
-)
+from backend.config import ColumnHighlights, DocumentHighlights, FainderMode, Metadata
+from backend.engine.conversion import col_to_doc_ids, hist_to_col_ids
 from backend.indices import FainderIndex, HnswIndex, TantivyIndex
 
-from .common import junction
-from .executor import Executor, T
+from .common import ColResult, DocResult, TResult, junction
+from .executor import Executor
 
 
-class SimpleExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor):
+class SimpleExecutor(Transformer[Token, DocResult], Executor):
     """This transformer evaluates a parse tree bottom-up and computes the query result."""
 
     fainder_mode: FainderMode
@@ -49,22 +41,18 @@ class SimpleExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor):
 
         self.reset(fainder_mode, enable_highlighting)
 
-    def reset(
-        self,
-        fainder_mode: FainderMode,
-        enable_highlighting: bool = False,
-    ) -> None:
+    def reset(self, fainder_mode: FainderMode, enable_highlighting: bool = False) -> None:
         self.scores = defaultdict(float)
         self.fainder_mode = fainder_mode
         self.enable_highlighting = enable_highlighting
 
-    def execute(self, tree: ParseTree) -> tuple[set[int], Highlights]:
+    def execute(self, tree: ParseTree) -> DocResult:
         """Start processing the parse tree."""
         return self.transform(tree)
 
     ### Operator implementations ###
 
-    def keyword_op(self, items: list[Token]) -> tuple[set[int], Highlights]:
+    def keyword_op(self, items: list[Token]) -> DocResult:
         logger.trace(f"Evaluating keyword term: {items}")
 
         result_docs, scores, highlights = self.tantivy_index.search(
@@ -74,7 +62,7 @@ class SimpleExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor):
 
         return set(result_docs), (highlights, set())  # Return empty set for column highlights
 
-    def col_op(self, items: list[set[uint32]]) -> tuple[set[int], Highlights]:
+    def col_op(self, items: list[ColResult]) -> DocResult:
         logger.trace(f"Evaluating column term: {items}")
 
         if len(items) != 1:
@@ -86,7 +74,7 @@ class SimpleExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor):
 
         return doc_ids, ({}, set())
 
-    def name_op(self, items: list[Token]) -> set[uint32]:
+    def name_op(self, items: list[Token]) -> ColResult:
         logger.trace(f"Evaluating column term: {items}")
 
         column = items[0]
@@ -94,7 +82,7 @@ class SimpleExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor):
 
         return self.hnsw_index.search(column, k, None)
 
-    def percentile_op(self, items: list[Token]) -> set[uint32]:
+    def percentile_op(self, items: list[Token]) -> ColResult:
         logger.trace(f"Evaluating percentile term: {items}")
 
         percentile = float(items[0])
@@ -106,21 +94,17 @@ class SimpleExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor):
         )
         return hist_to_col_ids(result_hists, self.metadata.hist_to_col)
 
-    def conjunction(
-        self, items: list[tuple[set[int], Highlights]] | list[set[uint32]]
-    ) -> tuple[set[int], Highlights] | set[uint32]:
+    def conjunction(self, items: Sequence[TResult]) -> TResult:
         logger.trace(f"Evaluating conjunction with items: {items}")
 
         return junction(items, and_, self.enable_highlighting, self.metadata.doc_to_cols)
 
-    def disjunction(
-        self, items: list[tuple[set[int], Highlights]] | list[set[uint32]]
-    ) -> tuple[set[int], Highlights] | set[uint32]:
+    def disjunction(self, items: Sequence[TResult]) -> TResult:
         logger.trace(f"Evaluating disjunction with items: {items}")
 
         return junction(items, or_, self.enable_highlighting, self.metadata.doc_to_cols)
 
-    def negation(self, items: list[T]) -> T:
+    def negation(self, items: Sequence[TResult]) -> TResult:
         logger.trace(f"Evaluating negation with {len(items)} items")
 
         if len(items) != 1:
@@ -138,7 +122,7 @@ class SimpleExecutor(Transformer[Token, tuple[set[int], Highlights]], Executor):
         all_columns = {uint32(col_id) for col_id in range(len(self.metadata.col_to_doc))}
         return all_columns - to_negate_cols
 
-    def query(self, items: list[tuple[set[int], Highlights]]) -> tuple[set[int], Highlights]:
+    def query(self, items: Sequence[DocResult]) -> DocResult:
         logger.trace(f"Evaluating query with {len(items)} items")
 
         if len(items) != 1:

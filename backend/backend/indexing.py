@@ -46,10 +46,7 @@ def _prepare_document_for_tantivy(json_doc: dict[str, Any]) -> None:
 
 
 def generate_metadata(
-    croissant_path: Path,
-    metadata_path: Path,
-    tantivy_path: Path,
-    return_documents: bool = True,
+    croissant_path: Path, metadata_path: Path, tantivy_path: Path, return_documents: bool = True
 ) -> tuple[
     list[tuple[np.uint32, Histogram]], dict[str, int], dict[int, dict[str, Any]], TantivyIndex
 ]:
@@ -196,20 +193,12 @@ def generate_fainder_indices(
     )
 
     save_output(
-        output_path / "rebinning.zst",
-        (rebinning_index, cluster_bins),
-        name="rebinning index",
+        output_path / "rebinning.zst", (rebinning_index, cluster_bins), name="rebinning index"
     )
     save_output(
-        output_path / "conversion.zst",
-        (conversion_index, cluster_bins),
-        name="conversion index",
+        output_path / "conversion.zst", (conversion_index, cluster_bins), name="conversion index"
     )
-    save_output(
-        output_path / "histograms.zst",
-        hists,
-        name="histograms",
-    )
+    save_output(output_path / "histograms.zst", hists, name="histograms")
 
 
 def generate_embedding_index(
@@ -265,14 +254,10 @@ def parse_args() -> argparse.Namespace:
         description="Generate metadata and indices for a collection of dataset profiles"
     )
     parser.add_argument(
-        "--no-fainder",
-        action="store_true",
-        help="Skip generating Fainder indices",
+        "--no-fainder", action="store_true", help="Skip generating Fainder indices"
     )
     parser.add_argument(
-        "--no-embeddings",
-        action="store_true",
-        help="Skip generating embedding index",
+        "--no-embeddings", action="store_true", help="Skip generating embedding index"
     )
     parser.add_argument(
         "--log-level",

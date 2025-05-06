@@ -46,11 +46,7 @@ class Optimizer:
 
     """
 
-    def __init__(
-        self,
-        cost_sorting: bool = True,
-        keyword_merging: bool = True,
-    ) -> None:
+    def __init__(self, cost_sorting: bool = True, keyword_merging: bool = True) -> None:
         self.opt_rules: list[OptimizationRule] = [QuoteRemover()]
         if cost_sorting:
             self.opt_rules.append(CostSorter())
@@ -71,9 +67,7 @@ class Optimizer:
 
 
 def create_optimizer(
-    executor_type: ExecutorType,
-    cost_sorting: bool = True,
-    keyword_merging: bool = True,
+    executor_type: ExecutorType, cost_sorting: bool = True, keyword_merging: bool = True
 ) -> Optimizer:
     """
     Creates an optimizer based on the executor type.
