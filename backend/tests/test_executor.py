@@ -3,6 +3,7 @@ import time
 import pytest
 from loguru import logger
 
+from backend.config import FainderMode
 from backend.engine import Engine, Optimizer
 
 from .assets.test_cases_executor import EXECUTOR_CASES, ExecutorCase
@@ -17,6 +18,7 @@ def test_execute(
     test_name: str,
     test_case: ExecutorCase,
     default_engine: Engine,
+    default_engine_small: Engine,
     prefiltering_engine: Engine,
     parallel_engine: Engine,
     parallel_prefiltering_engine: Engine,
@@ -29,6 +31,13 @@ def test_execute(
     exec_start = time.perf_counter()
     default_result, _ = default_engine.execute(query, enable_highlighting=False)
     default_time = time.perf_counter() - exec_start
+
+    default_engine_small.optimizer = Optimizer()
+    exec_start = time.perf_counter()
+    default_small_result, _ = default_engine_small.execute(
+        query, enable_highlighting=False, fainder_mode=FainderMode.EXACT
+    )
+    default_small_time = time.perf_counter() - exec_start
 
     default_engine.optimizer = Optimizer(cost_sorting=True, keyword_merging=False)
     exec_start = time.perf_counter()
@@ -61,6 +70,7 @@ def test_execute(
         "test_name": test_name,
         "query": query,
         "default_time": default_time,
+        "default_small_time": default_small_time,
         "no_merging_time": no_merging_time,
         "no_opt_time": no_opt_time,
         "prefiltering_time": prefiltering_time,
@@ -77,3 +87,4 @@ def test_execute(
     assert set(prefiltering_result) == set(expected_result)
     assert set(parallel_result) == set(expected_result)
     assert set(parallel_prefiltering_result) == set(expected_result)
+    assert set(default_small_result) == set(expected_result)

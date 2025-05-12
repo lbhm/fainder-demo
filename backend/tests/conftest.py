@@ -78,6 +78,39 @@ def default_engine() -> Engine:
 
 
 @pytest.fixture(scope="module")
+def default_engine_small() -> Engine:
+    settings = Settings(
+        data_dir=Path(__file__).parent / "assets",
+        collection_name="toy_collection_small",
+        _env_file=None,  # type: ignore
+    )
+
+    with settings.metadata_path.open() as file:
+        metadata = Metadata(**json.load(file))
+
+    tantivy_index = TantivyIndex(index_path=settings.tantivy_path, recreate=False)
+    # Fainder indices for testing are generated with the following parameters:
+    # n_clusters = 10, bin_budget = 230, alpha = 1, transform = None,
+    fainder_index = FainderIndex(
+        rebinning_path=settings.rebinning_index_path,
+        conversion_path=settings.conversion_index_path,
+        histogram_path=settings.histogram_path,
+    )
+    hnsw_index = HnswIndex(path=settings.hnsw_index_path, metadata=metadata, use_embeddings=False)
+    return Engine(
+        tantivy_index=tantivy_index,
+        fainder_index=fainder_index,
+        hnsw_index=hnsw_index,
+        metadata=metadata,
+        cache_size=-1,
+        min_usability_score=settings.min_usability_score,
+        rank_by_usability=settings.rank_by_usability,
+        executor_type=settings.executor_type,
+        max_workers=settings.max_workers,
+    )
+
+
+@pytest.fixture(scope="module")
 def prefiltering_engine() -> Engine:
     settings = Settings(
         data_dir=Path(__file__).parent / "assets",
