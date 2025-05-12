@@ -1,3 +1,5 @@
+import type { ChartDataset } from "chart.js";
+
 export interface Result {
   name: string;
   alternateName?: string;
@@ -56,4 +58,8 @@ export interface DistributionFile {
   encodingFormat: string;
   contentSize?: string;
   description?: string;
+}
+
+export interface CustomDataset extends ChartDataset<"bar"> {
+  binEdges: number[];
 }

@@ -85,11 +85,18 @@ const handleSubmit = async (): Promise<void> => {
       message: "Files uploaded successfully",
     };
     files.value = null;
-  } catch (error: any) {
-    alert.value = {
-      type: "error",
-      message: `Upload failed: ${error.message}`,
-    };
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      alert.value = {
+        type: "error",
+        message: `Upload failed: ${error.message}`,
+      };
+    } else {
+      alert.value = {
+        type: "error",
+        message: "Upload failed: An unknown error occurred",
+      };
+    }
   } finally {
     isUploading.value = false;
   }

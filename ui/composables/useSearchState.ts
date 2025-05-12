@@ -1,4 +1,4 @@
-import * as Types from "~/types/types";
+import type * as Types from "~/types/types";
 export const useSearchState = () => {
   const route = useRoute();
 

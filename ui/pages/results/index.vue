@@ -1,11 +1,7 @@
 # This results page will display the results of the search query # The list of
 the results will be displayed in a card format on the left side of the page and
 the details of the selected result will be displayed on the right side of the
-page
-
-
-import "./index.css";
-
+page import "./index.css";
 
 <template>
   <v-main>
@@ -560,7 +556,8 @@ import { useTheme } from "vuetify";
 import { useRoute, navigateTo } from "#imports";
 import { useSearchState } from "~/composables/useSearchState";
 import { useSearchOperations } from "~/composables/useSearchOperations";
-import * as Types from "~/types/types";
+import type * as Types from "~/types/types";
+import type { ChartOptions, ScriptableContext, TooltipItem } from "chart.js";
 
 const route = useRoute();
 const theme = useTheme();
@@ -771,7 +768,7 @@ await searchOperations.loadResults(
   enable_highlighting.value,
 );
 
-const chartOptions = ref({
+const chartOptions = ref<ChartOptions<"bar">>({
   scales: {
     x: {
       type: "linear",
@@ -799,7 +796,7 @@ const chartOptions = ref({
           size: 11,
         },
         padding: {
-          right: 10,
+          y: 10,
         },
       },
     },
@@ -807,17 +804,17 @@ const chartOptions = ref({
   plugins: {
     tooltip: {
       callbacks: {
-        title: (items: any) => {
+        title: (items: TooltipItem<"bar">[]) => {
           if (!items.length) return "";
           const item = items[0];
           const index = item.dataIndex;
-          const dataset = item.chart.data.datasets[0];
+          const dataset = item.chart.data.datasets[0] as Types.CustomDataset;
           const binEdges = dataset.binEdges;
           return `Range: ${binEdges[index].toFixed(2)} - ${binEdges[
             index + 1
           ].toFixed(2)}`;
         },
-        label: (item: any) => {
+        label: (item: TooltipItem<"bar">) => {
           return `Density: ${item.parsed.y.toFixed(4)}`;
         },
       },
@@ -879,7 +876,8 @@ const getChartData = (field: Types.Field, index: number) => {
         barPercentage: 1,
         categoryPercentage: 1,
         segment: {
-          backgroundColor: (_: any) => chartColors[index % chartColors.length],
+          backgroundColor: (_: ScriptableContext<"bar">) =>
+            chartColors[index % chartColors.length],
         },
         parsing: {
           xAxisKey: "x0",
@@ -909,7 +907,7 @@ const getBooleanChartData = (field: Types.Field) => {
   };
 };
 
-const booleanChartOptions = ref({
+const booleanChartOptions = ref<ChartOptions<"bar">>({
   scales: {
     y: {
       beginAtZero: true,
@@ -920,7 +918,7 @@ const booleanChartOptions = ref({
           size: 11,
         },
         padding: {
-          right: 10,
+          y: 10,
         },
       },
     },
@@ -940,7 +938,7 @@ const booleanChartOptions = ref({
   plugins: {
     tooltip: {
       callbacks: {
-        label: (context: any) => {
+        label: (context: TooltipItem<"bar">) => {
           return `${context.dataset.label}: ${context.raw}`;
         },
       },
@@ -1051,4 +1049,3 @@ const calculateDateDifference = (
   }
 };
 </script>
-

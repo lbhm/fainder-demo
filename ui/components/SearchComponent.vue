@@ -1,7 +1,6 @@
 # Search page for datasets search by precentile predicates and search by key
-words # The search page will contain multiple search bars
-
-import "./SearchComponent.css";
+words # The search page will contain multiple search bars import
+"./SearchComponent.css";
 
 <template>
   <v-main :class="['search-main', { 'pa-3': inline }]">
@@ -404,8 +403,6 @@ onMounted(() => {
     textarea.focus();
   }
 });
-
-const textareaMaxHeight = computed(() => `${props.lines * 24 + 26}px`);
 
 async function searchData() {
   if (
