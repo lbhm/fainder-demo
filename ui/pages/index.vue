@@ -23,6 +23,7 @@
 <script setup lang="ts">
 import { useRoute, navigateTo } from "#imports";
 import { ref } from "vue";
+import type { LocationQueryValueRaw } from "vue-router";
 
 // type for route query
 interface RouteQuery {
@@ -33,7 +34,7 @@ interface RouteQuery {
 interface SearchParams {
   query: string;
   fainder_mode?: string;
-  enable_highlighting?: boolean;
+  result_highlighting?: LocationQueryValueRaw;
 }
 
 const route = useRoute();

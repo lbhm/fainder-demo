@@ -713,7 +713,7 @@ watch(currentPage, async (newPage) => {
       page: newPage,
       index: selectedResultIndex.value,
       fainder_mode: fainder_mode.value,
-      result_highlighting: result_highlighting.value,
+      result_highlighting: String(result_highlighting.value),
       theme: theme.global.name.value,
     },
   });

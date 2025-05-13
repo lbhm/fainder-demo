@@ -133,7 +133,7 @@ import { useRoute } from "vue-router";
 interface SearchParams {
   query: string;
   fainder_mode: string;
-  enable_highlighting: boolean;
+  result_highlighting: boolean;
 }
 
 const { loadResults } = useSearchOperations();
@@ -187,7 +187,7 @@ async function searchData({
   query: searchQuery,
   fainder_mode: newfainder_mode,
   result_highlighting,
-}) {
+}: SearchParams): Promise<void> {
   query.value = searchQuery;
   fainder_mode.value = newfainder_mode;
 
@@ -203,7 +203,7 @@ async function searchData({
       page: 1,
       index: 0,
       fainder_mode: newfainder_mode,
-      result_highlighting: result_highlighting,
+      result_highlighting: String(result_highlighting),
       theme: theme.global.name.value,
     },
   });
