@@ -81,7 +81,7 @@ def default_engine() -> Engine:
 def default_engine_small() -> Engine:
     settings = Settings(
         data_dir=Path(__file__).parent / "assets",
-        collection_name="toy_collection_small",
+        collection_name="toy_collection",
         _env_file=None,  # type: ignore
     )
 
@@ -91,9 +91,11 @@ def default_engine_small() -> Engine:
     tantivy_index = TantivyIndex(index_path=settings.tantivy_path, recreate=False)
     # Fainder indices for testing are generated with the following parameters:
     # n_clusters = 10, bin_budget = 230, alpha = 1, transform = None,
+    rebinning_path = settings.rebinning_index_path.parent / "rebinning_small.zst"
+    conversion_path = settings.conversion_index_path.parent / "conversion_small.zst"
     fainder_index = FainderIndex(
-        rebinning_path=settings.rebinning_index_path,
-        conversion_path=settings.conversion_index_path,
+        rebinning_path=rebinning_path,
+        conversion_path=conversion_path,
         histogram_path=settings.histogram_path,
     )
     hnsw_index = HnswIndex(path=settings.hnsw_index_path, metadata=metadata, use_embeddings=False)
