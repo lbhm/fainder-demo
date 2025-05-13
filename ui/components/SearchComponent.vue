@@ -1,6 +1,5 @@
 # Search page for datasets search by precentile predicates and search by key
-words # The search page will contain multiple search bars import
-"./SearchComponent.css";
+words # The search page will contain multiple search bars
 
 <template>
   <v-main :class="['search-main', { 'pa-3': inline }]">
@@ -246,6 +245,7 @@ words # The search page will contain multiple search bars import
 </template>
 
 <script setup lang="ts">
+import "./SearchComponent.css";
 import { onMounted, ref, watch, computed } from "vue";
 import parseQuery from "~/utils/queryParser";
 

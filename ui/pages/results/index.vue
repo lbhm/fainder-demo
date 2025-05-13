@@ -1,7 +1,7 @@
 # This results page will display the results of the search query # The list of
 the results will be displayed in a card format on the left side of the page and
 the details of the selected result will be displayed on the right side of the
-page import "./index.css";
+page
 
 <template>
   <v-main>
@@ -550,6 +550,7 @@ page import "./index.css";
 </template>
 
 <script setup lang="ts">
+import "./index.css";
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { Bar } from "vue-chartjs";
 import { useTheme } from "vuetify";
