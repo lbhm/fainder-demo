@@ -18,7 +18,7 @@ def test_parse(category: str, test_name: str, test_case: ExecutorCase, parser: P
     tree = parser.parse(test_case["query"])
     duration = time.perf_counter() - start_time
 
-    validation_log = {
+    validation_log: dict[str, str | float] = {
         "test_type": "parser",
         "category": category,
         "test_name": test_name,

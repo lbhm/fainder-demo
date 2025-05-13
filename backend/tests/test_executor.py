@@ -18,10 +18,10 @@ def test_execute(
     test_name: str,
     test_case: ExecutorCase,
     default_engine: Engine,
-    default_engine_small: Engine,
     prefiltering_engine: Engine,
     parallel_engine: Engine,
     parallel_prefiltering_engine: Engine,
+    small_fainder_engine: Engine,
 ) -> None:
     query = test_case["query"]
     expected_result = test_case["expected"]
@@ -31,13 +31,6 @@ def test_execute(
     exec_start = time.perf_counter()
     default_result, _ = default_engine.execute(query, enable_highlighting=False)
     default_time = time.perf_counter() - exec_start
-
-    default_engine_small.optimizer = Optimizer()
-    exec_start = time.perf_counter()
-    default_small_result, _ = default_engine_small.execute(
-        query, enable_highlighting=False, fainder_mode=FainderMode.EXACT
-    )
-    default_small_time = time.perf_counter() - exec_start
 
     default_engine.optimizer = Optimizer(cost_sorting=True, keyword_merging=False)
     exec_start = time.perf_counter()
@@ -63,28 +56,33 @@ def test_execute(
     )
     parallel_prefiltering_time = time.perf_counter() - exec_start
 
+    exec_start = time.perf_counter()
+    small_fainder_exact_result, _ = small_fainder_engine.execute(
+        query, enable_highlighting=False, fainder_mode=FainderMode.EXACT
+    )
+    small_fainder_exact_time = time.perf_counter() - exec_start
+
     # Log timing information in a structured format
-    performance_log = {
+    performance_log: dict[str, str | float] = {
         "test_type": "executor",
         "category": category,
         "test_name": test_name,
         "query": query,
         "default_time": default_time,
-        "default_small_time": default_small_time,
         "no_merging_time": no_merging_time,
         "no_opt_time": no_opt_time,
         "prefiltering_time": prefiltering_time,
         "parallel_time": parallel_time,
         "parallel_prefiltering_time": parallel_prefiltering_time,
+        "small_fainder_exact_time": small_fainder_exact_time,
     }
     logger.info(performance_log)
 
-    # Verify results are consistent
-    # Verify all results match the expected result
+    # Verify all results are consistent and match the expected result
     assert set(default_result) == set(expected_result)
     assert set(no_merging_result) == set(expected_result)
     assert set(no_opt_result) == set(expected_result)
     assert set(prefiltering_result) == set(expected_result)
     assert set(parallel_result) == set(expected_result)
     assert set(parallel_prefiltering_result) == set(expected_result)
-    assert set(default_small_result) == set(expected_result)
+    assert set(small_fainder_exact_result) == set(expected_result)

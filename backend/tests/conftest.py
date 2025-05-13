@@ -78,7 +78,7 @@ def default_engine() -> Engine:
 
 
 @pytest.fixture(scope="module")
-def default_engine_small() -> Engine:
+def small_fainder_engine() -> Engine:
     settings = Settings(
         data_dir=Path(__file__).parent / "assets",
         collection_name="toy_collection",
