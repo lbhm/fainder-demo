@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 from collections.abc import Sequence
 from enum import Enum
@@ -38,7 +39,8 @@ class ExecutorType(str, Enum):
 
     SIMPLE = "simple"
     PREFILTERING = "prefiltering"
-    PARALLEL = "parallel"
+    THREADED = "threaded"
+    THREADED_PREFILTERING = "threaded_prefiltering"
 
 
 class CroissantStoreType(str, Enum):
@@ -85,6 +87,7 @@ class Settings(BaseSettings):
     min_usability_score: float = 0.0
     rank_by_usability: bool = True
     executor_type: ExecutorType = ExecutorType.SIMPLE
+    max_workers: int = os.cpu_count() or 1
 
     # Fainder settings
     fainder_n_clusters: int = 50
@@ -163,7 +166,7 @@ class QueryRequest(BaseModel):
     page: int = 1
     per_page: int = 10
     fainder_mode: FainderMode = FainderMode.LOW_MEMORY
-    enable_highlighting: bool = False
+    result_highlighting: bool = False
 
 
 class QueryResponse(BaseModel):

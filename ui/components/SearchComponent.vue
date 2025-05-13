@@ -2,35 +2,36 @@
 words # The search page will contain multiple search bars
 
 <template>
-  <v-main :class="['search-main', { 'pa-3': inline }]">
-    <v-container :class="{ 'pa-2': inline }">
-      <v-row :class="{ 'inline-layout': inline }">
-        <v-col cols="11">
+  <v-main class="search-main pa-3">
+    <v-container class="pa-2">
+      <v-row class="inline-layout">
+        <v-col cols="10">
           <div class="input-wrapper">
-            <v-textarea
-              v-model="searchQuery"
-              label="Search"
-              variant="outlined"
-              density="comfortable"
-              :error="!isValid"
-              :rules="[validateSyntax]"
-              :hide-details="true"
-              :rows="current_rows"
+            <code-input
+              language="DQL"
+              template="syntax-highlighted"
               class="search-input"
-              append-inner-icon="mdi-magnify"
-              :auto-grow="true"
-              autofocus
-              @update:model-value="highlightSyntax"
+              placeholder="Search for datasets"
+              :value="searchQuery"
+              :style="{ height: heightCodeInput }"
+              @input="(e: any) => (searchQuery = e.target.value)"
               @keydown="handleKeyDown"
-              @focus="isSearchFocused = true"
-              @blur="isSearchFocused = false"
-              @click:append-inner="searchData"
             />
-            <div class="syntax-highlight" v-html="highlightedQuery" />
+
             <div v-if="syntaxError" class="error-message">
               {{ syntaxError }}
             </div>
           </div>
+        </v-col>
+        <v-col cols="1">
+          <v-btn
+            icon="mdi-magnify"
+            variant="text"
+            elevation="0"
+            density="compact"
+            class="ml-2"
+            @click="searchData"
+          />
         </v-col>
         <v-col cols="1">
           <v-btn
@@ -218,8 +219,8 @@ words # The search page will contain multiple search bars
             variant="outlined"
           />
           <v-switch
-            v-model="temp_enable_highlighting"
-            label="Enable Highlighting"
+            v-model="temp_result_highlighting"
+            label="Enable Result Highlighting"
             color="primary"
           />
         </v-card-text>
@@ -249,308 +250,36 @@ import "./SearchComponent.css";
 import { onMounted, ref, watch, computed } from "vue";
 import parseQuery from "~/utils/queryParser";
 
-const props = defineProps({
-  searchQuery: {
-    type: String,
-    default: "",
-  },
-  inline: {
-    type: Boolean,
-    default: false,
-  },
-  simpleBuilder: {
-    type: Boolean,
-    default: false,
-  },
-  lines: {
-    type: Number,
-    default: 1,
-  },
-});
-
-const emit = defineEmits(["searchData"]);
-const route = useRoute();
-const temp_fainder_mode = ref(route.query.fainder_mode || "low_memory");
-const temp_enable_highlighting = ref(
-  route.query.enable_highlighting === "true",
-); // Default to false
-const current_rows = ref(1);
-
-const searchTerms = ref<Term[]>([]);
-
-const { fainder_mode, enable_highlighting } = useSearchState();
-
-// Initialize fainder_mode if not already set
-if (!fainder_mode.value) {
-  fainder_mode.value = String(route.query.fainder_mode) || "low_memory";
-}
-if (enable_highlighting.value === undefined) {
-  enable_highlighting.value = route.query.enable_highlighting === "true"; // Default to false
+// Declare codeInput as a global variable from the loaded script
+declare global {
+  const codeInput: {
+    Template: new (
+      highlightFn: (element: HTMLElement) => string,
+      preStyled?: boolean,
+      setLanguageClass?: boolean,
+      passSelf?: boolean,
+      plugins?: unknown[],
+    ) => unknown;
+    registerTemplate: (name: string, template: unknown) => void;
+  };
 }
 
-const searchQuery = ref(props.searchQuery);
-const syntaxError = ref("");
-const highlightedQuery = ref("");
-const highlightEnabled = useCookie("fainder_highlight_enabled", {
-  default: () => false,
-});
-const isValid = ref(true);
-const isSearchFocused = ref(false);
-
-console.log("Initial fainder_mode:", fainder_mode?.value);
-
-const showSettings = ref(false);
-const fainder_modes = [
-  { title: "Low Memory", value: "low_memory" },
-  { title: "Full Precision", value: "full_precision" },
-  { title: "Full Recall", value: "full_recall" },
-  { title: "Exact Results", value: "exact" },
-];
-
-// Simple query builder state
-const showSimpleBuilder = ref(false);
-
-const columnFilter = ref({
-  column: "",
-  threshold: "",
-});
-
-const percentileFilter = ref({
-  percentile: "",
-  comparison: "",
-  value: "",
-});
-
-// on change of highlightEnabled value, update syntax highlighting
-watch(highlightEnabled, (value) => {
-  // Clear error state when highlighting is disabled
-  if (!value) {
-    syntaxError.value = "";
-    isValid.value = true;
-  } else {
-    // Force validation when highlighting is enabled
-    isValid.value = validateSyntax(searchQuery.value);
+function highlightSyntax(value: string) {
+  if (syntax_highlighting.value === false) {
+    return value;
   }
-  // Update highlighting
-  highlightSyntax(searchQuery.value);
-});
+  let highlighted = String(value);
 
-const first_time = ref(true);
-
-// Add a watch for showSimpleBuilder
-watch(showSimpleBuilder, (isOpen) => {
-  if (isOpen && first_time.value) {
-    // Clear existing terms
-    first_time.value = false;
-    searchTerms.value = [];
-
-    if (searchQuery.value) {
-      parseExistingQuery(searchQuery.value);
-      highlightSyntax(searchQuery.value);
-    }
-  }
-});
-
-interface KeyboardEvent {
-  key: string;
-  shiftKey: boolean;
-  preventDefault: () => void;
-}
-
-const handleKeyDown = (event: KeyboardEvent): void => {
-  if (!isSearchFocused.value) return;
-
-  if (event.key === "Enter") {
-    if (!event.shiftKey) {
-      event.preventDefault();
-      searchData();
-    } else if (event.shiftKey) {
-      if (current_rows.value < props.lines) {
-        current_rows.value += 1; // on shift+enter, increase the number of rows
-      }
-    }
-  }
-};
-
-const parseExistingQuery = (query: string) => {
-  if (!query) return;
-  if (!props.simpleBuilder) {
-    searchQuery.value = query;
-    return;
-  }
-
-  const { terms, remainingQuery } = parseQuery(query);
-  searchTerms.value = terms;
-  searchQuery.value = remainingQuery;
-
-  console.log("Parsed query results:", {
-    searchTerms: searchTerms.value,
-    remainingQuery: searchQuery.value,
-  });
-};
-
-onMounted(() => {
-  if (props.searchQuery) {
-    searchQuery.value = props.searchQuery;
-    highlightSyntax(searchQuery.value);
-  }
-
-  // Focus the textarea
-  const textarea = document.querySelector(
-    ".search-input textarea",
-  ) as HTMLTextAreaElement;
-  if (textarea) {
-    textarea.focus();
-  }
-});
-
-async function searchData() {
-  if (
-    (!searchQuery.value || searchQuery.value.trim() === "") &&
-    searchTerms.value.length === 0
-  ) {
-    return;
-  }
-
-  // Convert search terms to string using utility function
-  const filterTerms =
-    searchTerms.value.length > 0 ? termsToString(searchTerms.value) : "";
-
-  let query = searchQuery.value?.trim() || "";
-
-  // Check if query is just plain text (no operators or functions)
-  const isPlainText =
-    !/(?:pp|percentile|kw|keyword|col|column)\s*\(|AND|OR|XOR|NOT|\(|\)/.test(
-      query,
-    );
-
-  // Process plain text as keyword search
-  if (isPlainText && query) {
-    query = `KW('${query}')`;
-  }
-
-  // Combine filter terms with query
-  if (filterTerms) {
-    query = query ? `${query} AND ${filterTerms}` : filterTerms;
-  }
-
-  const s_query = query;
-  console.log("Search query:", s_query);
-  console.log("Index type:", fainder_mode.value);
-  console.log("Highlighting enabled:", enable_highlighting.value);
-  emit("searchData", {
-    query: s_query,
-    fainder_mode: fainder_mode.value,
-    enable_highlighting: enable_highlighting.value,
-  });
-}
-
-const validateSyntax = (value: string) => {
-  if (!value || value.trim() === "" || !highlightEnabled.value) {
-    syntaxError.value = "";
-    isValid.value = true;
-    return true;
-  }
-
-  try {
-    // Reset state
-    syntaxError.value = "";
-    isValid.value = true;
-
-    const query = value.trim();
-
-    // If it's a simple keyword query (no special syntax), treat it as valid
-    if (
-      !query.includes("(") &&
-      !query.includes(")") &&
-      !/\b(AND|OR|XOR|NOT)\b/i.test(query)
-    ) {
-      return true;
-    }
-
-    // Check balanced parentheses
-    const openParens = (value.match(/\(/g) || []).length;
-    const closeParens = (value.match(/\)/g) || []).length;
-    if (openParens !== closeParens) {
-      isValid.value = false;
-      syntaxError.value = "Unbalanced parentheses";
-      return false;
-    }
-
-    // Extract and validate individual function calls
-    const functionPattern =
-      /(?:pp|percentile|kw|keyword|col|column|name)\s*\([^)]+\)/gi;
-    const functions = value.match(functionPattern) || [];
-
-    for (const func of functions) {
-      const lowFunc = func.toLowerCase();
-      if (lowFunc.startsWith("col") || lowFunc.startsWith("column")) {
-        // Check if it contains name or percentile terms
-        if (
-          !/^(?:col|column)\s*\(\s*(?:name\s*\([^;]+;\s*\d+\)|pp\s*\([^)]+\))\s*\)$/i.test(
-            func,
-          )
-        ) {
-          // Check if it has invalid keyword inside
-          if (/(?:kw|keyword)\s*\([^)]+\)/i.test(func)) {
-            isValid.value = false;
-            syntaxError.value =
-              "Keywords not allowed inside column expressions";
-            return false;
-          }
-        }
-      } else if (lowFunc.startsWith("kw") || lowFunc.startsWith("keyword")) {
-        if (!/^(?:kw|keyword)\s*\([^)]+\)$/i.test(func)) {
-          isValid.value = false;
-          syntaxError.value = "Invalid keyword syntax";
-          return false;
-        }
-      } else if (lowFunc.startsWith("pp") || lowFunc.startsWith("percentile")) {
-        if (
-          !/^(?:pp|percentile)\s*\(\s*\d+(?:\.\d+)?\s*;\s*(?:ge|gt|le|lt)\s*;\s*\d+(?:\.\d+)?\s*\)$/i.test(
-            func,
-          )
-        ) {
-          isValid.value = false;
-          syntaxError.value = "Invalid percentile syntax";
-          return false;
-        }
-      } else if (lowFunc.startsWith("name")) {
-        if (!/^name\s*\([^;]+;\s*\d+\)$/i.test(func)) {
-          isValid.value = false;
-          syntaxError.value = "Invalid name syntax";
-          return false;
-        }
-      }
-    }
-
-    return true;
-  } catch {
-    isValid.value = false;
-    syntaxError.value = "Invalid query syntax";
-    return false;
-  }
-};
-
-const highlightSyntax = (value: string) => {
-  if (!value || !highlightEnabled.value) {
-    highlightedQuery.value = value || "";
-    return;
-  }
-
-  let highlighted = value;
+  // Highlight strings
+  highlighted = highlighted.replace(
+    /(['"])(.*?)\1/g,
+    '<span class="string">$&</span>',
+  );
 
   // Highlight all function names consistently
   highlighted = highlighted.replace(
     /\b(kw|keyword|name|pp|percentile|col|column)\s*\(/gi,
     '<span class="function">$1</span>(',
-  );
-
-  // Highlight quoted strings in kw() and name()
-  highlighted = highlighted.replace(
-    /(kw|keyword|name)\s*\(\s*'([^']+)'/gi,
-    (match, func, content) =>
-      `<span class="function">${func}</span>(<span class="string">'${content}'</span>`,
   );
 
   // Highlight content inside function calls
@@ -581,7 +310,335 @@ const highlightSyntax = (value: string) => {
     }
   });
 
-  highlightedQuery.value = highlighted;
+  return highlighted;
+}
+
+function registerTemplate() {
+  codeInput.registerTemplate(
+    "syntax-highlighted",
+    new codeInput.Template(
+      function (result_element: HTMLElement) {
+        /* Highlight function - with `pre code` code element */
+        /* Highlight code in result_element - code is already escaped so it doesn't become HTML */
+        result_element.innerHTML = highlightSyntax(result_element.innerHTML);
+        return result_element.innerHTML;
+      },
+
+      true /* Optional - Is the `pre` element styled as well as the `code` element?
+       * Changing this to false uses the code element as the scrollable one rather
+       * than the pre element */,
+
+      true /* Optional - This is used for editing code - setting this to true sets the `code`
+       * element's class to `language-<the code-input's lang attribute>` */,
+
+      false /* Optional - Setting this to true passes the `<code-input>` element as a second
+       * argument to the highlight function to be used for getting data- attribute values
+       * and using the DOM for the code-input */,
+
+      [], // Array of plugins (see below)
+    ),
+  );
+}
+
+const heightCodeInput = computed(() => {
+  return `${visable_rows.value * 48}px`;
+});
+
+const props = defineProps({
+  searchQuery: {
+    type: String,
+    default: " ",
+  },
+  inline: {
+    type: Boolean,
+    default: false,
+  },
+  simpleBuilder: {
+    type: Boolean,
+    default: false,
+  },
+  lines: {
+    type: Number,
+    default: 1,
+  },
+});
+
+const emit = defineEmits(["searchData"]);
+const route = useRoute();
+const temp_fainder_mode = ref(route.query.fainder_mode || "low_memory");
+
+const visable_rows = ref(props.lines);
+const number_of_rows = ref(props.lines);
+
+const searchTerms = ref<Term[]>([]);
+
+const { fainder_mode, result_highlighting } = useSearchState();
+
+const syntax_highlighting = useCookie("fainder_syntax_highlighting", {
+  default: () => true,
+});
+
+console.debug(
+  "`fainder_syntax_highlighting` cookie: ",
+  syntax_highlighting.value,
+);
+
+// Initialize fainder_mode if not already set
+if (!fainder_mode.value) {
+  fainder_mode.value = String(route.query.fainder_mode) || "low_memory";
+}
+console.debug("Initial fainder_mode:", fainder_mode?.value);
+
+const temp_result_highlighting = ref(result_highlighting.value); // Default to true
+
+const searchQuery = ref(props.searchQuery);
+const syntaxError = computed(() => {
+  if (
+    !searchQuery.value ||
+    searchQuery.value.trim() === "" ||
+    !syntax_highlighting.value
+  ) {
+    return "";
+  }
+  return validateSyntax(searchQuery.value);
+});
+
+const isValid = ref(true);
+const showSettings = ref(false);
+const fainder_modes = [
+  { title: "Low Memory", value: "low_memory" },
+  { title: "Full Precision", value: "full_precision" },
+  { title: "Full Recall", value: "full_recall" },
+  { title: "Exact Results", value: "exact" },
+];
+
+// Simple query builder state
+const showSimpleBuilder = ref(false);
+
+const columnFilter = ref({
+  column: "",
+  threshold: "",
+});
+
+const percentileFilter = ref({
+  percentile: "",
+  comparison: "",
+  value: "",
+});
+
+registerTemplate();
+
+// on change of syntax_highlighting value, update isValid
+watch(syntax_highlighting, (value) => {
+  if (!value) {
+    isValid.value = true;
+  } else {
+    isValid.value = !syntaxError.value;
+  }
+  // update query param without changing anything else
+  const router = useRouter();
+  const route = useRoute();
+  router.replace({
+    path: route.path,
+    query: {
+      ...route.query,
+      syntax_highlighting: String(value),
+    },
+  });
+  // update searchQuery to trigger update
+  searchQuery.value = searchQuery.value + " ";
+  searchQuery.value = searchQuery.value.slice(0, -1);
+});
+
+// Add a watch for showSimpleBuilder
+watch(showSimpleBuilder, (isOpen) => {
+  if (isOpen) {
+    // Clear existing terms
+    searchTerms.value = [];
+
+    if (searchQuery.value) {
+      parseExistingQuery(searchQuery.value);
+    }
+  }
+});
+
+interface KeyboardEvent {
+  key: string;
+  shiftKey: boolean;
+  preventDefault: () => void;
+}
+
+const handleKeyDown = (
+  event: KeyboardEvent & { target: HTMLInputElement },
+): void => {
+  // Update searchQuery immediately
+  searchQuery.value = event.target.value;
+
+  if (event.key === "Enter") {
+    if (!event.shiftKey) {
+      event.preventDefault();
+      console.debug("Enter key pressed searching", searchQuery.value);
+      searchData();
+    } else if (event.shiftKey) {
+      if (!props.inline) {
+        console.debug("Shift+Enter key pressed increasing rows");
+        visable_rows.value += 1; // on shift+enter, increase the number of rows
+      }
+      number_of_rows.value += 1;
+    }
+  } else if (event.key === "Backspace") {
+    // Check if cursor is at the end of the last line and the line is empty
+    const cursorPos = event.target.selectionStart;
+    const lastLineStart = event.target.value.lastIndexOf("\n") + 1;
+    const isLastLineEmpty =
+      event.target.value.substring(lastLineStart).trim() === "";
+    const isAtEnd = cursorPos === event.target.value.length;
+
+    if (isLastLineEmpty && isAtEnd && visable_rows.value > 1) {
+      if (!props.inline) {
+        visable_rows.value -= 1;
+      }
+      number_of_rows.value -= 1;
+      console.debug("Backspace key pressed decreasing rows");
+    }
+  }
+};
+
+const parseExistingQuery = (query: string) => {
+  if (!query) return;
+  if (!props.simpleBuilder) {
+    searchQuery.value = query;
+    return;
+  }
+
+  const { terms, remainingQuery } = parseQuery(query);
+  searchTerms.value = terms;
+  searchQuery.value = remainingQuery;
+
+  console.debug("Parsed query results:", {
+    searchTerms: searchTerms.value,
+    remainingQuery: searchQuery.value,
+  });
+};
+
+onMounted(() => {
+  if (props.searchQuery) {
+    searchQuery.value = props.searchQuery;
+  }
+
+  // Focus the textarea
+  const textarea = document.querySelector(
+    ".search-input textarea",
+  ) as HTMLTextAreaElement;
+  if (textarea) {
+    textarea.focus();
+  }
+});
+
+const textareaMaxHeight = computed(() => `${props.lines * 24 + 26}px`);
+
+async function searchData() {
+  if (
+    (!searchQuery.value || searchQuery.value.trim() === "") &&
+    searchTerms.value.length === 0
+  ) {
+    console.log("No search terms or query provided.");
+    return;
+  }
+
+  // Convert search terms to string using utility function
+  const filterTerms =
+    searchTerms.value.length > 0 ? termsToString(searchTerms.value) : "";
+
+  let query = searchQuery.value?.trim() || "";
+
+  // Check if query is just plain text (no operators or functions)
+  const isPlainText =
+    !/(?:pp|percentile|kw|keyword|col|column)\s*\(|AND|OR|XOR|NOT|\(|\)/.test(
+      query,
+    );
+
+  // Process plain text as keyword search
+  if (isPlainText && query) {
+    query = `KW('${query}')`;
+  }
+
+  // Combine filter terms with query
+  if (filterTerms) {
+    query = query ? `${query} AND ${filterTerms}` : filterTerms;
+  }
+
+  const s_query = query;
+  console.log("Search query:", s_query);
+  console.log("Index type:", fainder_mode.value);
+  console.log("Result Highlighting status:", result_highlighting.value);
+  emit("searchData", {
+    query: s_query,
+    fainder_mode: fainder_mode.value,
+    result_highlighting: result_highlighting.value,
+  });
+}
+
+const validateSyntax = (value: string): string => {
+  try {
+    const query = value.trim();
+
+    // If it's a simple keyword query (no special syntax), treat it as valid
+    if (
+      !query.includes("(") &&
+      !query.includes(")") &&
+      !/\b(AND|OR|XOR|NOT)\b/i.test(query)
+    ) {
+      return "";
+    }
+
+    // Check balanced parentheses
+    const openParens = (value.match(/\(/g) || []).length;
+    const closeParens = (value.match(/\)/g) || []).length;
+    if (openParens !== closeParens) {
+      return "Unbalanced parentheses";
+    }
+
+    // Extract and validate individual function calls
+    const functionPattern =
+      /(?:pp|percentile|kw|keyword|col|column|name)\s*\([^)]+\)/gi;
+    const functions = value.match(functionPattern) || [];
+
+    for (const func of functions) {
+      const lowFunc = func.toLowerCase();
+      if (lowFunc.startsWith("col") || lowFunc.startsWith("column")) {
+        if (
+          !/^(?:col|column)\s*\(\s*(?:name\s*\([^;]+;\s*\d+\)|pp\s*\([^)]+\))\s*\)$/i.test(
+            func,
+          )
+        ) {
+          if (/(?:kw|keyword)\s*\([^)]+\)/i.test(func)) {
+            return "Keywords not allowed inside column expressions";
+          }
+        }
+      } else if (lowFunc.startsWith("kw") || lowFunc.startsWith("keyword")) {
+        if (!/^(?:kw|keyword)\s*\([^)]+\)$/i.test(func)) {
+          return "Invalid keyword syntax";
+        }
+      } else if (lowFunc.startsWith("pp") || lowFunc.startsWith("percentile")) {
+        if (
+          !/^(?:pp|percentile)\s*\(\s*\d+(?:\.\d+)?\s*;\s*(?:ge|gt|le|lt)\s*;\s*\d+(?:\.\d+)?\s*\)$/i.test(
+            func,
+          )
+        ) {
+          return "Invalid percentile syntax";
+        }
+      } else if (lowFunc.startsWith("name")) {
+        if (!/^name\s*\([^;]+;\s*\d+\)$/i.test(func)) {
+          return "Invalid name syntax";
+        }
+      }
+    }
+
+    return "";
+  } catch {
+    return "Invalid query syntax";
+  }
 };
 
 const removeSearchTerm = (index: number) => {
@@ -668,9 +725,9 @@ function cancelSettings() {
 function saveSettings() {
   showSettings.value = false;
   fainder_mode.value = String(temp_fainder_mode.value);
-  enable_highlighting.value = temp_enable_highlighting.value;
+  result_highlighting.value = temp_result_highlighting.value;
   console.log("New fainder_mode:", fainder_mode.value);
-  console.log("New highlighting enabled:", enable_highlighting.value);
+  console.log("New result highlighting state:", result_highlighting.value);
   // update route
   const route = useRoute();
   navigateTo({
@@ -678,8 +735,128 @@ function saveSettings() {
     query: {
       ...route.query,
       fainder_mode: temp_fainder_mode.value,
-      enable_highlighting: String(temp_enable_highlighting.value),
+      result_highlighting: String(temp_result_highlighting.value),
     },
   });
 }
 </script>
+
+<style scoped>
+.search-main {
+  background-color: transparent !important;
+}
+
+.inline-layout {
+  align-items: center;
+}
+
+.search-btn {
+  height: 48px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  text-transform: none;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+}
+
+.settings-btn {
+  height: 48px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  text-transform: none;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+}
+
+.input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.search-input {
+  max-height: v-bind(textareaMaxHeight);
+  overflow-y: v-bind("number_of_rows === 1 ? 'hidden' : 'auto'") !important;
+  overflow-x: auto;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.12);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Style for code-input element to ensure it shows all content */
+:deep(.search-input textarea) {
+  min-height: 48px;
+  padding: 8px 12px;
+  line-height: 1.5;
+}
+
+/* Add focus styles for better UX */
+:deep(.search-input:focus-within) {
+  border-color: rgb(var(--v-theme-primary));
+  box-shadow: 0 0 0 1px rgba(var(--v-theme-primary), 0.2);
+}
+
+.error-message {
+  color: rgb(var(--v-theme-error));
+  font-size: 12px;
+  margin-top: 4px;
+  min-height: 20px;
+  padding-left: 16px;
+}
+
+.query-builder {
+  background-color: rgba(var(--v-theme-surface), 0.8);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.gap-2 {
+  gap: 8px;
+}
+
+.builder-header {
+  display: flex;
+  align-items: center;
+  color: rgba(var(--v-theme-on-surface), 0.87);
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+}
+
+.builder-header .v-icon {
+  opacity: 0.7;
+}
+:deep(.function) {
+  color: #569cd6;
+}
+:deep(.string) {
+  color: #ce9178;
+}
+:deep(.comparison) {
+  color: #c586c0;
+}
+:deep(.number) {
+  color: #b5cea8;
+}
+:deep(.field) {
+  color: #9cdcfe;
+}
+:deep(.not-operator) {
+  color: #c586c0;
+}
+:deep(.operator) {
+  color: #c586c0;
+}
+:deep(.bracket-0) {
+  color: #ffd700;
+}
+:deep(.bracket-1) {
+  color: #da70d6;
+}
+:deep(.bracket-2) {
+  color: #87cefa;
+}
+:deep(.bracket-3) {
+  color: #fa8072;
+}
+</style>

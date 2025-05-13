@@ -51,7 +51,7 @@ Using a top-down approach:
 
 1. **Disjunction nodes**: Each child gets
    - A new write group
-   - Only its write group as read group
+   - Same read group as parent plus its own write group
 2. **Conjunction nodes**: Each child gets
    - Same write group as parent
    - Same read group as parent
@@ -64,3 +64,32 @@ Using a top-down approach:
 - Reduces execution time from ~20s to 0.5s for queries combining percentile predicates with keyword/column predicates
 - Negligible overhead for queries without percentile predicates
 - Optimal for the expected use case (percentile + keyword/column predicates)
+
+### Threaded Executor
+The Threaded Executor provides parallel execution capabilities for query processing.
+
+#### Key Features
+- Utilizes `concurrent.futures` library for thread pool management
+- Requires cost-based sorting and keyword merging before execution
+- Executes AST nodes in parallel using different threads
+
+#### Performance Characteristics
+- Significant performance improvement for percentile predicates without keyword/column filters, when compared to the sequential or prefilter executor
+- Negligible overhead for single-predicate queries
+- Less efficient in cases where filtering could be used
+- Limited parallel execution due to Python's GIL (Global Interpreter Lock)
+
+### Threaded Executor with Prefilter
+This executor combines the benefits of both threading and prefiltering approaches.
+
+#### Key Features
+- Integrates threading capabilities with prefilter optimization
+- Requires cost-based sorting and keyword merging before execution
+- Hybrid approach:
+  - Uses threading for all leaf nodes
+  - Combines and resolves for filter construction for percentile predicates all relevant nodes except other percentile predicates
+
+#### Performance Characteristics
+- Combines advantages of both threaded and prefilter executors
+- Negligible overhead for single-predicate queries
+- Optimal performance for complex queries involving multiple predicates

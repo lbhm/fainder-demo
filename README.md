@@ -45,7 +45,8 @@ CROISSANT_CACHE_SIZE=128     # Size of the Croissant store cache (only relevant 
 QUERY_CACHE_SIZE=128                # Maximum number of query results to cache
 MIN_USABILITY_SCORE=0.0             # Minimum usability threshold for query results
 RANK_BY_USABILITY=True              # Boolean to enable/disable usability
-EXECUTOR_TYPE=simple                # Query executor implementation (simple, prefiltering or parallel)
+EXECUTOR_TYPE=simple                # Query executor implementation (simple, prefiltering, threaded, or threaded_prefiltering)
+MAX_WORKERS=os.cpu_count()          # Number of threads for parallel execution
 
 # Fainder
 FAINDER_N_CLUSTERS=50               # Number of index clusters
@@ -54,7 +55,7 @@ FAINDER_ALPHA=1.0                   # Float value for additive smoothing
 FAINDER_TRANSFORM=None              # None, standard, robust, quantile, or power
 FAINDER_CLUSTER_ALGORITHM=kmeans    # kmeans, hdbscan, or agglomerative
 
-# Similiarity Search / Embeddings
+# Similarity Search / Embeddings
 USE_EMBEDDINGS=True                 # Boolean to enable/disable embeddings
 EMBEDDING_MODEL=all-MiniLM-L6-v2    # Name of the embedding model on Hugging Face
 EMBEDDING_BATCH_SIZE=32             # Batch size for embedding generation (during indexing)
@@ -104,7 +105,7 @@ docker compose down
 
 #### Prerequisites
 
-- Python 3.11 or 3.12 (Tantivy does not support 3.13 yet)
+- Python 3.11-3.13
 - Node.js 18 or greater
 - A Python package manager (e.g., `pip` or `uv`)
 - A Node.js package manager (e.g., `npm`)

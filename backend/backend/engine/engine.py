@@ -1,9 +1,10 @@
+import os
 from functools import lru_cache
 
 from backend.config import CacheInfo, ExecutorType, FainderMode, Highlights, Metadata
 from backend.indices import FainderIndex, HnswIndex, TantivyIndex
 
-from .executor import create_executor
+from .execution.factory import create_executor
 from .optimizer import create_optimizer
 from .parser import Parser
 
@@ -19,6 +20,7 @@ class Engine:
         min_usability_score: float = 0.0,
         rank_by_usability: bool = True,
         executor_type: ExecutorType = ExecutorType.SIMPLE,
+        max_workers: int = os.cpu_count() or 1,
     ) -> None:
         self.parser = Parser()
         self.optimizer = create_optimizer(executor_type)
@@ -30,7 +32,9 @@ class Engine:
             metadata=metadata,
             min_usability_score=min_usability_score,
             rank_by_usability=rank_by_usability,
+            max_workers=max_workers,
         )
+        self.max_workers = max_workers
         self.min_usability_score = min_usability_score
         self.rank_by_usability = rank_by_usability
         self.executor_type = executor_type
@@ -54,6 +58,7 @@ class Engine:
             metadata=metadata,
             min_usability_score=self.min_usability_score,
             rank_by_usability=self.rank_by_usability,
+            max_workers=self.max_workers,
         )
         self.clear_cache()
 

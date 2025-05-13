@@ -109,10 +109,7 @@ HIGHLIGHTING_CASES: dict[str, HighlightingCase] = {
     },
     "test_kw_in_name_field": {
         "query": "kw('name:(germany)')",
-        "expected": (
-            {0: {"name": "<mark>Germany</mark> City Rainfall Data"}},
-            set(),
-        ),
+        "expected": ({0: {"name": "<mark>Germany</mark> City Rainfall Data"}}, set()),
     },
     "test_kw_in_keywords_field": {
         "query": "kw('keywords:(environment)')",
@@ -130,10 +127,7 @@ HIGHLIGHTING_CASES: dict[str, HighlightingCase] = {
     },
     "test_kw_in_creator_field": {
         "query": "kw('creator:(Ayush Yadav)')",
-        "expected": (
-            {1: {"creator-name": "<mark>Ayush</mark> <mark>Yadav</mark>"}},
-            set(),
-        ),
+        "expected": ({1: {"creator-name": "<mark>Ayush</mark> <mark>Yadav</mark>"}}, set()),
     },
     "test_simple_pp_and_kw": {
         "query": "col(pp(0.1;ge;1)) AND kw('weather')",
@@ -161,14 +155,7 @@ HIGHLIGHTING_CASES: dict[str, HighlightingCase] = {
                     ),
                 }
             },
-            {
-                np.uint32(3),
-                np.uint32(4),
-                np.uint32(5),
-                np.uint32(6),
-                np.uint32(8),
-                np.uint32(9),
-            },
+            {np.uint32(3), np.uint32(4), np.uint32(5), np.uint32(6), np.uint32(8), np.uint32(9)},
         ),
     },
 }

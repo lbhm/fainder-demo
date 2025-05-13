@@ -1,7 +1,8 @@
-# This results page will display the results of the search query # The list of
-the results will be displayed in a card format on the left side of the page and
-the details of the selected result will be displayed on the right side of the
-page
+<!--
+  This page display the results of a search query. It includes a list of results on the left side
+  and details of the selected result on the right side. The page also handles loading states,
+  error messages, and pagination for the results.
+-->
 
 <template>
   <v-main>
@@ -32,7 +33,7 @@ page
         type="info"
         class="mt-4"
       >
-        No results found for your search criteria
+        No results found for your search criteria.
       </v-alert>
 
       <!-- Main Content -->
@@ -43,7 +44,7 @@ page
             v-if="!isLoading && !hasError && results && results.length > 0"
             class="search-stats mb-4"
           >
-            Found {{ resultCount }} results in {{ searchTime.toFixed(4) }}s
+            Found {{ resultCount }} results in {{ searchTime.toFixed(4) }}s.
           </div>
           <!-- Remove the Modify Search button since we have inline search now -->
 
@@ -577,7 +578,7 @@ const {
   query,
   fainder_mode,
   perPage,
-  enable_highlighting,
+  result_highlighting: result_highlighting,
 } = useSearchState();
 
 console.log(selectedResultIndex.value);
@@ -659,13 +660,13 @@ perPage.value = calculatePerPage(windowHeight.value);
 // Update perPage when the window height changes
 watch(windowHeight, (newHeight) => {
   perPage.value = calculatePerPage(newHeight);
-  // reload results with new perPage value
+  // Reload results with new perPage value
   if (query.value) {
     searchOperations.loadResults(
       query.value,
       currentPage.value,
       fainder_mode.value,
-      enable_highlighting.value,
+      result_highlighting.value,
     );
   }
 });
@@ -701,7 +702,7 @@ watch(currentPage, async (newPage) => {
     query.value,
     newPage,
     fainder_mode.value,
-    enable_highlighting.value,
+    result_highlighting.value,
   );
 
   // Update URL with new page
@@ -712,7 +713,7 @@ watch(currentPage, async (newPage) => {
       page: newPage,
       index: selectedResultIndex.value,
       fainder_mode: fainder_mode.value,
-      enable_highlighting: enable_highlighting.value.toString(),
+      result_highlighting: result_highlighting.value,
       theme: theme.global.name.value,
     },
   });
@@ -757,7 +758,7 @@ const retrySearch = async () => {
     query.value,
     currentPage.value,
     fainder_mode.value,
-    enable_highlighting.value,
+    result_highlighting.value,
   );
 };
 
@@ -766,7 +767,7 @@ await searchOperations.loadResults(
   query.value,
   currentPage.value,
   fainder_mode.value,
-  enable_highlighting.value,
+  result_highlighting.value,
 );
 
 const chartOptions = ref<ChartOptions<"bar">>({

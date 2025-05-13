@@ -1,3 +1,7 @@
+<!--
+  This page allows users to upload new dataset profiles to the search engine.
+-->
+
 <template>
   <v-main class="d-flex align-center justify-center">
     <div class="search-wrapper">
@@ -6,8 +10,8 @@
       </div>
       <Search_Component
         :search-query="query"
-        :inline="true"
-        :lines="5"
+        :inline="false"
+        :lines="1"
         :query-builder="false"
         :simple-builder="true"
         @search-data="searchData"
@@ -39,8 +43,8 @@ const query = ref<string | undefined>(q.query);
 async function searchData({
   query: searchQuery,
   fainder_mode: newfainder_mode,
-  enable_highlighting,
-}: SearchParams): Promise<void> {
+  result_highlighting,
+}: SearchParams) {
   // If query is empty or undefined, reset the URL without query parameters
   if (!searchQuery || searchQuery.trim() === "") {
     await navigateTo({
@@ -55,9 +59,7 @@ async function searchData({
     query: {
       query: searchQuery,
       fainder_mode: newfainder_mode,
-      enable_highlighting: enable_highlighting
-        ? enable_highlighting.toString()
-        : "false",
+      result_highlighting: result_highlighting,
     },
   });
 }
