@@ -742,39 +742,6 @@ function saveSettings() {
 </script>
 
 <style scoped>
-.search-main {
-  background-color: transparent !important;
-}
-
-.inline-layout {
-  align-items: center;
-}
-
-.search-btn {
-  height: 48px;
-  font-weight: 500;
-  letter-spacing: 0.5px;
-  text-transform: none;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-}
-
-.settings-btn {
-  height: 48px;
-  font-weight: 500;
-  letter-spacing: 0.5px;
-  text-transform: none;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-}
-
-.input-wrapper {
-  position: relative;
-  width: 100%;
-}
-
 .search-input {
   max-height: v-bind(textareaMaxHeight);
   overflow-y: v-bind("number_of_rows === 1 ? 'hidden' : 'auto'") !important;
@@ -782,81 +749,5 @@ function saveSettings() {
   border: 1px solid rgba(var(--v-theme-on-surface), 0.12);
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-
-/* Style for code-input element to ensure it shows all content */
-:deep(.search-input textarea) {
-  min-height: 48px;
-  padding: 8px 12px;
-  line-height: 1.5;
-}
-
-/* Add focus styles for better UX */
-:deep(.search-input:focus-within) {
-  border-color: rgb(var(--v-theme-primary));
-  box-shadow: 0 0 0 1px rgba(var(--v-theme-primary), 0.2);
-}
-
-.error-message {
-  color: rgb(var(--v-theme-error));
-  font-size: 12px;
-  margin-top: 4px;
-  min-height: 20px;
-  padding-left: 16px;
-}
-
-.query-builder {
-  background-color: rgba(var(--v-theme-surface), 0.8);
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.gap-2 {
-  gap: 8px;
-}
-
-.builder-header {
-  display: flex;
-  align-items: center;
-  color: rgba(var(--v-theme-on-surface), 0.87);
-  padding-bottom: 8px;
-  margin-bottom: 12px;
-}
-
-.builder-header .v-icon {
-  opacity: 0.7;
-}
-:deep(.function) {
-  color: #569cd6;
-}
-:deep(.string) {
-  color: #ce9178;
-}
-:deep(.comparison) {
-  color: #c586c0;
-}
-:deep(.number) {
-  color: #b5cea8;
-}
-:deep(.field) {
-  color: #9cdcfe;
-}
-:deep(.not-operator) {
-  color: #c586c0;
-}
-:deep(.operator) {
-  color: #c586c0;
-}
-:deep(.bracket-0) {
-  color: #ffd700;
-}
-:deep(.bracket-1) {
-  color: #da70d6;
-}
-:deep(.bracket-2) {
-  color: #87cefa;
-}
-:deep(.bracket-3) {
-  color: #fa8072;
 }
 </style>

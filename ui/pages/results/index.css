@@ -69,7 +69,7 @@
   width: 100%;
 }
 
-.pagination-controls :deep(.v-pagination) {
+.pagination-controls .v-pagination {
   width: 100%;
   justify-content: center;
 }
@@ -86,22 +86,22 @@
 }
 
 /* Update highlight styles for details container */
-.highlight-text :deep(mark) {
+.highlight-text mark {
   background-color: rgba(var(--v-theme-warning), 0.2);
 }
 
 /* Update highlight text styles to handle all text variants */
 .highlight-text,
-:deep(.v-card-title),
-:deep(.v-card-subtitle),
-:deep(.v-card-text) {
+.v-card-title,
+.v-card-subtitle,
+.v-card-text {
   line-height: 1.6;
 }
 
-:deep(.v-card-title mark),
-:deep(.v-card-subtitle mark),
-:deep(.v-card-text mark),
-.highlight-text :deep(mark) {
+.v-card-title mark,
+.v-card-subtitle mark,
+.v-card-text mark,
+.highlight-text mark {
   background-color: rgba(var(--v-theme-warning), 0.2);
   color: inherit;
   padding: 0 2px;
@@ -187,39 +187,39 @@
 }
 
 /* Add new styles for markdown content */
-.description-section :deep(.markdown-body) {
+.description-section .markdown-body {
   max-width: 100%;
   overflow-x: auto;
 }
 
-.description-section :deep(img) {
+.description-section img {
   max-width: 100%;
   height: auto;
 }
 
-.description-section :deep(table) {
+.description-section table {
   display: block;
   max-width: 100%;
   overflow-x: auto;
   border-collapse: collapse;
 }
 
-.description-section :deep(pre) {
+.description-section pre {
   max-width: 100%;
   overflow-x: auto;
   white-space: pre-wrap;
   word-wrap: break-word;
 }
 
-.description-section :deep(ul),
-.description-section :deep(ol) {
+.description-section ul,
+.description-section ol {
   max-width: 100%;
   padding-left: 24px;
   margin: 16px 0;
   list-style-position: outside;
 }
 
-.description-section :deep(li) {
+.description-section li {
   margin-bottom: 8px;
   overflow-wrap: break-word;
   word-wrap: break-word;
@@ -525,7 +525,7 @@
 }
 
 /* Update alert styles */
-:deep(.v-alert) {
+.v-alert {
   position: relative;
   z-index: 2;
   margin-bottom: 16px;
