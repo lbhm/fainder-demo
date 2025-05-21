@@ -22,6 +22,7 @@ class InitializedComponents:
     fainder_index: FainderIndex
     hnsw_index: HnswIndex
     engine: Engine
+    current_fainder_config: str = "default"
 
 
 class ApplicationState:
@@ -48,6 +49,12 @@ class ApplicationState:
             raise RuntimeError("ApplicationState not initialized")
         return self._components.settings
 
+    @property
+    def current_fainder_config(self) -> str:
+        if self._components is None:
+            raise RuntimeError("ApplicationState not initialized")
+        return self._components.current_fainder_config
+
     def initialize(self) -> None:
         """Initialize all components of the application state."""
         try:
@@ -68,15 +75,18 @@ class ApplicationState:
                 ],
             )
 
+            # Default to the "default" configuration
+            current_config = "default"
+
             try:
                 # Try to load existing metadata and indices
                 (metadata, croissant_store, tantivy_index, fainder_index, hnsw_index, engine) = (
-                    self._load_indices(settings)
+                    self._load_indices(settings, current_config)
                 )
             except (FileNotFoundError, IndexingError) as e:
                 logger.warning(f"Failed to load indices: {e}. Recreating...")
                 (metadata, croissant_store, tantivy_index, fainder_index, hnsw_index, engine) = (
-                    self._recreate_indices(settings)
+                    self._recreate_indices(settings, current_config)
                 )
 
             self._components = InitializedComponents(
@@ -87,6 +97,7 @@ class ApplicationState:
                 fainder_index=fainder_index,
                 hnsw_index=hnsw_index,
                 engine=engine,
+                current_fainder_config=current_config,
             )
 
         except Exception as e:
@@ -94,10 +105,20 @@ class ApplicationState:
             raise e
 
     def update_indices(self) -> None:
+        """Update indices from the croissant files, using the current config."""
+        if self._components is None:
+            raise RuntimeError("ApplicationState not initialized")
+
         settings = self.settings
+        current_config = self.current_fainder_config
+
+        logger.info(f"Updating indices with current configuration '{current_config}'")
+
         (metadata, croissant_store, tantivy_index, fainder_index, hnsw_index, engine) = (
-            self._recreate_indices(settings)
+            self._recreate_indices(settings, current_config)
         )
+
+        # Keep the current configuration
         self._components = InitializedComponents(
             settings=settings,
             metadata=metadata,
@@ -106,12 +127,53 @@ class ApplicationState:
             fainder_index=fainder_index,
             hnsw_index=hnsw_index,
             engine=engine,
+            current_fainder_config=current_config,
         )
 
+    def update_fainder_index(self, config_name: str) -> None:
+        """Update the Fainder index with a specific configuration."""
+        settings = self.settings
+        logger.info(f"Updating Fainder index with configuration '{config_name}'")
+
+        if self._components is None:
+            raise RuntimeError("ApplicationState not initialized")
+
+        # Get the paths for the specified configuration
+        rebinning_path = settings.fainder_rebinning_path_for_config(config_name)
+        conversion_path = settings.fainder_conversion_path_for_config(config_name)
+
+        # Check if the configuration files exist
+        if not rebinning_path.exists():
+            raise FileNotFoundError(f"Rebinning index for configuration '{config_name}' not found")
+        if not conversion_path.exists():
+            raise FileNotFoundError(
+                f"Conversion index for configuration '{config_name}' not found"
+            )
+
+        # Update the FainderIndex component
+        self._components.fainder_index.update(
+            rebinning_path=rebinning_path,
+            conversion_path=conversion_path,
+            histogram_path=settings.histogram_path,
+        )
+
+        # Update the engine with the new FainderIndex
+        self._components.engine.update_indices(
+            tantivy_index=self._components.tantivy_index,
+            fainder_index=self._components.fainder_index,
+            hnsw_index=self._components.hnsw_index,
+            metadata=self._components.metadata,
+        )
+
+        # Update the current configuration
+        self._components.current_fainder_config = config_name
+
+        logger.info(f"Fainder index updated successfully with configuration '{config_name}'")
+
     def _load_indices(
-        self, settings: Settings
+        self, settings: Settings, config_name: str = "default"
     ) -> tuple[Metadata, CroissantStore, TantivyIndex, FainderIndex, HnswIndex, Engine]:
-        logger.info("Loading metadata")
+        logger.info(f"Loading metadata and indices with configuration '{config_name}'")
         metadata = Metadata(**load_json(settings.metadata_path))
 
         logger.info("Initializing Croissant store")
@@ -126,10 +188,24 @@ class ApplicationState:
         logger.info("Initializing Tantivy index")
         tantivy_index = TantivyIndex(settings.tantivy_path)
 
-        logger.info("Initializing Fainder index")
+        logger.info(f"Initializing Fainder index with configuration '{config_name}'")
+        # Use configuration-specific paths
+        rebinning_path = settings.fainder_rebinning_path_for_config(config_name)
+        conversion_path = settings.fainder_conversion_path_for_config(config_name)
+
+        # For backward compatibility, check if config-specific files exist
+        if not rebinning_path.exists() and config_name != "default":
+            logger.warning(f"Configuration '{config_name}' not found, falling back to default")
+            rebinning_path = settings.rebinning_index_path
+            conversion_path = settings.conversion_index_path
+        elif not rebinning_path.exists() and config_name == "default":
+            # If default configuration doesn't exist, use standard paths
+            rebinning_path = settings.rebinning_index_path
+            conversion_path = settings.conversion_index_path
+
         fainder_index = FainderIndex(
-            rebinning_path=settings.rebinning_index_path,
-            conversion_path=settings.conversion_index_path,
+            rebinning_path=rebinning_path,
+            conversion_path=conversion_path,
             histogram_path=settings.histogram_path,
         )
 
@@ -156,7 +232,7 @@ class ApplicationState:
         return metadata, croissant_store, tantivy_index, fainder_index, hnsw_index, engine
 
     def _recreate_indices(
-        self, settings: Settings
+        self, settings: Settings, config_name: str = "default"
     ) -> tuple[Metadata, CroissantStore, TantivyIndex, FainderIndex, HnswIndex, Engine]:
         """Recreate all indices from the croissant files."""
         # Generate metadata first
@@ -181,7 +257,7 @@ class ApplicationState:
 
         tantivy_index = TantivyIndex(settings.tantivy_path)
 
-        # Generate indices
+        # Generate embedding index
         generate_embedding_index(
             name_to_vector=name_to_vector,
             output_path=settings.embedding_path,
@@ -191,9 +267,11 @@ class ApplicationState:
             n_bidirectional_links=settings.hnsw_n_bidirectional_links,
         )
 
+        # Generate Fainder indices with the specified configuration
         generate_fainder_indices(
             hists=hists,
             output_path=settings.fainder_path,
+            config_name=config_name,
             n_clusters=settings.fainder_n_clusters,
             bin_budget=settings.fainder_bin_budget,
             alpha=settings.fainder_alpha,
@@ -201,10 +279,13 @@ class ApplicationState:
             algorithm=settings.fainder_cluster_algorithm,
         )
 
-        # Initialize components with new indices
+        # Initialize components with new indices, using the configuration-specific paths
+        rebinning_path = settings.fainder_rebinning_path_for_config(config_name)
+        conversion_path = settings.fainder_conversion_path_for_config(config_name)
+
         fainder_index = FainderIndex(
-            rebinning_path=settings.rebinning_index_path,
-            conversion_path=settings.conversion_index_path,
+            rebinning_path=rebinning_path,
+            conversion_path=conversion_path,
             histogram_path=settings.histogram_path,
         )
 

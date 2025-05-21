@@ -22,15 +22,12 @@ class FainderIndex:
         conversion_path: Path | None,
         histogram_path: Path | None,
     ) -> None:
-        self.rebinning_index: tuple[list[PctlIndex], list[NDArray[np.float64]]] | None = (
-            load_input(rebinning_path, "rebinning index") if rebinning_path else None
-        )
-        self.conversion_index: tuple[list[PctlIndex], list[NDArray[np.float64]]] | None = (
-            load_input(conversion_path, "conversion index") if conversion_path else None
-        )
-        self.hists: list[tuple[np.uint32, Histogram]] | None = (
-            load_input(histogram_path, "histograms") if histogram_path else None
-        )
+        self.rebinning_index: tuple[list[PctlIndex], list[NDArray[np.float64]]] | None = None
+        self.conversion_index: tuple[list[PctlIndex], list[NDArray[np.float64]]] | None = None
+        self.hists: list[tuple[np.uint32, Histogram]] | None = None
+
+        # Load the indices if paths are provided
+        self.update(rebinning_path, conversion_path, histogram_path)
 
     def update(
         self,
@@ -38,13 +35,24 @@ class FainderIndex:
         conversion_path: Path | None,
         histogram_path: Path | None,
     ) -> None:
-        self.rebinning_index = (
-            load_input(rebinning_path, "rebinning index") if rebinning_path else None
-        )
-        self.conversion_index = (
-            load_input(conversion_path, "conversion index") if conversion_path else None
-        )
-        self.hists = load_input(histogram_path, "histograms") if histogram_path else None
+        """Update the Fainder indices with new files."""
+        if rebinning_path and rebinning_path.exists():
+            logger.info(f"Loading rebinning index from {rebinning_path}")
+            self.rebinning_index = load_input(rebinning_path, "rebinning index")
+        elif rebinning_path:
+            logger.warning(f"Rebinning index path {rebinning_path} does not exist")
+
+        if conversion_path and conversion_path.exists():
+            logger.info(f"Loading conversion index from {conversion_path}")
+            self.conversion_index = load_input(conversion_path, "conversion index")
+        elif conversion_path:
+            logger.warning(f"Conversion index path {conversion_path} does not exist")
+
+        if histogram_path and histogram_path.exists():
+            logger.info(f"Loading histograms from {histogram_path}")
+            self.hists = load_input(histogram_path, "histograms")
+        elif histogram_path:
+            logger.warning(f"Histogram path {histogram_path} does not exist")
 
     def search(
         self,

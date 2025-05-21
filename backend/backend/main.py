@@ -15,6 +15,8 @@ from backend.config import (
     ColumnHighlights,
     ColumnSearchError,
     DocumentHighlights,
+    FainderConfigRequest,
+    FainderConfigsResponse,
     FainderError,
     IndexingError,
     MessageResponse,
@@ -22,6 +24,7 @@ from backend.config import (
     QueryResponse,
 )
 from backend.croissant_store import Document
+from backend.util import load_json
 
 logger.info("Starting backend")
 app_state = ApplicationState()
@@ -172,17 +175,61 @@ async def upload_files(files: list[UploadFile]) -> MessageResponse:
 async def update_indices() -> MessageResponse:
     """Recreate all indices from the current state of the Croissant store."""
     try:
-        # NOTE: Our approach increases memory usage since we load the new indices without deleting
-        # the old ones, we should consider optimizing this in the future
+        # Get the current configuration name for logging
+        current_config = app_state.current_fainder_config
+        logger.info(f"Updating indices with configuration '{current_config}'")
 
+        # This now uses the current configuration internally
         app_state.update_indices()
-        logger.info("Indices updated successfully")
-        return MessageResponse(message="Indices updated successfully")
+        logger.info(f"Indices updated successfully with configuration '{current_config}'")
+        return MessageResponse(
+            message=f"Indices updated successfully with configuration '{current_config}'"
+        )
     except IndexingError as e:
         logger.error(f"Indexing error: {e}")
         raise HTTPException(status_code=500, detail="Indexing error") from e
     except Exception as e:
         logger.error(f"Unknown indexing error: {e}, {e.args}")
+        raise HTTPException(status_code=500, detail="Internal server error") from e
+
+
+@app.post("/change_fainder")
+async def change_fainder(request: FainderConfigRequest) -> MessageResponse:
+    """Change the Fainder configuration to use a different index."""
+    try:
+        # Check if it's the same as the current config
+        if request.config_name == app_state.current_fainder_config:
+            return MessageResponse(
+                message=f"Already using Fainder configuration '{request.config_name}'"
+            )
+
+        app_state.update_fainder_index(request.config_name)
+        logger.info(f"Fainder configuration changed to '{request.config_name}' successfully")
+        return MessageResponse(
+            message=f"Fainder configuration changed to '{request.config_name}' successfully"
+        )
+    except FileNotFoundError as e:
+        logger.error(f"Fainder configuration error: {e}")
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    except Exception as e:
+        logger.error(f"Unknown error changing Fainder configuration: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error") from e
+
+
+@app.get("/fainder_configs")
+async def get_fainder_configs() -> FainderConfigsResponse:
+    """Get the list of available Fainder configurations and the current active one."""
+    try:
+        config_path = app_state.settings.fainder_config_path
+        current_config = app_state.current_fainder_config
+
+        if not config_path.exists():
+            return FainderConfigsResponse(configs=["default"], current=current_config)
+
+        configs = load_json(config_path)
+        return FainderConfigsResponse(configs=list(configs.keys()), current=current_config)
+    except Exception as e:
+        logger.error(f"Error getting Fainder configurations: {e}")
         raise HTTPException(status_code=500, detail="Internal server error") from e
 
 

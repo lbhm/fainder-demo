@@ -159,6 +159,17 @@ class Settings(BaseSettings):
     def metadata_path(self) -> Path:
         return self.data_dir / self.collection_name / self.metadata_file
 
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def fainder_config_path(self) -> Path:
+        return self.fainder_path / "configs.json"
+
+    def fainder_rebinning_path_for_config(self, config_name: str) -> Path:
+        return self.fainder_path / f"rebinning_{config_name}.zst"
+
+    def fainder_conversion_path_for_config(self, config_name: str) -> Path:
+        return self.fainder_path / f"conversion_{config_name}.zst"
+
 
 class QueryRequest(BaseModel):
     query: str
@@ -202,6 +213,15 @@ class IndexingError(Exception):
 
 class FainderError(Exception):
     pass
+
+
+class FainderConfigRequest(BaseModel):
+    config_name: str
+
+
+class FainderConfigsResponse(BaseModel):
+    configs: list[str]
+    current: str
 
 
 class InterceptHandler(logging.Handler):

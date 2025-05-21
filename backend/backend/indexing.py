@@ -164,6 +164,7 @@ def generate_metadata(
 def generate_fainder_indices(
     hists: Sequence[tuple[int | np.integer[Any], Histogram]],
     output_path: Path,
+    config_name: str = "default",
     n_clusters: int = 27,
     bin_budget: int = 270,
     alpha: float = 1,
@@ -172,7 +173,7 @@ def generate_fainder_indices(
     seed: int = 42,
     workers: int | None = os.cpu_count(),
 ) -> None:
-    logger.info("Starting Fainder index generation")
+    logger.info(f"Starting Fainder index generation with config '{config_name}'")
 
     logger.info(f"Clustering {len(hists)} histograms")
     clustered_hists, cluster_bins, _ = cluster_histograms(
@@ -204,12 +205,51 @@ def generate_fainder_indices(
         workers=workers,
     )
 
+    # Save indices with config name in the filename
+    rebinning_file = f"rebinning_{config_name}.zst"
+    conversion_file = f"conversion_{config_name}.zst"
+
     save_output(
-        output_path / "rebinning.zst", (rebinning_index, cluster_bins), name="rebinning index"
+        output_path / rebinning_file,
+        (rebinning_index, cluster_bins),
+        name=f"rebinning index ({config_name})",
     )
     save_output(
-        output_path / "conversion.zst", (conversion_index, cluster_bins), name="conversion index"
+        output_path / conversion_file,
+        (conversion_index, cluster_bins),
+        name=f"conversion index ({config_name})",
     )
+
+    # Save or update the config information in a JSON file
+    config_file = output_path / "configs.json"
+    configs = {}
+    if config_file.exists():
+        configs = load_json(config_file)
+
+    # Add or update the config
+    configs[config_name] = {
+        "n_clusters": n_clusters,
+        "bin_budget": bin_budget,
+        "alpha": alpha,
+        "transform": transform,
+        "algorithm": algorithm,
+        "rebinning_file": rebinning_file,
+        "conversion_file": conversion_file,
+    }
+
+    dump_json(configs, config_file)
+
+    # For the default config, also save with the default filenames for backward compatibility
+    if config_name == "default":
+        save_output(
+            output_path / "rebinning.zst", (rebinning_index, cluster_bins), name="rebinning index"
+        )
+        save_output(
+            output_path / "conversion.zst",
+            (conversion_index, cluster_bins),
+            name="conversion index",
+        )
+
     save_output(output_path / "histograms.zst", hists, name="histograms")
 
 
@@ -278,6 +318,12 @@ def parse_args() -> argparse.Namespace:
         choices=["DEBUG", "INFO", "WARNING"],
         help="Set the logging level",
     )
+    parser.add_argument(
+        "--config-name",
+        default="default",
+        type=str,
+        help="Configuration name for the Fainder indices",
+    )
 
     return parser.parse_args()
 
@@ -307,6 +353,7 @@ if __name__ == "__main__":
         generate_fainder_indices(
             hists=hists,
             output_path=settings.fainder_path,
+            config_name=args.config_name,
             n_clusters=settings.fainder_n_clusters,
             bin_budget=settings.fainder_bin_budget,
             alpha=settings.fainder_alpha,
