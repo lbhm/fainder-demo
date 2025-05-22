@@ -1,5 +1,6 @@
 import json
 from dataclasses import dataclass
+from typing import Any
 
 from loguru import logger
 
@@ -170,6 +171,23 @@ class ApplicationState:
 
         logger.info(f"Fainder index updated successfully with configuration '{config_name}'")
 
+    def _load_config_from_json(self, config_name: str) -> dict[str, Any] | None:
+        """Load configuration from configs.json file if it exists."""
+        config_path = self.settings.fainder_path / "configs.json"
+
+        try:
+            configs = load_json(config_path)
+
+            if config_name in configs:
+                logger.info(f"Found configuration '{config_name}' in configs.json")
+                return configs[config_name]
+            logger.warning(f"Configuration '{config_name}' not found in configs.json")
+            return None
+
+        except (json.JSONDecodeError, FileNotFoundError) as e:
+            logger.error(f"Failed to load configs.json: {e}")
+            return None
+
     def _load_indices(
         self, settings: Settings, config_name: str = "default"
     ) -> tuple[Metadata, CroissantStore, TantivyIndex, FainderIndex, HnswIndex, Engine]:
@@ -267,17 +285,35 @@ class ApplicationState:
             n_bidirectional_links=settings.hnsw_n_bidirectional_links,
         )
 
-        # Generate Fainder indices with the specified configuration
-        generate_fainder_indices(
-            hists=hists,
-            output_path=settings.fainder_path,
-            config_name=config_name,
-            n_clusters=settings.fainder_n_clusters,
-            bin_budget=settings.fainder_bin_budget,
-            alpha=settings.fainder_alpha,
-            transform=settings.fainder_transform,
-            algorithm=settings.fainder_cluster_algorithm,
-        )
+        # Load configuration from configs.json if available
+        config_params: dict[str, Any] | None = self._load_config_from_json(config_name)
+
+        if config_params:
+            # Use parameters from configs.json
+            logger.info(f"Using Fainder configuration from configs.json for '{config_name}'")
+            generate_fainder_indices(
+                hists=hists,
+                output_path=settings.fainder_path,
+                config_name=config_name,
+                n_clusters=config_params.get("n_clusters", settings.fainder_n_clusters),
+                bin_budget=config_params.get("bin_budget", settings.fainder_bin_budget),
+                alpha=config_params.get("alpha", settings.fainder_alpha),
+                transform=config_params.get("transform", settings.fainder_transform),
+                algorithm=config_params.get("algorithm", settings.fainder_cluster_algorithm),
+            )
+        else:
+            # Fall back to settings values
+            logger.info(f"Using Fainder configuration from settings for '{config_name}'")
+            generate_fainder_indices(
+                hists=hists,
+                output_path=settings.fainder_path,
+                config_name=config_name,
+                n_clusters=settings.fainder_n_clusters,
+                bin_budget=settings.fainder_bin_budget,
+                alpha=settings.fainder_alpha,
+                transform=settings.fainder_transform,
+                algorithm=settings.fainder_cluster_algorithm,
+            )
 
         # Initialize components with new indices, using the configuration-specific paths
         rebinning_path = settings.fainder_rebinning_path_for_config(config_name)
