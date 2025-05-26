@@ -54,6 +54,7 @@ FAINDER_BIN_BUDGET=1000             # Bin/storage budget
 FAINDER_ALPHA=1.0                   # Float value for additive smoothing
 FAINDER_TRANSFORM=None              # None, standard, robust, quantile, or power
 FAINDER_CLUSTER_ALGORITHM=kmeans    # kmeans, hdbscan, or agglomerative
+FAINDER_DEFAULT=DEFAULT
 
 # Similarity Search / Embeddings
 USE_EMBEDDINGS=True                 # Boolean to enable/disable embeddings

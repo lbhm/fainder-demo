@@ -77,7 +77,7 @@ class ApplicationState:
             )
 
             # Default to the "default" configuration
-            current_config = "default"
+            current_config = settings.fainder_default
 
             try:
                 # Try to load existing metadata and indices
@@ -211,13 +211,9 @@ class ApplicationState:
         rebinning_path = settings.fainder_rebinning_path_for_config(config_name)
         conversion_path = settings.fainder_conversion_path_for_config(config_name)
 
-        # For backward compatibility, check if config-specific files exist
-        if not rebinning_path.exists() and config_name != "default":
+        # If the config doesn't exist, fall back to default values
+        if not rebinning_path.exists() or not conversion_path.exists():
             logger.warning(f"Configuration '{config_name}' not found, falling back to default")
-            rebinning_path = settings.rebinning_index_path
-            conversion_path = settings.conversion_index_path
-        elif not rebinning_path.exists() and config_name == "default":
-            # If default configuration doesn't exist, use standard paths
             rebinning_path = settings.rebinning_index_path
             conversion_path = settings.conversion_index_path
 
