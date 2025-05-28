@@ -8,7 +8,7 @@ from backend.croissant_store import CroissantStore, get_croissant_store
 from backend.engine import Engine
 from backend.indexing import generate_embedding_index, generate_fainder_indices, generate_metadata
 from backend.indices import FainderIndex, HnswIndex, TantivyIndex
-from backend.util import load_json
+from backend.utils import load_json
 
 
 @dataclass
@@ -59,21 +59,10 @@ class ApplicationState:
         """Initialize all components of the application state."""
         try:
             logger.info("Initializing application state")
-            settings = Settings()  # type: ignore
+            settings = Settings()  # type: ignore[call-arg]
 
             # NOTE: Potentially add more modules here if they are not intercepted by loguru
-            configure_logging(
-                settings.log_level,
-                modules=[
-                    "fastapi",
-                    "fastapi_cli",
-                    "fastapi_cli.cli",
-                    "fastapi_cli.discover",
-                    "uvicorn",
-                    "uvicorn.access",
-                    "uvicorn.error",
-                ],
-            )
+            configure_logging(settings.log_level)
 
             # Default to the "default" configuration
             current_config = settings.fainder_default
@@ -99,10 +88,9 @@ class ApplicationState:
                 engine=engine,
                 current_fainder_config=current_config,
             )
-
         except Exception as e:
             logger.error(f"Failed to initialize application state: {e}")
-            raise e
+            raise
 
     def update_indices(self) -> None:
         """Update indices from the croissant files, using the current config."""
@@ -178,7 +166,7 @@ class ApplicationState:
 
         if config_name in configs:
             logger.info(f"Found configuration '{config_name}' in configs.json")
-            return configs[config_name]
+            return configs[config_name]  # type: ignore[no-any-return]
         logger.warning(f"Configuration '{config_name}' not found in configs.json")
         return None
 

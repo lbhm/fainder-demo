@@ -89,7 +89,7 @@ class HnswIndex:
                 raise ColumnSearchError("Embedding model is not available for approximate search")
 
             # Nearest neighbor search
-            embedding: NDArray[np.float32] = self.embedder.encode(  # pyright: ignore
+            embedding: NDArray[np.float32] = self.embedder.encode(  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
                 column_name, convert_to_numpy=True, normalize_embeddings=True
             )
 

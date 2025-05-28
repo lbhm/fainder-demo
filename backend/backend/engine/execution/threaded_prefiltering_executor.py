@@ -10,11 +10,7 @@ from numpy import uint32
 from numpy.typing import NDArray
 
 from backend.config import ColumnHighlights, DocumentHighlights, FainderMode, Metadata
-from backend.engine.conversion import (
-    col_to_doc_ids,
-    col_to_hist_ids,
-    doc_to_col_ids,
-)
+from backend.engine.conversion import col_to_doc_ids, col_to_hist_ids, doc_to_col_ids
 from backend.indices import FainderIndex, HnswIndex, TantivyIndex
 
 from .common import (
@@ -60,11 +56,11 @@ class IntermediateResultFuture:
         self.fainder_mode = fainder_mode
 
     def add_doc_future(self, future: Future[tuple[DocResult, int]]) -> None:
-        """Add a future that will resolve to document IDs"""
+        """Add a future that will resolve to document IDs."""
         self.kw_result_futures.append(future)
 
     def add_col_future(self, future: Future[tuple[ColResult, int]]) -> None:
-        """Add a future that will resolve to column IDs"""
+        """Add a future that will resolve to column IDs."""
         self.col_result_futures.append(future)
 
     def add_col_ids(self, col_ids: set[uint32], doc_to_cols: dict[int, set[int]]) -> None:
@@ -169,7 +165,7 @@ class IntermediateResultStoreFuture:
     def add_future_kw_result(
         self, write_group: int, future: Future[tuple[DocResult, int]]
     ) -> None:
-        """Add a future that will resolve to document IDs"""
+        """Add a future that will resolve to document IDs."""
         if write_group not in self.results:
             self.results[write_group] = IntermediateResultFuture(
                 write_group, fainder_mode=self.fainder_mode
@@ -179,7 +175,7 @@ class IntermediateResultStoreFuture:
     def add_future_col_result(
         self, write_group: int, future: Future[tuple[ColResult, int]]
     ) -> None:
-        """Add a future that will resolve to column IDs"""
+        """Add a future that will resolve to column IDs."""
         if write_group not in self.results:
             self.results[write_group] = IntermediateResultFuture(
                 write_group, fainder_mode=self.fainder_mode
@@ -241,10 +237,11 @@ class IntermediateResultStoreFuture:
 
 
 class ThreadedPrefilteringExecutor(Transformer[Token, DocResult], Executor):
-    """This transformer evaluates a parse tree bottom-up
-    and computes the query result in parallel using Threading.
-    It also uses prefiltering to reduce the number of documents
-    before executing the query for percentile predicates."""
+    """This transformer evaluates a parse tree bottom-up and computes results in parallel threads.
+
+    It also uses prefiltering to reduce the number of documents before executing the query for
+    percentile predicates.
+    """
 
     def __init__(
         self,
@@ -357,11 +354,13 @@ class ThreadedPrefilteringExecutor(Transformer[Token, DocResult], Executor):
         """Resolve item from future."""
         return item.result() if isinstance(item, Future) else item
 
-    ### Operator implementations ###
+    ##########################
+    # Operator implementations
+    ##########################
 
     def keyword_op(self, items: list[Token]) -> Future[tuple[DocResult, int]]:
         def _keyword_task(token: Token) -> tuple[DocResult, int]:
-            """Task function for keyword search to be run in a thread"""
+            """Task function for keyword search to be run in a thread."""
             logger.trace(f"Thread executing keyword search for: {token}")
             write_group = self._get_write_group(token)
             result_docs, scores, highlights = self.tantivy_index.search(
@@ -382,7 +381,7 @@ class ThreadedPrefilteringExecutor(Transformer[Token, DocResult], Executor):
 
     def name_op(self, items: list[Token]) -> Future[tuple[ColResult, int]]:
         def _name_task(column: Token, k: int) -> tuple[ColResult, int]:
-            """Task function for column name search to be run in a thread"""
+            """Task function for column name search to be run in a thread."""
             logger.trace(f"Thread executing column name search for: {column}")
             write_group = self._get_write_group(column)
             parent_write_group = self._get_parent_write_group(write_group)
@@ -401,7 +400,7 @@ class ThreadedPrefilteringExecutor(Transformer[Token, DocResult], Executor):
 
     def percentile_op(self, items: list[Token]) -> Future[tuple[ColResult, int]]:
         def _percentile_task(items: list[Token]) -> tuple[ColResult, int]:
-            """Task function for percentile search to be run in a thread"""
+            """Task function for percentile search to be run in a thread."""
             percentile = float(items[0])
             comparison: str = items[1]
             reference = float(items[2])

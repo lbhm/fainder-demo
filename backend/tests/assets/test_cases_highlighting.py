@@ -155,14 +155,7 @@ HIGHLIGHTING_CASES: dict[str, HighlightingCase] = {
                     ),
                 }
             },
-            {
-                np.uint32(0),
-                np.uint32(1),
-                np.uint32(2),
-                np.uint32(3),
-                np.uint32(4),
-                np.uint32(5),
-            },
+            {np.uint32(0), np.uint32(1), np.uint32(2), np.uint32(3), np.uint32(4), np.uint32(5)},
         ),
     },
 }

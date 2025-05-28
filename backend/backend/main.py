@@ -24,7 +24,7 @@ from backend.config import (
     QueryResponse,
 )
 from backend.croissant_store import Document
-from backend.util import load_json
+from backend.utils import load_json
 
 logger.info("Starting backend")
 app_state = ApplicationState()

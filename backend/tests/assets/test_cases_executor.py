@@ -427,8 +427,7 @@ EXECUTOR_CASES: dict[str, dict[str, ExecutorCase]] = {
                                 "negation",
                                 [
                                     Tree(
-                                        Token("RULE", "keyword_op"),
-                                        [Token("STRING", "'germany'")],
+                                        Token("RULE", "keyword_op"), [Token("STRING", "'germany'")]
                                     )
                                 ],
                             ),
@@ -449,8 +448,7 @@ EXECUTOR_CASES: dict[str, dict[str, ExecutorCase]] = {
                                         ],
                                     ),
                                     Tree(
-                                        Token("RULE", "keyword_op"),
-                                        [Token("STRING", "'weather'")],
+                                        Token("RULE", "keyword_op"), [Token("STRING", "'weather'")]
                                     ),
                                 ],
                             ),

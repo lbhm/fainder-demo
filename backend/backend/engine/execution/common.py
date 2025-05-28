@@ -19,8 +19,8 @@ TResult = TypeVar("TResult", DocResult, ColResult)
 
 
 class ResultGroupAnnotator(Visitor_Recursive[Token]):
-    """
-    This visitor adds numbers for intermediate result groups to each node.
+    """This visitor adds numbers for intermediate result groups to each node.
+
     A node has a write group and a list of read groups.
     """
 
@@ -33,10 +33,11 @@ class ResultGroupAnnotator(Visitor_Recursive[Token]):
         self.current_write_group = 0
 
     def apply(self, tree: ParseTree, parallel: bool = False) -> None:
-        """
-        Apply the visitor to the parse tree.
+        """Apply the visitor to the parse tree.
+
         For parallel processing, col_op is treated as a disjunction to
         allow for parallel exceution of percentile predicates.
+
         Args:
             tree: The parse tree to visit.
             parallel: True if the query will be excuted in parallel.
@@ -50,7 +51,7 @@ class ResultGroupAnnotator(Visitor_Recursive[Token]):
         self.current_write_group += 1
         return self.current_write_group
 
-    def __default__(self, tree: ParseTree) -> None:
+    def __default__(self, tree: ParseTree) -> None:  # noqa: PLW3201
         # Set attributes for all children using the parent's values
         logger.trace(f"Processing default node: {tree}")
         if id(tree) in self.write_groups and id(tree) in self.read_groups:
@@ -229,7 +230,7 @@ def junction(
     doc_to_cols: dict[int, set[int]] | None = None,
 ) -> TResult:
     """Combine query results using a junction operator (AND/OR)."""
-    if len(items) < 2:
+    if len(items) < 2:  # noqa: PLR2004
         raise ValueError("Junction must have at least two items")
 
     # Items contains document results (i.e., DocResult)
@@ -244,9 +245,9 @@ def junction(
                 doc_ids = operator(doc_ids, item[0])
                 highlights = merge_highlights(highlights, item[1], doc_ids, doc_to_cols)
 
-            return doc_ids, highlights  # type: ignore
+            return doc_ids, highlights  # type: ignore[return-value]
 
-        return reduce(operator, [item[0] for item in items]), ({}, set())  # type: ignore
+        return reduce(operator, [item[0] for item in items]), ({}, set())  # type: ignore[return-value]
 
     # Items contains column results (i.e., ColResult)
-    return reduce(operator, items)  # type: ignore
+    return reduce(operator, items)  # type: ignore[return-value]

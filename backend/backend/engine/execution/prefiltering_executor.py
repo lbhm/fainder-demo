@@ -8,10 +8,7 @@ from numpy import uint32
 from numpy.typing import NDArray
 
 from backend.config import ColumnHighlights, DocumentHighlights, FainderMode, Metadata
-from backend.engine.conversion import (
-    col_to_doc_ids,
-    doc_to_col_ids,
-)
+from backend.engine.conversion import col_to_doc_ids, doc_to_col_ids
 from backend.indices import FainderIndex, HnswIndex, TantivyIndex
 
 from .common import (
@@ -27,8 +24,9 @@ from .executor import Executor
 
 class IntermediateResult:
     """Intermediate results for prefiltering.
-    Only one of doc_ids or col_ids should be set.
-    If multiple are set, this should result in an error.
+
+    Only one of doc_ids or col_ids should be set. If multiple are set, this should result in an
+    error.
     """
 
     def __init__(
@@ -107,10 +105,7 @@ class IntermediateResultStore:
         self.fainder_mode = fainder_mode
 
     def add_col_id_results(
-        self,
-        write_group: int,
-        col_ids: set[uint32],
-        doc_to_cols: dict[int, set[int]],
+        self, write_group: int, col_ids: set[uint32], doc_to_cols: dict[int, set[int]]
     ) -> None:
         logger.trace(f"Adding column IDs to write group {write_group}: {col_ids}")
         if write_group in self.results:
@@ -121,10 +116,7 @@ class IntermediateResultStore:
             )
 
     def add_doc_id_results(
-        self,
-        write_group: int,
-        doc_ids: set[int],
-        col_to_doc: NDArray[uint32],
+        self, write_group: int, doc_ids: set[int], col_to_doc: NDArray[uint32]
     ) -> None:
         logger.trace(f"Adding document IDs to write group {write_group}: {doc_ids}")
         if write_group in self.results:
@@ -251,7 +243,9 @@ class PrefilteringExecutor(Transformer[Token, DocResult], Executor):
         logger.trace(f"Parent write groups: {self.parent_write_group}")
         return self.transform(tree)
 
-    ### Operator implementations ###
+    ##########################
+    # Operator implementations
+    ##########################
 
     def keyword_op(self, items: list[Token]) -> tuple[DocResult, int]:
         logger.trace(f"Evaluating keyword term: {items}")

@@ -18,7 +18,7 @@ from sentence_transformers import SentenceTransformer
 
 from backend.config import Settings
 from backend.indices import TantivyIndex, get_tantivy_schema
-from backend.util import dump_json, load_json
+from backend.utils import dump_json, load_json
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
@@ -277,8 +277,8 @@ def generate_embedding_index(
         # model_kwargs={"file_name": "onnx/model_O2.onnx"},
     )
     # Maybe remove the module compilation if it does not help with performance
-    embedder.compile()  # type: ignore
-    embeddings: NDArray[np.float32] = embedder.encode(  # pyright: ignore
+    embedder.compile()  # type: ignore[no-untyped-call]
+    embeddings: NDArray[np.float32] = embedder.encode(  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
         sentences=strings,
         batch_size=batch_size,
         show_progress_bar=show_progress_bar,
@@ -332,13 +332,13 @@ if __name__ == "__main__":
     args = parse_args()
 
     try:
-        settings = Settings()  # type: ignore
+        settings = Settings()  # type: ignore[call-arg]
         if args.log_level is None:
             configure_run(settings.log_level)
         else:
             configure_run(args.log_level)
         logger.debug(settings.model_dump())
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error(f"Error loading settings: {e}")
         sys.exit(1)
 

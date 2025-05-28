@@ -63,7 +63,7 @@ class FainderIndex:
         hist_filter: set[np.uint32] | None = None,
     ) -> set[np.uint32]:
         # Data validation
-        if not (0 < percentile <= 1) or comparison not in ["ge", "gt", "le", "lt"]:
+        if not (0 < percentile <= 1) or comparison not in {"ge", "gt", "le", "lt"}:
             raise FainderError(
                 f"Invalid percentile predicate: {percentile};{comparison};{reference}"
             )
@@ -71,7 +71,7 @@ class FainderIndex:
         id_filter = np.array(list(hist_filter), dtype=np.uint32) if hist_filter else None
 
         # Predicate evaluation
-        query: PctlQuery = (percentile, comparison, reference)  # type: ignore
+        query: PctlQuery = (percentile, comparison, reference)  # type: ignore[assignment]
         match fainder_mode:
             case FainderMode.LOW_MEMORY:
                 if self.rebinning_index is None:
