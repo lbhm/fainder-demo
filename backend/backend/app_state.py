@@ -1,4 +1,3 @@
-import json
 from dataclasses import dataclass
 from typing import Any
 
@@ -175,18 +174,13 @@ class ApplicationState:
         """Load configuration from configs.json file if it exists."""
         config_path = self.settings.fainder_path / "configs.json"
 
-        try:
-            configs = load_json(config_path)
+        configs = load_json(config_path)
 
-            if config_name in configs:
-                logger.info(f"Found configuration '{config_name}' in configs.json")
-                return configs[config_name]
-            logger.warning(f"Configuration '{config_name}' not found in configs.json")
-            return None
-
-        except (json.JSONDecodeError, FileNotFoundError) as e:
-            logger.error(f"Failed to load configs.json: {e}")
-            return None
+        if config_name in configs:
+            logger.info(f"Found configuration '{config_name}' in configs.json")
+            return configs[config_name]
+        logger.warning(f"Configuration '{config_name}' not found in configs.json")
+        return None
 
     def _load_indices(
         self, settings: Settings, config_name: str = "default"
@@ -256,9 +250,7 @@ class ApplicationState:
             tantivy_path=settings.tantivy_path,
         )
 
-        # Load generated metadata
-        with settings.metadata_path.open() as file:
-            metadata = Metadata(**json.load(file))
+        metadata = Metadata(**load_json(settings.metadata_path))
 
         # Load Croissant documents
         croissant_store = get_croissant_store(

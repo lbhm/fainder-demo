@@ -166,10 +166,10 @@ class Settings(BaseSettings):
         return self.fainder_path / "configs.json"
 
     def fainder_rebinning_path_for_config(self, config_name: str) -> Path:
-        return self.fainder_path / f"rebinning_{config_name}.zst"
+        return self.fainder_path / f"{config_name}_rebinning.zst"
 
     def fainder_conversion_path_for_config(self, config_name: str) -> Path:
-        return self.fainder_path / f"conversion_{config_name}.zst"
+        return self.fainder_path / f"{config_name}_conversion.zst"
 
 
 class QueryRequest(BaseModel):

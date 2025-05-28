@@ -534,6 +534,7 @@ const changeFainderConfig = async (configName: string): Promise<boolean> => {
 // Open settings and fetch configs
 const openSettings = async () => {
   showSettings.value = true;
+  configError.value = ""; // Reset temporary state
   await fetchFainderConfigs();
 };
 
@@ -831,18 +832,19 @@ function cancelSettings() {
   showSettings.value = false;
   // Reset temp values
   temp_fainder_config.value = currentConfig.value;
-  // settingsMessage.value = "";
 }
 
 async function saveSettings() {
   configChangeLoading.value = true;
-  // settingsMessage.value = "";
+  configError.value = ""; // Clear any previous error
 
   try {
     // Handle config change if needed
     if (temp_fainder_config.value !== currentConfig.value) {
       const success = await changeFainderConfig(temp_fainder_config.value);
       if (!success) {
+        configError.value =
+          "Failed to update Fainder configuration. Please try again.";
         return; // Keep dialog open to show error
       }
     }

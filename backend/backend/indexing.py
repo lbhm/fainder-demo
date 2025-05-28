@@ -206,8 +206,8 @@ def generate_fainder_indices(
     )
 
     # Save indices with config name in the filename
-    rebinning_file = f"rebinning_{config_name}.zst"
-    conversion_file = f"conversion_{config_name}.zst"
+    rebinning_file = f"{config_name}_rebinning.zst"
+    conversion_file = f"{config_name}_conversion.zst"
 
     save_output(
         output_path / rebinning_file,

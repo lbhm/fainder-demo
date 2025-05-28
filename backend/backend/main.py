@@ -175,6 +175,9 @@ async def upload_files(files: list[UploadFile]) -> MessageResponse:
 async def update_indices() -> MessageResponse:
     """Recreate all indices from the current state of the Croissant store."""
     try:
+        # NOTE: Our approach increases memory usage since we load the new indices without deleting
+        # the old ones, we should consider optimizing this in the future
+
         # Get the current configuration name for logging
         current_config = app_state.current_fainder_config
         logger.info(f"Updating indices with configuration '{current_config}'")
@@ -194,7 +197,7 @@ async def update_indices() -> MessageResponse:
 
 
 @app.post("/change_fainder")
-async def change_fainder(request: FainderConfigRequest) -> MessageResponse:
+async def change_fainder_config(request: FainderConfigRequest) -> MessageResponse:
     """Change the Fainder configuration to use a different index."""
     try:
         # Check if it's the same as the current config
