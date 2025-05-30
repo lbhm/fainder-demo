@@ -13,37 +13,24 @@ if TYPE_CHECKING:
 Costs for each operator in the query tree. Currently, we define operator costs as a hand-picked
 magic number. In the future, we may want to use a more sophisticated cost model.
 """
-LEAF_COSTS = {
-    "keyword_op": 1,
-    "percentile_op": 2,
-    "name_op": 1,
-}
-NODE_COSTS = {
-    "col_op": 1,
-    "negation": 0,
-}
+LEAF_COSTS = {"keyword_op": 1, "percentile_op": 2, "name_op": 1}
+NODE_COSTS = {"col_op": 1, "negation": 0}
 
 
 class OptimizationRule(ABC):
-    """
-    An optimization rule that can be applied to a ParseTree.
-    """
+    """An optimization rule that can be applied to a ParseTree."""
 
     @abstractmethod
     def apply(self, tree: ParseTree) -> None:
-        """
-        Optimizes the given ParseTree in-place using this rule.
-        """
+        """Optimizes the given ParseTree in-place using this rule."""
 
 
 class Optimizer:
-    """
-    This class is a wrapper around individual optimization techniques that operate on a ParseTree.
+    """This class is a wrapper around individual optimization rules that operate on a ParseTree.
 
     Currently, we support the following optimization techniques:
     - Cost-based sorting of sibling operators
     - Keyword merging
-
     """
 
     def __init__(self, cost_sorting: bool = True, keyword_merging: bool = True) -> None:
@@ -58,9 +45,7 @@ class Optimizer:
             self.opt_rules.append(MergeKeywords())
 
     def optimize(self, tree: ParseTree) -> ParseTree:
-        """
-        Optimizes the given ParseTree in-place using a sequence of optimization techniques.
-        """
+        """Optimizes the given ParseTree in-place using a sequence of optimization techniques."""
         for rule in self.opt_rules:
             rule.apply(tree)
         return tree
@@ -69,9 +54,7 @@ class Optimizer:
 def create_optimizer(
     executor_type: ExecutorType, cost_sorting: bool = True, keyword_merging: bool = True
 ) -> Optimizer:
-    """
-    Creates an optimizer based on the executor type.
-    """
+    """Creates an optimizer based on the executor type."""
     if executor_type == ExecutorType.PREFILTERING:
         return Optimizer(cost_sorting=True, keyword_merging=True)
     # TODO: Handle other executor types properly
@@ -79,13 +62,12 @@ def create_optimizer(
 
 
 class QuoteRemover(Visitor[Token], OptimizationRule):
-    """
-    This visitor removes quotes from all string tokens in the tree.
+    """This visitor removes quotes from all string tokens in the tree.
 
     This is a hack and should be removed once we optimize our DQL grammar.
     """
 
-    def __default__(self, tree: ParseTree) -> ParseTree:
+    def __default__(self, tree: ParseTree) -> ParseTree:  # noqa: PLW3201
         children: list[Branch[Token]] = []
         for subtree in tree.children:
             if isinstance(subtree, Token) and subtree.type == "STRING":
@@ -100,15 +82,13 @@ class QuoteRemover(Visitor[Token], OptimizationRule):
 
 
 class ParentAnnotator(Visitor[Token], OptimizationRule):
-    """
-    This visitor annotates each node with its parent node's operator type.
-    """
+    """This visitor annotates each node with its parent node's operator type."""
 
-    def __default__(self, tree: ParseTree) -> ParseTree:
+    def __default__(self, tree: ParseTree) -> ParseTree:  # noqa: PLW3201
         for subtree in tree.children:
             if isinstance(subtree, Tree):
                 if not hasattr(subtree, "parent"):
-                    subtree.parent = tree.data  # type: ignore
+                    subtree.parent = tree.data  # type: ignore[attr-defined]
                 else:
                     raise ValueError(f"Parent of node {subtree} already set")
 
@@ -119,14 +99,12 @@ class ParentAnnotator(Visitor[Token], OptimizationRule):
 
 
 class CostSorter(Visitor[Token], OptimizationRule):
-    """
-    This visitor annotates each node with a cost value and sorts the children of each node by cost.
-    """
+    """This visitor annotates each node with a cost value and sorts children by cost."""
 
-    def __default__(self, tree: ParseTree) -> ParseTree:
+    def __default__(self, tree: ParseTree) -> ParseTree:  # noqa: PLW3201
         if tree.data in LEAF_COSTS:
             # If the node is a leaf node, set its cost and return
-            tree.cost = LEAF_COSTS[tree.data]  # type: ignore
+            tree.cost = LEAF_COSTS[tree.data]  # type: ignore[attr-defined]
             return tree
 
         # Compute the cost of the current node
@@ -141,7 +119,7 @@ class CostSorter(Visitor[Token], OptimizationRule):
         logger.trace("After sorting: {}", tree.children)
 
         # Store the cost on the tree node
-        tree.cost = cost  # type: ignore
+        tree.cost = cost  # type: ignore[attr-defined]
 
         return tree
 
@@ -150,9 +128,7 @@ class CostSorter(Visitor[Token], OptimizationRule):
 
 
 class MergeKeywords(Visitor[Token], OptimizationRule):
-    """
-    This transformer merges sibling keyword queries into a single query string.
-    """
+    """This transformer merges sibling keyword queries into a single query string."""
 
     def __init__(self) -> None:
         super().__init__()
@@ -168,7 +144,7 @@ class MergeKeywords(Visitor[Token], OptimizationRule):
 
     def _merge_terms(self, tree: ParseTree, operator: str) -> None:
         """Merges consecutive keyword terms in a list of parse trees."""
-        if len(tree.children) < 2:
+        if len(tree.children) < 2:  # noqa: PLR2004
             raise ValueError("Junction must have at least two items")
 
         keyword_ops: list[ParseTree] = []
@@ -177,7 +153,7 @@ class MergeKeywords(Visitor[Token], OptimizationRule):
         one_positive_kw_op = False
         for child in tree.children:
             if isinstance(child, Token):
-                raise ValueError("Junction children must be trees")
+                raise TypeError("Junction children must be trees, not tokens.")
             if child.data == "keyword_op":
                 keyword_ops.append(child)
                 one_positive_kw_op = True
@@ -193,7 +169,7 @@ class MergeKeywords(Visitor[Token], OptimizationRule):
                 other_ops.append(child)
 
         # Nothing to merge for less than two keyword operators
-        if len(keyword_ops) < 2 or one_positive_kw_op is False:
+        if len(keyword_ops) < 2 or one_positive_kw_op is False:  # noqa: PLR2004
             return
 
         merged_string = self._merge_keyword_string(keyword_ops, operator)
@@ -214,7 +190,7 @@ class MergeKeywords(Visitor[Token], OptimizationRule):
 
         child = tree.children[0]
         if not isinstance(child, Token):
-            raise ValueError("Negation must have a token child")
+            raise TypeError("Negation must have a token child")
 
         return Tree(Token("RULE", "keyword_op"), [Token("STRING", f"-({child})")])
 

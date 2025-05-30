@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 from loguru import logger
 
 from backend.config import CroissantError, CroissantStoreType
-from backend.util import dump_json, load_json
+from backend.utils import dump_json, load_json
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -183,4 +183,9 @@ def get_croissant_store(
                 dataset_slug=dataset_slug,
                 cache_size=cache_size,
                 overwrite_docs=overwrite_docs,
+            )
+        case _:
+            raise TypeError(
+                f"Unsupported Croissant store type: {store_type}. "
+                "Supported types are: 'dict', 'file'."
             )

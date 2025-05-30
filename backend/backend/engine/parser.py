@@ -67,4 +67,4 @@ def main() -> None:
     args = argparser.parse_args()
 
     parser = Parser()
-    print(parser.parse(args.query).pretty(), end="")
+    print(parser.parse(args.query).pretty(), end="")  # noqa: T201

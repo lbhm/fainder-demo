@@ -4,7 +4,7 @@ from backend.config import FainderMode
 
 
 class FilteringStopPointsConfig(TypedDict):
-    """sizes at which point to stop prefiltering per Fainder mode"""
+    """Sizes at which point to stop prefiltering per Fainder mode."""
 
     num_doc_ids: int
     num_col_ids: int

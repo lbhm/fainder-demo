@@ -73,50 +73,38 @@ torch = { index = "pytorch" }
 line-length = 99
 target-version = "py311"
 
+[tool.ruff.format]
+skip-magic-trailing-comma = false
+
 [tool.ruff.lint]
-select = [
-    "A",     # flake8-builtins
-    "ANN",   # flake8-annotations
-    "ASYNC", # flake8-async
-    "B",     # flake8-bugbear
-    "COM",   # flake8-commas
-    "C4",    # flake8-comprehensions
-    "C90",   # mccabe
-    "E",     # pycodestyle errors
-    "F",     # pyflakes
-    "FAST",  # FastAPI rules
-    "FURB",  # refurb
-    "I",     # isort
-    "ICN",   # flake8-import-conventions
-    "ISC",   # flake8-implicit-str-concat
-    "N",     # pep8-naming
-    "NPY",   # Numpy checks
-    "PERF",  # perflint
-    "PIE",   # flake8-pie
-    "PL",    # pylint
-    "PT",    # flake8-pytest-style
-    "PTH",   # flake8-use-pathlib
-    "PYI",   # flake8-pyi
-    "Q",     # flake8-quotes
-    "RET",   # flake8-return
-    "RUF",   # ruff-specific rules
-    "S",     # flake8-bandit
-    "SIM",   # flake8-simplify
-    "TC",    # flake8-typing-checking
-    "UP",    # pyupgrade
-    "W",     # pycodestyle warnings
-]
+select = ["ALL"]
 ignore = [
-    "COM812", # missing-trailing-comma
-    "D",      # pydocstyle
-    "EM",     # flake8-errmsg
-    "PLR",    # pylint refactoring
-    "S101",   # assert (needed for pytest)
+    "AIR",     # airflow
+    "ARG",     # flake8-unused-arguments
+    "COM812",  # missing-trailing-comma
+    "CPY",     # flake8-copyright
+    "D1",      # pydocstyle undocumented-*
+    "DJ",      # flake8-django
+    "DOC",     # pydoclint
+    "EM",      # flake8-errmsg
+    "ERA",     # eradicate
+    "FBT",     # flake8-boolean-trap
+    "FIX",     # flake8-fixme
+    "PLR09",   # pylint too-many-*
+    "PLR6301", # no-self-use
+    "S101",    # assert (needed for pytest)
+    "TD",      # flake8-todos
+    "TRY003",  # raise-vanilla-args
 ]
+isort.split-on-trailing-comma = false
+preview = true
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
 
 [tool.pyright]
 include = ["backend", "tests"]
-# reportUnnecessaryTypeIgnoreComment = true
+reportUnnecessaryTypeIgnoreComment = false
 typeCheckingMode = "strict"
 venvPath = "."
 venv = ".venv"
@@ -125,3 +113,5 @@ venv = ".venv"
 files = ["backend", "tests"]
 strict = true
 plugins = ["numpy.typing.mypy_plugin"]
+enable_error_code = ["ignore-without-code"]
+warn_unused_ignores = true

@@ -44,9 +44,7 @@ class TantivyIndex:
         self.index = self.load_index(self.schema, recreate)
 
     def load_index(self, schema: tantivy.Schema, recreate: bool = False) -> tantivy.Index:
-        """
-        Load the index from the index path. If the index does not exist, create a new index.
-        """
+        """Load the index from the index path. If the index does not exist, create a new index."""
         tantivy_path = Path(self.index_path)
         if recreate and tantivy_path.exists():
             # Delete the index if it already exists to make sure we start from scratch
@@ -129,7 +127,7 @@ class TantivyIndex:
                         offset += len("<mark></mark>")
 
                     field_name = field
-                    if field in ["creator", "publisher"]:
+                    if field in {"creator", "publisher"}:
                         field_name += "-name"
                     highlights[doc_id][field_name] = html_snippet
 

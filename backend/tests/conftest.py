@@ -1,4 +1,3 @@
-import json
 import sys
 from collections.abc import Generator
 from pathlib import Path
@@ -14,9 +13,7 @@ from backend.indices import FainderIndex, HnswIndex, TantivyIndex
 
 @pytest.fixture(autouse=True, scope="module")
 def _setup_and_teardown() -> Generator[None, Any, None]:  # pyright: ignore[reportUnusedFunction]
-    """
-    Generic setup and teardown fixture that runs before and after each test.
-    """
+    """Generic setup and teardown fixture that runs before and after each test."""
     # Setup code
 
     # Create logs directory if it doesn't exist
@@ -49,11 +46,11 @@ def default_engine() -> Engine:
     settings = Settings(
         data_dir=Path(__file__).parent / "assets",
         collection_name="toy_collection",
-        _env_file=None,  # type: ignore
+        _env_file=None,  # type: ignore[call-arg]
     )
 
-    with settings.metadata_path.open() as file:
-        metadata = Metadata(**json.load(file))
+    with settings.metadata_path.open("rb") as f:
+        metadata = Metadata.model_validate_json(f.read())
 
     tantivy_index = TantivyIndex(index_path=settings.tantivy_path, recreate=False)
     # Fainder indices for testing are generated with the following parameters:
@@ -82,11 +79,11 @@ def small_fainder_engine() -> Engine:
     settings = Settings(
         data_dir=Path(__file__).parent / "assets",
         collection_name="toy_collection",
-        _env_file=None,  # type: ignore
+        _env_file=None,  # type: ignore[call-arg]
     )
 
-    with settings.metadata_path.open() as file:
-        metadata = Metadata(**json.load(file))
+    with settings.metadata_path.open("rb") as f:
+        metadata = Metadata.model_validate_json(f.read())
 
     tantivy_index = TantivyIndex(index_path=settings.tantivy_path, recreate=False)
     # Fainder indices for testing are generated with the following parameters:
@@ -117,11 +114,11 @@ def prefiltering_engine() -> Engine:
     settings = Settings(
         data_dir=Path(__file__).parent / "assets",
         collection_name="toy_collection",
-        _env_file=None,  # type: ignore
+        _env_file=None,  # type: ignore[call-arg]
     )
 
-    with settings.metadata_path.open() as file:
-        metadata = Metadata(**json.load(file))
+    with settings.metadata_path.open("rb") as f:
+        metadata = Metadata.model_validate_json(f.read())
 
     tantivy_index = TantivyIndex(index_path=settings.tantivy_path, recreate=False)
     # Fainder indices for testing are generated with the following parameters:
@@ -150,11 +147,11 @@ def parallel_engine() -> Engine:
     settings = Settings(
         data_dir=Path(__file__).parent / "assets",
         collection_name="toy_collection",
-        _env_file=None,  # type: ignore
+        _env_file=None,  # type: ignore[call-arg]
     )
 
-    with settings.metadata_path.open() as file:
-        metadata = Metadata(**json.load(file))
+    with settings.metadata_path.open("rb") as f:
+        metadata = Metadata.model_validate_json(f.read())
 
     tantivy_index = TantivyIndex(index_path=settings.tantivy_path, recreate=False)
     # Fainder indices for testing are generated with the following parameters:
@@ -183,11 +180,11 @@ def parallel_prefiltering_engine() -> Engine:
     settings = Settings(
         data_dir=Path(__file__).parent / "assets",
         collection_name="toy_collection",
-        _env_file=None,  # type: ignore
+        _env_file=None,  # type: ignore[call-arg]
     )
 
-    with settings.metadata_path.open() as file:
-        metadata = Metadata(**json.load(file))
+    with settings.metadata_path.open("rb") as f:
+        metadata = Metadata.model_validate_json(f.read())
 
     tantivy_index = TantivyIndex(index_path=settings.tantivy_path, recreate=False)
     # Fainder indices for testing are generated with the following parameters:

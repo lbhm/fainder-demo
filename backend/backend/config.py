@@ -1,9 +1,8 @@
 import logging
 import os
 import sys
-from collections.abc import Sequence
-from enum import Enum
-from itertools import chain
+import warnings
+from enum import StrEnum, auto
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any, Literal
 
@@ -36,25 +35,25 @@ DocumentArray = NDArray[np.uint32]
 ColumnArray = NDArray[np.uint32]
 
 
-class ExecutorType(str, Enum):
+class ExecutorType(StrEnum):
     """Enum representing different executor types for query execution."""
 
-    SIMPLE = "simple"
-    PREFILTERING = "prefiltering"
-    THREADED = "threaded"
-    THREADED_PREFILTERING = "threaded_prefiltering"
+    SIMPLE = auto()
+    PREFILTERING = auto()
+    THREADED = auto()
+    THREADED_PREFILTERING = auto()
 
 
-class CroissantStoreType(str, Enum):
-    DICT = "dict"
-    FILE = "file"
+class CroissantStoreType(StrEnum):
+    DICT = auto()
+    FILE = auto()
 
 
-class FainderMode(str, Enum):
-    LOW_MEMORY = "low_memory"
-    FULL_PRECISION = "full_precision"
-    FULL_RECALL = "full_recall"
-    EXACT = "exact"
+class FainderMode(StrEnum):
+    LOW_MEMORY = auto()
+    FULL_PRECISION = auto()
+    FULL_RECALL = auto()
+    EXACT = auto()
 
 
 class Metadata(BaseModel):
@@ -228,9 +227,7 @@ class FainderConfigsResponse(BaseModel):
 
 
 class InterceptHandler(logging.Handler):
-    """Logs to loguru from Python logging module.
-
-    See https://github.com/MatthewScholefield/loguru-logging-intercept"""
+    """Intercepts standard logging and routes it to Loguru."""
 
     def emit(self, record: logging.LogRecord) -> None:
         """Route a record to loguru."""
@@ -239,48 +236,40 @@ class InterceptHandler(logging.Handler):
         except ValueError:
             level = str(record.levelno)
 
-        # Find caller from where the logged message originated
-        frame: FrameType | None = logging.currentframe()
-        depth = 2
-        while frame and frame.f_code.co_filename == logging.__file__:
+        # Traverse the stack to find the actual caller
+        frame: FrameType | None
+        frame, depth = logging.currentframe(), 1
+        while frame:
             frame = frame.f_back
+            if frame and frame.f_globals.get("__name__") not in {
+                "logging",
+                "loguru._handler",
+                "loguru._logger",
+            }:
+                break
             depth += 1
-        logger_with_opts = logger.opt(depth=depth, exception=record.exc_info)
-        try:
-            logger_with_opts.log(level, record.getMessage())
-        except Exception as e:
-            safe_msg = getattr(record, "msg", None) or str(record)
-            logger_with_opts.warning(
-                f"Exception logging the following native logger message: {safe_msg}, {e}"
-            )
+
+        logger.opt(depth=depth, exception=record.exc_info).log(level, record.getMessage())
 
 
-def configure_logging(level: str, modules: Sequence[str] = ()) -> None:
-    # TODO: Maybe move from loguru to standard logging (in case of performance problems)
+def configure_logging(level: str) -> None:
     logger.remove()
     logger.add(
         sys.stdout,
-        format="{time:HH:mm:ss} | {level: >5} | {file}:{line} | <level>{message}</level>",
+        format=(
+            "<green>{time:HH:mm:ss}</green> | <level>{level:.1}</level> | {name}:{line} | "
+            "<level>{message}</level>"
+        ),
         level=level,
     )
 
-    logging.basicConfig(handlers=[InterceptHandler()], level=0, force=True)
-    for logger_name in chain(("",), modules):
-        if logger_name:
-            # Undocumented way of getting a logger without creating it:
-            mod_logger = logging.Logger.manager.loggerDict.get(logger_name)
-        else:
-            # Root logger is not contained in loggerDict
-            mod_logger = logging.getLogger()
-        if (mod_logger) and (isinstance(mod_logger, logging.Logger)):
-            mod_logger.handlers = [InterceptHandler(level=0)]
-            mod_logger.propagate = False
-            logger.trace("InterceptHandler in place for logger {}", logger_name)
-        else:
-            logger.debug("No logger found named {}", logger_name)
+    # Intercept all standard logging
+    logging.root.handlers = [InterceptHandler()]
+    for name in logging.root.manager.loggerDict:
+        logging.getLogger(name).handlers = []
+        logging.getLogger(name).propagate = True
 
-    # NOTE: This is a helper to list all loggers in the system
-    # for k, _ in logging.Logger.manager.loggerDict.items():
-    #     if "transformer" in k or "torch" in k:
-    #         continue
-    #     print(k)
+    # Redirect warnings to Loguru
+    warnings.showwarning = lambda msg, cat, fn, ln, *args: logger.warning(  # pyright: ignore[reportUnknownLambdaType]
+        f"{cat.__name__}: {msg} ({fn}:{ln})"  # pyright: ignore[reportUnknownMemberType]
+    )

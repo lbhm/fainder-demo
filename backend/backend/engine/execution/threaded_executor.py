@@ -17,8 +17,7 @@ from .executor import Executor
 
 
 class ThreadedExecutor(Transformer[Token, DocResult], Executor):
-    """This transformer evaluates a parse tree bottom-up
-    and computes the query result in parallel using Threading."""
+    """This transformer evaluates a query bottom-up and computes results in parallel threads."""
 
     def __init__(
         self,
@@ -67,18 +66,20 @@ class ThreadedExecutor(Transformer[Token, DocResult], Executor):
         return result
 
     def _resolve_item(self, item: TResult | Future[TResult]) -> TResult:
-        """Resolve item if it's a Future, otherwise return the item itself"""
+        """Resolve item if it's a Future, otherwise return the item itself."""
         return item.result() if isinstance(item, Future) else item
 
     def _resolve_items(self, items: Sequence[TResult | Future[TResult]]) -> list[TResult]:
         """Resolve all items in the list if they are futures."""
         return [self._resolve_item(item) for item in items]
 
-    ### Operator implementations ###
+    ##########################
+    # Operator implementations
+    ##########################
 
     def keyword_op(self, items: list[Token]) -> Future[DocResult]:
         def _keyword_task(token: Token) -> DocResult:
-            """Task function for keyword search to be run in a thread"""
+            """Task function for keyword search to be run in a thread."""
             logger.trace("Thread executing keyword search for: {}", token)
             result_docs, scores, highlights = self.tantivy_index.search(
                 token, self.enable_highlighting, self.min_usability_score, self.rank_by_usability
@@ -98,7 +99,7 @@ class ThreadedExecutor(Transformer[Token, DocResult], Executor):
 
     def name_op(self, items: list[Token]) -> Future[ColResult]:
         def _name_task(column: Token, k: int) -> ColResult:
-            """Task function for column name search to be run in a thread"""
+            """Task function for column name search to be run in a thread."""
             logger.trace("Thread executing column name search for: {}", column)
             return self.hnsw_index.search(column, k, None)
 
@@ -117,7 +118,7 @@ class ThreadedExecutor(Transformer[Token, DocResult], Executor):
 
     def percentile_op(self, items: list[Token]) -> Future[ColResult]:
         def _percentile_task(percentile: float, comparison: str, reference: float) -> ColResult:
-            """Task function for percentile search to be run in a thread"""
+            """Task function for percentile search to be run in a thread."""
             logger.trace(
                 "Thread executing percentile search with {} {} {}",
                 percentile,

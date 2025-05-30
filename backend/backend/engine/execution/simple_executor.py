@@ -49,7 +49,9 @@ class SimpleExecutor(Transformer[Token, DocResult], Executor):
         """Start processing the parse tree."""
         return self.transform(tree)
 
-    ### Operator implementations ###
+    ##########################
+    # Operator implementations
+    ##########################
 
     def keyword_op(self, items: list[Token]) -> DocResult:
         logger.trace("Evaluating keyword term: {}", items)
