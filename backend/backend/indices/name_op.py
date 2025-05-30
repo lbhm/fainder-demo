@@ -37,7 +37,7 @@ class HnswIndex:
             return
 
         # Embedding model
-        logger.debug(f"Loading SentenceTransformer model '{model}'")
+        logger.debug("Loading SentenceTransformer model '{}'", model)
         self.embedder = SentenceTransformer(
             model_name_or_path=model,
             cache_folder=(path.parent / "model_cache").as_posix(),
@@ -106,9 +106,11 @@ class HnswIndex:
                 for col_id in self.vector_to_cols[vector_id]
             }
             logger.debug(
-                f"Column search '{column_name}' with k={k} returned neighbors "
-                f"{[self.vector_to_name[vector_id] for vector_id in vector_ids[0]]} with "
-                f"distances {distances[0]}"
+                "Column search '{}' with k={} returned neighbors {} with distances {}",
+                column_name,
+                k,
+                [self.vector_to_name[vector_id] for vector_id in vector_ids[0]],
+                distances[0],
             )
 
         return result

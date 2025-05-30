@@ -64,7 +64,7 @@ class CroissantStore(ABC):
 
         if file_path.exists():
             if self.overwrite_docs:
-                logger.warning(f"Overwriting document with dataset slug {ref}")
+                logger.warning("Overwriting document with dataset slug {}", ref)
             else:
                 raise CroissantError(f"Document with dataset slug {ref} already exists")
 
@@ -109,7 +109,7 @@ class DictCroissantStore(CroissantStore):
         try:
             return self.documents[doc_id]
         except KeyError:
-            logger.error(f"Document with id {doc_id} not found")
+            logger.error("Document with id {} not found", doc_id)
             return {}
 
     def add_document(self, doc: Document) -> None:
@@ -149,10 +149,10 @@ class FileCroissantStore(CroissantStore):
         try:
             return load_json(self.doc_to_path[doc_id])
         except KeyError:
-            logger.error(f"Document with id {doc_id} not found")
+            logger.error("Document with id {} not found", doc_id)
             return {}
         except (FileNotFoundError, ValueError) as e:
-            logger.error(f"Error loading document with id {doc_id}: {e}")
+            logger.error("Error loading document with id {}: {}", doc_id, e)
             return {}
 
     def replace_documents(self, doc_to_path: list[str]) -> None:

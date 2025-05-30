@@ -45,7 +45,6 @@ def _apply_field_highlighting(doc: Document, field: str, highlighted: str) -> No
     """Apply highlighting to a specific field in the document."""
     field_split = field.split("_")
     helper = doc
-    logger.trace(f"Processing field: {field} and highlighting: {highlighted}")
     for i in range(len(field_split)):
         if i == len(field_split) - 1:
             helper[field_split[i]] = highlighted
@@ -89,7 +88,7 @@ def _apply_highlighting(
 @app.post("/query")
 async def query(request: QueryRequest) -> QueryResponse:
     """Execute a query and return the results."""
-    logger.info(f"Received query: {request}")
+    logger.info("Received query: {}", request)
 
     try:
         start_time = time.perf_counter()
@@ -114,8 +113,11 @@ async def query(request: QueryRequest) -> QueryResponse:
 
         search_time = time.perf_counter() - start_time
         logger.info(
-            f"Query '{request.query}' returned {len(doc_ids)} results and {len(docs)} paginated "
-            f"documents in {search_time:.4f} seconds."
+            "Query '{}' returned {} results and {} paginated documents in {:.4f} seconds.",
+            request.query,
+            len(doc_ids),
+            len(docs),
+            search_time,
         )
         return QueryResponse(
             query=request.query,
@@ -127,23 +129,25 @@ async def query(request: QueryRequest) -> QueryResponse:
         )
     except UnexpectedInput as e:
         logger.info(
-            f"Bad user query:\n{e.get_context(request.query).strip()}\n"
-            f"(line {e.line}, column {e.column})"
+            "Bad user query:\n{}\n(line {}, column {})",
+            e.get_context(request.query).strip(),
+            e.line,
+            e.column,
         )
         raise HTTPException(
             status_code=400, detail=f"Invalid query: {e.get_context(request.query)}"
         ) from e
     except FainderError as e:
-        logger.info(f"Error executing percentile predicate: {e}")
+        logger.info("Error executing percentile predicate: {}", e)
         raise HTTPException(
             status_code=400, detail=f"Error executing percentile predicate: {e}"
         ) from e
     except ColumnSearchError as e:
-        logger.info(f"Column search error: {e}")
+        logger.info("Column search error: {}", e)
         raise HTTPException(status_code=400, detail=f"Column search error: {e}") from e
     # TODO: Add other known errors for specific error handling
     except Exception as e:
-        logger.error(f"Unknown query execution error: {e}")
+        logger.error("Unknown query execution error: {}", e)
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail="Internal server error") from e
 
@@ -161,13 +165,13 @@ async def upload_files(files: list[UploadFile]) -> MessageResponse:
         for file in files:
             content = await file.read()
             app_state.croissant_store.add_document(orjson.loads(content))
-            logger.debug(f"Uploaded file: {file.filename}")
+            logger.debug("Uploaded file: {}", file.filename)
 
-        logger.info(f"{len(files)} files uploaded successfully")
+        logger.info("{} files uploaded successfully", len(files))
         return MessageResponse(message=f"{len(files)} files uploaded successfully")
     except Exception as e:
-        logger.error(f"Upload error: {e}")
-        logger.debug(f"Upload error traceback: {e.__traceback__}")
+        logger.error("Upload error: {}", e)
+        logger.debug("Upload error traceback: {}", e.__traceback__)
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -189,10 +193,10 @@ async def update_indices() -> MessageResponse:
             message=f"Indices updated successfully with configuration '{current_config}'"
         )
     except IndexingError as e:
-        logger.error(f"Indexing error: {e}")
+        logger.error("Indexing error: {}", e)
         raise HTTPException(status_code=500, detail="Indexing error") from e
     except Exception as e:
-        logger.error(f"Unknown indexing error: {e}, {e.args}")
+        logger.error("Unknown indexing error: {}, {}", e, e.args)
         raise HTTPException(status_code=500, detail="Internal server error") from e
 
 

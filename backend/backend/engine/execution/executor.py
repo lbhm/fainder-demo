@@ -36,7 +36,7 @@ class Executor(ABC):
         """Start processing the parse tree."""
 
     def updates_scores(self, doc_ids: Sequence[int], scores: Sequence[float]) -> None:
-        logger.trace(f"Updating scores for {len(doc_ids)} documents")
+        logger.trace("Updating scores for {} documents", len(doc_ids))
 
         for doc_id, score in zip(doc_ids, scores, strict=True):
             self.scores[doc_id] += score

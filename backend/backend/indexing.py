@@ -78,7 +78,7 @@ def generate_metadata(
             num_hists += sum(1 for col in fields if "histogram" in col)
             num_cols += len(fields)
 
-    logger.info(f"Found {num_hists} histograms and {num_cols} columns")
+    logger.info("Found {} histograms and {} columns", num_hists, num_cols)
 
     # We need to pre-allocate the column ID mapping since we insert at different indices
     col_to_doc: list[int] = [-1] * num_cols
@@ -122,7 +122,7 @@ def generate_metadata(
                         vector_id += 1
                     vector_to_cols[name_to_vector[col_name]].add(col_id)
         except KeyError as e:
-            logger.error(f"KeyError {e} reading file {path}")
+            logger.error("KeyError {} reading file {}", e, path)
 
         # Store the document path for file-based Croissant stores
         doc_to_path.append(path.name)
@@ -135,8 +135,10 @@ def generate_metadata(
         tantivy_docs.append(tantivy.Document.from_dict(json_doc, tantivy_schema))  # pyright: ignore[reportUnknownMemberType]
 
     logger.info(
-        f"Found {len(doc_to_cols)} documents with {len(col_to_doc)} columns and "
-        f"{num_hists} histograms."
+        "Found {} documents with {} columns and {} histograms.",
+        len(doc_to_cols),
+        len(col_to_doc),
+        num_hists,
     )
 
     # Index the documents in Tantivy (we index all documents at once to increase performance)
@@ -175,7 +177,7 @@ def generate_fainder_indices(
 ) -> None:
     logger.info(f"Starting Fainder index generation with config '{config_name}'")
 
-    logger.info(f"Clustering {len(hists)} histograms")
+    logger.info("Clustering {} histograms", len(hists))
     clustered_hists, cluster_bins, _ = cluster_histograms(
         hists=hists,
         transform=transform,
@@ -339,7 +341,7 @@ if __name__ == "__main__":
             configure_run(args.log_level)
         logger.debug(settings.model_dump())
     except Exception as e:  # noqa: BLE001
-        logger.error(f"Error loading settings: {e}")
+        logger.error("Error loading settings: {}", e)
         sys.exit(1)
 
     hists, name_to_vector, _, _ = generate_metadata(  # type: ignore[assignment]

@@ -73,7 +73,7 @@ class ApplicationState:
                     self._load_indices(settings, current_config)
                 )
             except (FileNotFoundError, IndexingError) as e:
-                logger.warning(f"Failed to load indices: {e}. Recreating...")
+                logger.warning("Failed to load indices: {}. Recreating...", e)
                 (metadata, croissant_store, tantivy_index, fainder_index, hnsw_index, engine) = (
                     self._recreate_indices(settings, current_config)
                 )
@@ -89,7 +89,7 @@ class ApplicationState:
                 current_fainder_config=current_config,
             )
         except Exception as e:
-            logger.error(f"Failed to initialize application state: {e}")
+            logger.error("Failed to initialize application state: {}", e)
             raise
 
     def update_indices(self) -> None:

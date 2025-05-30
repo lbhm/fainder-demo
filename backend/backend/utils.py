@@ -20,5 +20,5 @@ def load_json(path: Path) -> dict[str, Any]:
         with path.open("rb") as file:
             return orjson.loads(file.read())  # type: ignore[no-any-return]
     except orjson.JSONDecodeError as e:
-        logger.error(f"Error parsing JSON from {path}: {e}")
+        logger.error("Error parsing JSON from {}: {}", path, e)
         return {}

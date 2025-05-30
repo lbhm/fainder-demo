@@ -112,10 +112,12 @@ class FainderIndex:
                     id_filter=id_filter,
                 )
 
-        logger.trace(f"Results: {result}")
         logger.info(
-            f"Query '{query}' ({fainder_mode} mode) returned {len(result)} histograms in "
-            f"{runtime:.2f} seconds."
+            "Query '{}' ({} mode) returned {} histograms in {} seconds.",
+            query,
+            fainder_mode,
+            len(result),
+            f"{runtime:.2f}",
         )
 
         return result

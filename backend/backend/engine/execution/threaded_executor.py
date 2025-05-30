@@ -81,14 +81,14 @@ class ThreadedExecutor(Transformer[Token, DocResult], Executor):
     def keyword_op(self, items: list[Token]) -> Future[DocResult]:
         def _keyword_task(token: Token) -> DocResult:
             """Task function for keyword search to be run in a thread."""
-            logger.trace(f"Thread executing keyword search for: {token}")
+            logger.trace("Thread executing keyword search for: {}", token)
             result_docs, scores, highlights = self.tantivy_index.search(
                 token, self.enable_highlighting, self.min_usability_score, self.rank_by_usability
             )
             self.updates_scores(result_docs, scores)
             return set(result_docs), (highlights, set())
 
-        logger.trace(f"Starting threaded keyword search for: {items}")
+        logger.trace("Evaluating keyword term: {}", items)
 
         # Submit task to thread pool and store the future with a unique ID
         task_id = id(items[0])
@@ -101,10 +101,10 @@ class ThreadedExecutor(Transformer[Token, DocResult], Executor):
     def name_op(self, items: list[Token]) -> Future[ColResult]:
         def _name_task(column: Token, k: int) -> ColResult:
             """Task function for column name search to be run in a thread."""
-            logger.trace(f"Thread executing column name search for: {column}")
+            logger.trace("Thread executing column name search for: {}", column)
             return self.hnsw_index.search(column, k, None)
 
-        logger.trace(f"Starting threaded column name search for: {items}")
+        logger.trace("Evaluating column name term: {}", items)
 
         column = items[0]
         k = int(items[1])
@@ -121,11 +121,14 @@ class ThreadedExecutor(Transformer[Token, DocResult], Executor):
         def _percentile_task(percentile: float, comparison: str, reference: float) -> ColResult:
             """Task function for percentile search to be run in a thread."""
             logger.trace(
-                f"Thread executing percentile search with {percentile} {comparison} {reference}"
+                "Thread executing percentile search with {} {} {}",
+                percentile,
+                comparison,
+                reference,
             )
             return self.fainder_index.search(percentile, comparison, reference, self.fainder_mode)
 
-        logger.trace(f"Starting threaded percentile search for: {items}")
+        logger.trace("Evaluating percentile term: {}", items)
 
         percentile = float(items[0])
         comparison: str = items[1]
@@ -140,7 +143,7 @@ class ThreadedExecutor(Transformer[Token, DocResult], Executor):
         return future
 
     def col_op(self, items: Sequence[ColResult | Future[ColResult]]) -> DocResult:
-        logger.trace(f"Evaluating column term: {items}")
+        logger.trace("Evaluating column term with items of length: {}", len(items))
 
         if len(items) != 1:
             raise ValueError("Column term must have exactly one item")
@@ -155,7 +158,7 @@ class ThreadedExecutor(Transformer[Token, DocResult], Executor):
         return doc_ids, ({}, set())
 
     def conjunction(self, items: Sequence[TResult | Future[TResult]]) -> TResult:
-        logger.trace(f"Evaluating conjunction with items: {items}")
+        logger.trace("Evaluating conjunction with items of length: {}", len(items))
 
         # Resolve all futures in items
         resolved_items = self._resolve_items(items)
@@ -163,7 +166,7 @@ class ThreadedExecutor(Transformer[Token, DocResult], Executor):
         return junction(resolved_items, and_, self.enable_highlighting, self.metadata.doc_to_cols)
 
     def disjunction(self, items: Sequence[TResult | Future[TResult]]) -> TResult:
-        logger.trace(f"Evaluating disjunction with items: {items}")
+        logger.trace("Evaluating disjunction with items of length: {}", len(items))
 
         # Resolve all futures in items
         resolved_items = self._resolve_items(items)
@@ -171,11 +174,10 @@ class ThreadedExecutor(Transformer[Token, DocResult], Executor):
         return junction(resolved_items, or_, self.enable_highlighting, self.metadata.doc_to_cols)
 
     def negation(self, items: Sequence[TResult | Future[TResult]]) -> TResult:
-        logger.trace(f"Evaluating negation with {len(items)} items")
+        logger.trace("Evaluating negation with items of length: {}", len(items))
 
         if len(items) != 1:
             raise ValueError("Negation term must have exactly one item")
-
         # Resolve the item if it's a future
         item = self._resolve_item(items[0])
 
@@ -193,7 +195,7 @@ class ThreadedExecutor(Transformer[Token, DocResult], Executor):
         return all_columns - to_negate_cols
 
     def query(self, items: Sequence[DocResult | Future[DocResult]]) -> DocResult:
-        logger.trace(f"Evaluating query with {len(items)} items")
+        logger.trace("Evaluating query with {} items", len(items))
 
         if len(items) != 1:
             raise ValueError("Query must have exactly one item")

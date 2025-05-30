@@ -66,13 +66,13 @@ class TantivyIndex:
         min_usability_score: float = 0.0,
         rank_by_usability: bool = True,
     ) -> tuple[list[int], list[float], DocumentHighlights]:
-        logger.debug(f"Searching Tantivy index with query: {query}")
+        logger.debug("Searching Tantivy index with query: {}", query)
         parsed_query = self.index.parse_query(query, default_field_names=DOC_FIELDS)
         searcher = self.index.searcher()
 
         search_start = time.perf_counter()
         search_result = searcher.search(parsed_query, limit=MAX_DOCS).hits
-        logger.info(f"Tantivy search took {time.perf_counter() - search_start:.5f}s")
+        logger.info("Tantivy search took {:.5f}s", time.perf_counter() - search_start)
 
         results: list[int] = []
         scores: list[float] = []
@@ -83,13 +83,14 @@ class TantivyIndex:
             doc = searcher.doc(doc_address)
             doc_id: int | None = doc.get_first("id")
             if doc_id is None:
-                logger.error(f"Tantivy document with address {doc_address} has no id field")
+                logger.error("Tantivy document with address {} has no id field", doc_address)
                 continue
             usability_score: int | None = doc.get_first("usability")
             if usability_score is None or usability_score < min_usability_score:
                 logger.debug(
-                    f"Tantivy document with id {doc_id} has no usability field or its score is "
-                    "below the threshold"
+                    "Tantivy document with id {} has no usability field or its score is "
+                    "below the threshold",
+                    doc_id,
                 )
                 continue
             if rank_by_usability:
@@ -128,5 +129,5 @@ class TantivyIndex:
                         field_name += "-name"
                     highlights[doc_id][field_name] = html_snippet
 
-        logger.info(f"Processing results took {time.perf_counter() - process_start:.5f}s")
+        logger.info("Processing results took {:.5f}s", time.perf_counter() - process_start)
         return results, scores, highlights
