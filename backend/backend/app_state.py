@@ -158,11 +158,16 @@ class ApplicationState:
 
         logger.info(f"Fainder index updated successfully with configuration '{config_name}'")
 
-    def _load_config_from_json(self, config_name: str) -> dict[str, Any] | None:
+    def _load_config_from_json(
+        self, config_name: str, settings: Settings
+    ) -> dict[str, Any] | None:
         """Load configuration from configs.json file if it exists."""
-        config_path = self.settings.fainder_path / "configs.json"
-
-        configs = load_json(config_path)
+        config_path = settings.fainder_path / "configs.json"
+        try:
+            configs = load_json(config_path)
+        except FileNotFoundError:
+            logger.warning(f"Configuration file {config_path} not found")
+            return None
 
         if config_name in configs:
             logger.info(f"Found configuration '{config_name}' in configs.json")
@@ -264,7 +269,7 @@ class ApplicationState:
         )
 
         # Load configuration from configs.json if available
-        config_params: dict[str, Any] | None = self._load_config_from_json(config_name)
+        config_params: dict[str, Any] | None = self._load_config_from_json(config_name, settings)
 
         if config_params:
             # Use parameters from configs.json
