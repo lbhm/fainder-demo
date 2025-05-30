@@ -152,7 +152,7 @@ async def query(request: QueryRequest) -> QueryResponse:
 async def upload_files(files: list[UploadFile]) -> MessageResponse:
     """Add new JSON documents to the Croissant store."""
     for file in files:
-        if not file.filename:
+        if file.filename is None:
             raise HTTPException(status_code=400, detail="No file uploaded")
         if not file.filename.endswith(".json"):
             raise HTTPException(status_code=400, detail="Only .json files are accepted")

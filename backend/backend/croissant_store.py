@@ -184,3 +184,8 @@ def get_croissant_store(
                 cache_size=cache_size,
                 overwrite_docs=overwrite_docs,
             )
+        case _:
+            raise TypeError(
+                f"Unsupported Croissant store type: {store_type}. "
+                "Supported types are: 'dict', 'file'."
+            )

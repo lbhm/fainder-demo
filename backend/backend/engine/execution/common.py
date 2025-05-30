@@ -250,4 +250,4 @@ def junction(
         return reduce(operator, [item[0] for item in items]), ({}, set())  # type: ignore[return-value]
 
     # Items contains column results (i.e., ColResult)
-    return reduce(operator, items)  # type: ignore[return-value]
+    return reduce(operator, items)

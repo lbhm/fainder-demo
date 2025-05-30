@@ -174,7 +174,8 @@ class ApplicationState:
         self, settings: Settings, config_name: str = "default"
     ) -> tuple[Metadata, CroissantStore, TantivyIndex, FainderIndex, HnswIndex, Engine]:
         logger.info(f"Loading metadata and indices with configuration '{config_name}'")
-        metadata = Metadata(**load_json(settings.metadata_path))
+        with settings.metadata_path.open("rb") as f:
+            metadata = Metadata.model_validate_json(f.read())
 
         logger.info("Initializing Croissant store")
         croissant_store = get_croissant_store(
@@ -238,7 +239,8 @@ class ApplicationState:
             tantivy_path=settings.tantivy_path,
         )
 
-        metadata = Metadata(**load_json(settings.metadata_path))
+        with settings.metadata_path.open("rb") as f:
+            metadata = Metadata.model_validate_json(f.read())
 
         # Load Croissant documents
         croissant_store = get_croissant_store(

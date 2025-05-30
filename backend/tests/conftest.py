@@ -1,4 +1,3 @@
-import json
 import sys
 from collections.abc import Generator
 from pathlib import Path
@@ -50,8 +49,8 @@ def default_engine() -> Engine:
         _env_file=None,  # type: ignore[call-arg]
     )
 
-    with settings.metadata_path.open() as file:
-        metadata = Metadata(**json.load(file))
+    with settings.metadata_path.open("rb") as f:
+        metadata = Metadata.model_validate_json(f.read())
 
     tantivy_index = TantivyIndex(index_path=settings.tantivy_path, recreate=False)
     # Fainder indices for testing are generated with the following parameters:
@@ -83,8 +82,8 @@ def small_fainder_engine() -> Engine:
         _env_file=None,  # type: ignore[call-arg]
     )
 
-    with settings.metadata_path.open() as file:
-        metadata = Metadata(**json.load(file))
+    with settings.metadata_path.open("rb") as f:
+        metadata = Metadata.model_validate_json(f.read())
 
     tantivy_index = TantivyIndex(index_path=settings.tantivy_path, recreate=False)
     # Fainder indices for testing are generated with the following parameters:
@@ -118,8 +117,8 @@ def prefiltering_engine() -> Engine:
         _env_file=None,  # type: ignore[call-arg]
     )
 
-    with settings.metadata_path.open() as file:
-        metadata = Metadata(**json.load(file))
+    with settings.metadata_path.open("rb") as f:
+        metadata = Metadata.model_validate_json(f.read())
 
     tantivy_index = TantivyIndex(index_path=settings.tantivy_path, recreate=False)
     # Fainder indices for testing are generated with the following parameters:
@@ -151,8 +150,8 @@ def parallel_engine() -> Engine:
         _env_file=None,  # type: ignore[call-arg]
     )
 
-    with settings.metadata_path.open() as file:
-        metadata = Metadata(**json.load(file))
+    with settings.metadata_path.open("rb") as f:
+        metadata = Metadata.model_validate_json(f.read())
 
     tantivy_index = TantivyIndex(index_path=settings.tantivy_path, recreate=False)
     # Fainder indices for testing are generated with the following parameters:
@@ -184,8 +183,8 @@ def parallel_prefiltering_engine() -> Engine:
         _env_file=None,  # type: ignore[call-arg]
     )
 
-    with settings.metadata_path.open() as file:
-        metadata = Metadata(**json.load(file))
+    with settings.metadata_path.open("rb") as f:
+        metadata = Metadata.model_validate_json(f.read())
 
     tantivy_index = TantivyIndex(index_path=settings.tantivy_path, recreate=False)
     # Fainder indices for testing are generated with the following parameters:

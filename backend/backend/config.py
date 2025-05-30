@@ -2,7 +2,7 @@ import logging
 import os
 import sys
 import warnings
-from enum import Enum
+from enum import StrEnum, auto
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any, Literal
 
@@ -33,25 +33,25 @@ IntegerArray = Annotated[
 ]
 
 
-class ExecutorType(str, Enum):
+class ExecutorType(StrEnum):
     """Enum representing different executor types for query execution."""
 
-    SIMPLE = "simple"
-    PREFILTERING = "prefiltering"
-    THREADED = "threaded"
-    THREADED_PREFILTERING = "threaded_prefiltering"
+    SIMPLE = auto()
+    PREFILTERING = auto()
+    THREADED = auto()
+    THREADED_PREFILTERING = auto()
 
 
-class CroissantStoreType(str, Enum):
-    DICT = "dict"
-    FILE = "file"
+class CroissantStoreType(StrEnum):
+    DICT = auto()
+    FILE = auto()
 
 
-class FainderMode(str, Enum):
-    LOW_MEMORY = "low_memory"
-    FULL_PRECISION = "full_precision"
-    FULL_RECALL = "full_recall"
-    EXACT = "exact"
+class FainderMode(StrEnum):
+    LOW_MEMORY = auto()
+    FULL_PRECISION = auto()
+    FULL_RECALL = auto()
+    EXACT = auto()
 
 
 class Metadata(BaseModel):

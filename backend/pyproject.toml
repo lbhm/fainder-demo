@@ -104,7 +104,7 @@ convention = "google"
 
 [tool.pyright]
 include = ["backend", "tests"]
-# reportUnnecessaryTypeIgnoreComment = true
+reportUnnecessaryTypeIgnoreComment = false
 typeCheckingMode = "strict"
 venvPath = "."
 venv = ".venv"
@@ -114,4 +114,4 @@ files = ["backend", "tests"]
 strict = true
 plugins = ["numpy.typing.mypy_plugin"]
 enable_error_code = ["ignore-without-code"]
-warn_unused_ignores = false
+warn_unused_ignores = true
