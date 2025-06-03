@@ -100,7 +100,7 @@ class ApplicationState:
         settings = self.settings
         current_config = self.current_fainder_config
 
-        logger.info(f"Updating indices with current configuration '{current_config}'")
+        logger.info("Updating indices with current configuration '{}'", current_config)
 
         (metadata, croissant_store, tantivy_index, fainder_index, hnsw_index, engine) = (
             self._recreate_indices(settings, current_config)
@@ -121,7 +121,7 @@ class ApplicationState:
     def update_fainder_index(self, config_name: str) -> None:
         """Update the Fainder index with a specific configuration."""
         settings = self.settings
-        logger.info(f"Updating Fainder index with configuration '{config_name}'")
+        logger.info("Updating Fainder index with configuration '{}'", config_name)
 
         if self._components is None:
             raise RuntimeError("ApplicationState not initialized")
@@ -132,10 +132,12 @@ class ApplicationState:
 
         # Check if the configuration files exist
         if not rebinning_path.exists():
-            raise FileNotFoundError(f"Rebinning index for configuration '{config_name}' not found")
+            raise FileNotFoundError(
+                "Rebinning index for configuration '{}' not found", config_name
+            )
         if not conversion_path.exists():
             raise FileNotFoundError(
-                f"Conversion index for configuration '{config_name}' not found"
+                "Conversion index for configuration '{}' not found", config_name
             )
 
         # Update the FainderIndex component
@@ -156,7 +158,7 @@ class ApplicationState:
         # Update the current configuration
         self._components.current_fainder_config = config_name
 
-        logger.info(f"Fainder index updated successfully with configuration '{config_name}'")
+        logger.info("Fainder index updated successfully with configuration '{}'", config_name)
 
     def _load_config_from_json(
         self, config_name: str, settings: Settings
@@ -166,19 +168,19 @@ class ApplicationState:
         try:
             configs = load_json(config_path)
         except FileNotFoundError:
-            logger.warning(f"Configuration file {config_path} not found")
+            logger.warning("Configuration file {} not found", config_path)
             return None
 
         if config_name in configs:
-            logger.info(f"Found configuration '{config_name}' in configs.json")
+            logger.info("Found configuration '{}' in configs.json", config_name)
             return configs[config_name]  # type: ignore[no-any-return]
-        logger.warning(f"Configuration '{config_name}' not found in configs.json")
+        logger.warning("Configuration '{}' not found in configs.json", config_name)
         return None
 
     def _load_indices(
         self, settings: Settings, config_name: str = "default"
     ) -> tuple[Metadata, CroissantStore, TantivyIndex, FainderIndex, HnswIndex, Engine]:
-        logger.info(f"Loading metadata and indices with configuration '{config_name}'")
+        logger.info("Loading metadata and indices with configuration '{}'", config_name)
         with settings.metadata_path.open("rb") as f:
             metadata = Metadata.model_validate_json(f.read())
 
@@ -194,14 +196,14 @@ class ApplicationState:
         logger.info("Initializing Tantivy index")
         tantivy_index = TantivyIndex(settings.tantivy_path)
 
-        logger.info(f"Initializing Fainder index with configuration '{config_name}'")
+        logger.info("Initializing Fainder index with configuration '{}'", config_name)
         # Use configuration-specific paths
         rebinning_path = settings.fainder_rebinning_path_for_config(config_name)
         conversion_path = settings.fainder_conversion_path_for_config(config_name)
 
         # If the config doesn't exist, fall back to default values
         if not rebinning_path.exists() or not conversion_path.exists():
-            logger.warning(f"Configuration '{config_name}' not found, falling back to default")
+            logger.warning("Configuration '{}' not found, falling back to default", config_name)
             rebinning_path = settings.rebinning_index_path
             conversion_path = settings.conversion_index_path
 
@@ -269,11 +271,11 @@ class ApplicationState:
         )
 
         # Load configuration from configs.json if available
-        config_params: dict[str, Any] | None = self._load_config_from_json(config_name, settings)
+        config_params = self._load_config_from_json(config_name, settings)
 
         if config_params:
             # Use parameters from configs.json
-            logger.info(f"Using Fainder configuration from configs.json for '{config_name}'")
+            logger.info("Using Fainder configuration from configs.json for '{}'", config_name)
             generate_fainder_indices(
                 hists=hists,
                 output_path=settings.fainder_path,
@@ -286,7 +288,7 @@ class ApplicationState:
             )
         else:
             # Fall back to settings values
-            logger.info(f"Using Fainder configuration from settings for '{config_name}'")
+            logger.info("Using Fainder configuration from settings for '{}'", config_name)
             generate_fainder_indices(
                 hists=hists,
                 output_path=settings.fainder_path,
