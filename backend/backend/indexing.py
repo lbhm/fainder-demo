@@ -376,6 +376,18 @@ def parse_args() -> argparse.Namespace:
         type=str,
         help="Configuration name for the Fainder indices",
     )
+    parser.add_argument(
+        "--multi-configs",
+        nargs="+",
+        type=str,
+        help="List of multiple configurations in format 'name:clusters:budget'. Example: --multi-configs default:27:270 small:10:100",
+    )
+    parser.add_argument(
+        "--multi-chunks",
+        nargs="+",
+        type=str,
+        help="List of multiple chunk configurations in format 'chunks:layout' where layout is either 'contiguous' or 'round_robin'. Example: --multi-chunks 4:contiguous 8:round_robin",
+    )
 
     return parser.parse_args()
 
@@ -402,16 +414,47 @@ if __name__ == "__main__":
     )
 
     if not args.no_fainder:
-        generate_fainder_indices(
-            hists=hists,
-            output_path=settings.fainder_path,
-            config_name=args.config_name,
-            n_clusters=settings.fainder_n_clusters,
-            bin_budget=settings.fainder_bin_budget,
-            alpha=settings.fainder_alpha,
-            transform=settings.fainder_transform,
-            algorithm=settings.fainder_cluster_algorithm,
-        )
+        # Handle multiple configurations if specified
+        if args.multi_configs:
+            for config_str in args.multi_configs:
+                try:
+                    parts = config_str.split(":")
+                    if len(parts) != 3:
+                        logger.warning(f"Invalid configuration format: {config_str}, skipping. Expected format: name:clusters:budget")
+                        continue
+                    
+                    config_name, n_clusters, bin_budget = parts
+                    n_clusters = int(n_clusters)
+                    bin_budget = int(bin_budget)
+                    
+                    logger.info(f"Generating additional Fainder indices with config '{config_name}', clusters={n_clusters}, budget={bin_budget}")
+                    generate_fainder_indices(
+                        hists=hists,
+                        output_path=settings.fainder_path,
+                        config_name=config_name,
+                        n_clusters=n_clusters,
+                        bin_budget=bin_budget,
+                        alpha=settings.fainder_alpha,
+                        transform=settings.fainder_transform,
+                        algorithm=settings.fainder_cluster_algorithm,
+                    )
+                except ValueError as e:
+                    logger.error(f"Error processing configuration {config_str}: {e}")
+                    continue
+
+        else:
+            # Handle single configuration
+            generate_fainder_indices(
+                hists=hists,
+                output_path=settings.fainder_path,
+                config_name=args.config_name,
+                n_clusters=settings.fainder_n_clusters,
+                bin_budget=settings.fainder_bin_budget,
+                alpha=settings.fainder_alpha,
+                transform=settings.fainder_transform,
+                algorithm=settings.fainder_cluster_algorithm,
+            )
+        
 
     if not args.no_embeddings:
         generate_embedding_index(
@@ -422,10 +465,43 @@ if __name__ == "__main__":
             ef_construction=settings.hnsw_ef_construction,
             n_bidirectional_links=settings.hnsw_n_bidirectional_links,
         )
+    
     if not args.no_hists_parallel:
-        save_histograms_parallel(
-            hists,
-            output_path=settings.fainder_path,
-            n_chunks=settings.fainder_num_chunks,
-            chunk_layout=settings.fainder_chunk_layout,
-        )
+        # Process multiple chunk configurations if specified
+        if args.multi_chunks:
+            for chunk_str in args.multi_chunks:
+                try:
+                    parts = chunk_str.split(":")
+                    if len(parts) != 2:
+                        logger.warning(f"Invalid chunk configuration format: {chunk_str}, skipping. Expected format: chunks:layout")
+                        continue
+                    
+                    n_chunks_str, layout_str = parts
+                    n_chunks = int(n_chunks_str)
+                    
+                    if layout_str.lower() == "contiguous":
+                        chunk_layout = FainderChunkLayout.CONTIGUOUS
+                    elif layout_str.lower() == "round_robin":
+                        chunk_layout = FainderChunkLayout.ROUND_ROBIN
+                    else:
+                        logger.warning(f"Invalid layout '{layout_str}' in chunk configuration: {chunk_str}, skipping. Expected: 'contiguous' or 'round_robin'")
+                        continue
+                    
+                    logger.info(f"Saving histograms with chunk configuration: chunks={n_chunks}, layout={layout_str}")
+                    save_histograms_parallel(
+                        hists,
+                        output_path=settings.fainder_path,
+                        n_chunks=n_chunks,
+                        chunk_layout=chunk_layout,
+                    )
+                except ValueError as e:
+                    logger.error(f"Error processing chunk configuration {chunk_str}: {e}")
+                    continue
+        else:
+            # Default single chunk configuration
+            save_histograms_parallel(
+                hists,
+                output_path=settings.fainder_path,
+                n_chunks=settings.fainder_num_chunks,
+                chunk_layout=settings.fainder_chunk_layout,
+            )
