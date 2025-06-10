@@ -24,7 +24,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 if TYPE_CHECKING:
     from types import FrameType
 
-DocumentHighlights = dict[int, dict[str, str]]
+DocumentHighlights = dict[int | np.uint32, dict[str, str]]
 ColumnHighlights = NDArray[np.uint32]
 Highlights = tuple[DocumentHighlights, ColumnHighlights]
 IntegerArray = Annotated[

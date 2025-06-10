@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, Literal
 import hnswlib
 import numpy as np
 import tantivy
-from fainder.execution.parallel_processing import partition_histogram_ids
+from fainder.execution.parallel_processing import FainderChunkLayout, partition_histogram_ids
 from fainder.preprocessing.clustering import cluster_histograms
 from fainder.preprocessing.percentile_index import create_index
 from fainder.typing import Histogram
@@ -17,7 +17,7 @@ from fainder.utils import configure_run, save_output
 from loguru import logger
 from sentence_transformers import SentenceTransformer
 
-from backend.config import FainderChunkLayout, Settings
+from backend.config import Settings
 from backend.indices import TantivyIndex, get_tantivy_schema
 from backend.utils import dump_json, load_json
 

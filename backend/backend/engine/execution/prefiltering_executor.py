@@ -6,15 +6,20 @@ from lark import ParseTree, Token, Transformer
 from loguru import logger
 from numpy.typing import NDArray
 
-from backend.config import ColumnHighlights, DocumentHighlights, FainderMode, Metadata
+from backend.config import (
+    ColumnArray,
+    ColumnHighlights,
+    DocumentArray,
+    DocumentHighlights,
+    FainderMode,
+    Metadata,
+)
 from backend.engine.conversion import col_to_doc_ids, doc_to_col_ids
 from backend.indices import FainderIndex, HnswIndex, TantivyIndex
 
 from .common import (
     ColResult,
-    ColumnArray,
     DocResult,
-    DocumentArray,
     ResultGroupAnnotator,
     TResult,
     exceeds_filtering_limit,

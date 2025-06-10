@@ -31,7 +31,7 @@ dependencies = [
     "hnswlib~=0.8.0",
     "lark[interegular]~=1.2",
     "loguru~=0.7.3",
-    "numpy~=2.0",
+    "numpy~=2.3",
     "orjson~=3.10",
     "pydantic~=2.10",
     "pydantic-settings~=2.7",
@@ -112,6 +112,5 @@ venv = ".venv"
 [tool.mypy]
 files = ["backend", "tests"]
 strict = true
-plugins = ["numpy.typing.mypy_plugin"]
 enable_error_code = ["ignore-without-code"]
 warn_unused_ignores = true

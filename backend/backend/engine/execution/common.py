@@ -330,4 +330,4 @@ def junction(
         return reduce_arrays(doc_ids_list, operator), ({}, np.array([], dtype=np.uint32))  # type: ignore[return-value]
 
     # Items contains column results (i.e., ColResult)
-    return reduce_arrays(items, operator)  # type: ignore[return-value]
+    return reduce_arrays(items, operator)  # type: ignore[type-var]
