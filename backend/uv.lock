@@ -66,7 +66,7 @@ requires-dist = [
     { name = "hnswlib", specifier = "~=0.8.0" },
     { name = "lark", extras = ["interegular"], specifier = "~=1.2" },
     { name = "loguru", specifier = "~=0.7.3" },
-    { name = "numpy", specifier = "~=2.0" },
+    { name = "numpy", specifier = "~=2.3" },
     { name = "orjson", specifier = "~=3.10" },
     { name = "pydantic", specifier = "~=2.10" },
     { name = "pydantic-settings", specifier = "~=2.7" },
