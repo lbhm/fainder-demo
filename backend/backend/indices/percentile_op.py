@@ -31,17 +31,20 @@ class FainderIndex:
     ) -> None:
         self.rebinning_index: tuple[list[PctlIndex], list[NDArray[np.float64]]] | None = None
         self.conversion_index: tuple[list[PctlIndex], list[NDArray[np.float64]]] | None = None
-        self.histogram_path: Path | None = histogram_path
         self.hists: list[tuple[np.uint32, Histogram]] | None = None
+        self.histogram_path: Path | None = None
+        self.rebinning_path: Path | None = None
+        self.conversion_path: Path | None = None
+        self.chunk_layout: FainderChunkLayout | None = None
+
+        self.num_workers: int | None = None
+        self.num_chunks: int | None = None
 
         self.parallel = num_workers > 1
 
         self.parallel_processor: ParallelHistogramProcessor | None = None
 
         atexit.register(self._cleanup_parallel_processor)
-
-        self.num_workers = num_workers
-        self.num_chunks = num_chunks
 
         self.update(
             rebinning_path=rebinning_path,
@@ -69,47 +72,66 @@ class FainderIndex:
         chunk_layout: FainderChunkLayout = FainderChunkLayout.ROUND_ROBIN,
     ) -> None:
         """Update the Fainder indices with new files."""
-        if rebinning_path and rebinning_path.exists():
+        if rebinning_path == self.rebinning_path:
+            logger.info("Rebinning index path has not changed, skipping update.")
+        elif rebinning_path and rebinning_path.exists():
             logger.info(f"Loading rebinning index from {rebinning_path}")
             self.rebinning_index = load_input(rebinning_path, "rebinning index")
         elif rebinning_path:
             logger.warning(f"Rebinning index path {rebinning_path} does not exist")
 
-        if conversion_path and conversion_path.exists():
+        if self.conversion_path == conversion_path:
+            logger.info("Conversion index path has not changed, skipping update.")
+        elif conversion_path and conversion_path.exists():
             logger.info(f"Loading conversion index from {conversion_path}")
             self.conversion_index = load_input(conversion_path, "conversion index")
         elif conversion_path:
             logger.warning(f"Conversion index path {conversion_path} does not exist")
 
-        if histogram_path and histogram_path.exists():
+        if self.histogram_path == histogram_path:
+            logger.info("Histogram path has not changed, skipping update.")
+        elif histogram_path and histogram_path.exists():
             logger.info(f"Loading histograms from {histogram_path}")
-            self.histogram_path = histogram_path
             self.hists = load_input(histogram_path, "histograms")
         elif histogram_path:
             logger.warning(f"Histogram path {histogram_path} does not exist")
 
-        self.parallel = num_workers > 1
+        if (
+            histogram_path == self.histogram_path
+            and self.parallel_processor is not None
+            and num_workers == self.num_workers
+            and num_chunks == self.num_chunks
+            and chunk_layout == self.chunk_layout
+        ):
+            logger.info("Histogram path has not changed, skipping parallel processor update.")
+        else:
+            # Clean up existing parallel processor if it exists
+            if self.parallel_processor is not None:
+                logger.info("Shutting down existing parallel processor")
+                self.parallel_processor.shutdown()
+                self.parallel_processor = None
 
+            self.parallel = num_workers > 1
+
+            if self.parallel and histogram_path is not None:
+                # If parallel processing is enabled and histogram path is available,
+                logger.info(
+                    f"Initializing parallel processor with histograms from: {self.histogram_path}"
+                )
+                self.parallel_processor = ParallelHistogramProcessor(
+                    histogram_path=histogram_path,
+                    num_workers=num_workers,
+                    num_chunks=num_chunks,
+                    chunk_layout=chunk_layout,
+                )
+
+        # Store the paths and parameters
         self.num_workers = num_workers
         self.num_chunks = num_chunks
-
-        # Clean up existing parallel processor if it exists
-        if self.parallel_processor is not None:
-            logger.info("Shutting down existing parallel processor")
-            self.parallel_processor.shutdown()
-            self.parallel_processor = None
-
-        if self.parallel and histogram_path is not None:
-            # If parallel processing is enabled and histogram path is available,
-            logger.info(
-                f"Initializing parallel processor with histograms from: {self.histogram_path}"
-            )
-            self.parallel_processor = ParallelHistogramProcessor(
-                histogram_path=histogram_path,
-                num_workers=num_workers,
-                num_chunks=num_chunks,
-                chunk_layout=chunk_layout,
-            )
+        self.rebinning_path = rebinning_path
+        self.conversion_path = conversion_path
+        self.histogram_path = histogram_path
+        self.chunk_layout = chunk_layout
 
     def search(  # noqa: C901
         self,

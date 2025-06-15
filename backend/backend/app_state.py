@@ -145,6 +145,9 @@ class ApplicationState:
             rebinning_path=rebinning_path,
             conversion_path=conversion_path,
             histogram_path=settings.histogram_path,
+            num_workers=settings.fainder_num_workers,
+            chunk_layout=settings.fainder_chunk_layout,
+            num_chunks=settings.fainder_num_chunks,
         )
 
         # Update the engine with the new FainderIndex
