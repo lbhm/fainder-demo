@@ -40,9 +40,9 @@ export const useSearchOperations = () => {
         body: JSON.stringify({
           query: queryStr,
           page: page,
-          perPage: perPage.value,
-          fainderMode: fainderMode || "low_memory",
-          resultHighlighting: resultHighlighting,
+          per_page: perPage.value,
+          fainder_mode: fainderMode || "low_memory",
+          result_highlighting: resultHighlighting,
         }),
       });
 
