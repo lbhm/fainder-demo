@@ -315,7 +315,7 @@
                                   <td class="stat-value">
                                     {{
                                       formatNumber(
-                                        field.statistics["firstQuartile"],
+                                        field.statistics.firstQuartile,
                                       )
                                     }}
                                   </td>
@@ -325,7 +325,7 @@
                                   <td class="stat-value">
                                     {{
                                       formatNumber(
-                                        field.statistics["secondQuartile"],
+                                        field.statistics.secondQuartile,
                                       )
                                     }}
                                   </td>
@@ -335,7 +335,7 @@
                                   <td class="stat-value">
                                     {{
                                       formatNumber(
-                                        field.statistics["thirdQuartile"],
+                                        field.statistics.thirdQuartile,
                                       )
                                     }}
                                   </td>
