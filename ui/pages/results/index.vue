@@ -564,7 +564,7 @@
 
 <script setup lang="ts">
 import "./index.css";
-import { ref, computed, onMounted, onUnmounted, watch } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue";
 import { Bar } from "vue-chartjs";
 import { useTheme } from "vuetify";
 import { useRoute, navigateTo } from "#imports";
@@ -743,6 +743,14 @@ const selectResult = (result: Types.Result) => {
     showFullDescription.value = false;
     selectedFileIndex.value = 0; // Reset to first file when selecting new result
   }
+
+  // Scroll to top of the details container
+  nextTick(() => {
+    const detailsContainer = document.querySelector(".results-wrapper");
+    if (detailsContainer) {
+      detailsContainer.scrollTop = 0;
+    }
+  });
 
   // Update URL with all necessary parameters
   navigateTo({
