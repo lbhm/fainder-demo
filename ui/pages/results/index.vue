@@ -746,7 +746,7 @@ const selectResult = (result: Types.Result) => {
 
   // Scroll to top of the details container
   nextTick(() => {
-    const detailsContainer = document.querySelector(".results-wrapper");
+    const detailsContainer = document.querySelector(".details-container");
     if (detailsContainer) {
       detailsContainer.scrollTop = 0;
     }
