@@ -26,7 +26,7 @@ export interface Field {
   markedName?: string; // where does this come from?
   dataType: string[];
   histogram?: Histogram;
-  counts?: { yes?: number; no?: number };
+  counts?: Record<string, number>;
   minDate?: string;
   maxDate?: string;
   uniqueDates?: number;
