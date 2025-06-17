@@ -43,6 +43,9 @@ Use cases for the dsl and comparison of different configurations.
 
 3. `KW('Cardiovascular') AND col(name("age"; 3) AND pp(0.75; le; 45))`
    → **with exact:** 11 results
+   → **Runtime:**
+      - good config: **1.7 sec**
+      - bad config: **2.9 sec**
 
    → **with full_recall:**
       - good config: **11** results
