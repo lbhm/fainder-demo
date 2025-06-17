@@ -62,7 +62,7 @@ class FainderIndex:
             self.parallel_processor.shutdown()
             self.parallel_processor = None
 
-    def update(
+    def update(  # noqa: C901
         self,
         rebinning_path: Path | None,
         conversion_path: Path | None,
