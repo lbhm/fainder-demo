@@ -501,8 +501,8 @@ const fetchFainderConfigs = async () => {
     console.error("Error fetching fainder configs:", error);
     // Fallback
     availableConfigs.value = ["default"];
-    currentConfig.value = fainderIndexName.value;
-    tempFainderConfig.value = fainderIndexName.value;
+    currentConfig.value = "default";
+    tempFainderConfig.value = "default";
   } finally {
     configsLoading.value = false;
   }
