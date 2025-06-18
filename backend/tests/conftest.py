@@ -56,8 +56,8 @@ def default_engine() -> Engine:
     # Fainder indices for testing are generated with the following parameters:
     # n_clusters = 23, bin_budget = 230, alpha = 1, transform = None,
     fainder_index = FainderIndex(
-        rebinning_path=settings.rebinning_index_path,
-        conversion_path=settings.conversion_index_path,
+        rebinning_paths={"default": settings.rebinning_index_path},
+        conversion_paths={"default": settings.conversion_index_path},
         histogram_path=settings.histogram_path,
         num_workers=0,  # Use 0 to disable parallel processing in tests
     )
@@ -92,8 +92,8 @@ def small_fainder_engine() -> Engine:
     rebinning_path = settings.rebinning_index_path.parent / "rebinning_small.zst"
     conversion_path = settings.conversion_index_path.parent / "conversion_small.zst"
     fainder_index = FainderIndex(
-        rebinning_path=rebinning_path,
-        conversion_path=conversion_path,
+        rebinning_paths={"default": rebinning_path},
+        conversion_paths={"default": conversion_path},
         histogram_path=settings.histogram_path,
         num_workers=0,  # Set number of workers to 0 for testing
     )
@@ -126,8 +126,8 @@ def prefiltering_engine() -> Engine:
     # Fainder indices for testing are generated with the following parameters:
     # n_clusters = 23, bin_budget = 230, alpha = 1, transform = None,
     fainder_index = FainderIndex(
-        rebinning_path=settings.rebinning_index_path,
-        conversion_path=settings.conversion_index_path,
+        rebinning_paths={"default": settings.rebinning_index_path},
+        conversion_paths={"default": settings.conversion_index_path},
         histogram_path=settings.histogram_path,
         num_workers=0,
     )
@@ -160,8 +160,8 @@ def parallel_engine() -> Engine:
     # Fainder indices for testing are generated with the following parameters:
     # n_clusters = 23, bin_budget = 230, alpha = 1, transform = None,
     fainder_index = FainderIndex(
-        rebinning_path=settings.rebinning_index_path,
-        conversion_path=settings.conversion_index_path,
+        rebinning_paths={"default": settings.rebinning_index_path},
+        conversion_paths={"default": settings.conversion_index_path},
         histogram_path=settings.histogram_path,
         num_workers=0,
     )
@@ -194,8 +194,8 @@ def parallel_prefiltering_engine() -> Engine:
     # Fainder indices for testing are generated with the following parameters:
     # n_clusters = 23, bin_budget = 230, alpha = 1, transform = None,
     fainder_index = FainderIndex(
-        rebinning_path=settings.rebinning_index_path,
-        conversion_path=settings.conversion_index_path,
+        rebinning_paths={"default": settings.rebinning_index_path},
+        conversion_paths={"default": settings.conversion_index_path},
         histogram_path=settings.histogram_path,
         num_workers=0,
     )

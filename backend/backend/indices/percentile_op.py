@@ -37,6 +37,10 @@ class FainderIndex:
         ) = None
         self.hists: list[tuple[np.uint32, Histogram]] | None = None
 
+        if histogram_path is not None and histogram_path.exists():
+            logger.info(f"Loading histograms from {histogram_path}")
+            self.hists = load_input(histogram_path, "histograms")
+
         # load rebinning indexes
         if rebinning_paths:
             self.rebinning_indexes = {}
