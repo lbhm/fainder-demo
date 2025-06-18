@@ -756,8 +756,9 @@ const removeSearchTerm = (index: number) => {
 const transferTerm = (predicates: Predicate[], index: number) => {
   for (const predicate of predicates) {
     if (predicate.type === "name") {
+      const column = predicate.column.replace(/['"]/g, "").trim();
       columnFilter.value = {
-        column: predicate.column,
+        column: column,
         threshold: predicate.threshold.toString(),
       };
     } else {
