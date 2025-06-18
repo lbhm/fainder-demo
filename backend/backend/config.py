@@ -97,7 +97,6 @@ class Settings(BaseSettings):
     fainder_transform: Literal["standard", "robust", "quantile", "power"] | None = None
     fainder_cluster_algorithm: Literal["agglomerative", "hdbscan", "kmeans"] = "kmeans"
     fainder_chunk_layout: FainderChunkLayout = FainderChunkLayout.CONTIGUOUS
-    fainder_default: str = "default"
     fainder_num_workers: int = (os.cpu_count() or 1) - 1
     fainder_num_chunks: int = (os.cpu_count() or 1) - 1
 
@@ -183,6 +182,7 @@ class QueryRequest(BaseModel):
     per_page: int = 10
     fainder_mode: FainderMode = FainderMode.LOW_MEMORY
     result_highlighting: bool = False
+    fainder_index_name: str = "default"
 
 
 class QueryResponse(BaseModel):
@@ -227,7 +227,6 @@ class FainderConfigRequest(BaseModel):
 
 class FainderConfigsResponse(BaseModel):
     configs: list[str]
-    current: str
 
 
 class InterceptHandler(logging.Handler):

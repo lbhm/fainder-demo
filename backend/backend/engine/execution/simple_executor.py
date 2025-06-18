@@ -40,7 +40,13 @@ class SimpleExecutor(Transformer[Token, DocResult], Executor):
 
         self.reset(fainder_mode, enable_highlighting)
 
-    def reset(self, fainder_mode: FainderMode, enable_highlighting: bool = False) -> None:
+    def reset(
+        self,
+        fainder_mode: FainderMode,
+        enable_highlighting: bool = False,
+        fainder_index_name: str = "default",
+    ) -> None:
+        self.fainder_index_name = fainder_index_name
         self.scores = defaultdict(float)
         self.fainder_mode = fainder_mode
         self.enable_highlighting = enable_highlighting
@@ -93,7 +99,9 @@ class SimpleExecutor(Transformer[Token, DocResult], Executor):
         comparison: str = items[1]
         reference = float(items[2])
 
-        return self.fainder_index.search(percentile, comparison, reference, self.fainder_mode)
+        return self.fainder_index.search(
+            percentile, comparison, reference, self.fainder_mode, self.fainder_index_name
+        )
 
     def conjunction(self, items: Sequence[TResult]) -> TResult:
         logger.trace("Evaluating conjunction with items of length: {}", len(items))

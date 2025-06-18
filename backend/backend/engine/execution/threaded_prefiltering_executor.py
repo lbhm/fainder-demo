@@ -333,7 +333,13 @@ class ThreadedPrefilteringExecutor(Transformer[Token, DocResult], Executor):
         self._thread_pool.shutdown(wait=True)
         logger.debug("Thread pool shut down")
 
-    def reset(self, fainder_mode: FainderMode, enable_highlighting: bool = False) -> None:
+    def reset(
+        self,
+        fainder_mode: FainderMode,
+        enable_highlighting: bool = False,
+        fainder_index_name: str = "default",
+    ) -> None:
+        self.fainder_index_name = fainder_index_name
         self.scores = defaultdict(float)
         self.fainder_mode = fainder_mode
         self.enable_highlighting = enable_highlighting
@@ -484,7 +490,12 @@ class ThreadedPrefilteringExecutor(Transformer[Token, DocResult], Executor):
             if hist_filter is not None and len(hist_filter) == 0:
                 return np.array([], dtype=np.uint32), write_group
             result_hists = self.fainder_index.search(
-                percentile, comparison, reference, self.fainder_mode, hist_filter
+                percentile,
+                comparison,
+                reference,
+                self.fainder_mode,
+                self.fainder_index_name,
+                hist_filter,
             )
             parent_write_group = self._get_parent_write_group(write_group)
             self.intermediate_results.add_col_ids(

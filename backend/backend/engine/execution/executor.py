@@ -28,7 +28,12 @@ class Executor(ABC):
         """Initialize the executor with the necessary indices and metadata."""
 
     @abstractmethod
-    def reset(self, fainder_mode: FainderMode, enable_highlighting: bool = False) -> None:
+    def reset(
+        self,
+        fainder_mode: FainderMode,
+        enable_highlighting: bool = False,
+        fainder_index_name: str = "default",
+    ) -> None:
         """Reset the executor's state."""
 
     @abstractmethod

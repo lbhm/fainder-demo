@@ -421,7 +421,7 @@ const numberOfRows = ref(props.lines);
 
 const searchTerms = ref<Term[]>([]);
 
-const { fainderMode, resultHighlighting } = useSearchState();
+const { fainderMode, resultHighlighting, fainderIndexName } = useSearchState();
 
 const syntaxHighlighting = useCookie("fainderSyntaxHighlighting", {
   default: () => true,
@@ -495,37 +495,16 @@ const fetchFainderConfigs = async () => {
       },
     );
     availableConfigs.value = response.configs;
-    currentConfig.value = response.current;
-    tempFainderConfig.value = response.current;
+    currentConfig.value = fainderIndexName.value;
+    tempFainderConfig.value = fainderIndexName.value;
   } catch (error) {
     console.error("Error fetching fainder configs:", error);
     // Fallback
     availableConfigs.value = ["default"];
-    currentConfig.value = "default";
-    tempFainderConfig.value = "default";
+    currentConfig.value = fainderIndexName.value;
+    tempFainderConfig.value = fainderIndexName.value;
   } finally {
     configsLoading.value = false;
-  }
-};
-
-// Change fainder configuration
-const changeFainderConfig = async (configName: string): Promise<boolean> => {
-  if (configName === currentConfig.value) {
-    return true;
-  }
-
-  try {
-    await $fetch("/change_fainder", {
-      method: "POST",
-      baseURL: config.public.apiBase,
-      body: { config_name: configName },
-    });
-
-    currentConfig.value = configName;
-    return true;
-  } catch (error: unknown) {
-    console.error("Error changing fainder config:", error);
-    return false;
   }
 };
 
@@ -684,6 +663,7 @@ async function searchData() {
     query: sQuery,
     fainderMode: fainderMode.value,
     resultHighlighting: resultHighlighting.value,
+    fainderIndexName: fainderIndexName.value,
   });
 }
 
@@ -838,19 +818,10 @@ async function saveSettings() {
   configError.value = ""; // Clear any previous error
 
   try {
-    // Handle config change if needed
-    if (tempFainderConfig.value !== currentConfig.value) {
-      const success = await changeFainderConfig(tempFainderConfig.value);
-      if (!success) {
-        configError.value =
-          "Failed to update Fainder configuration. Please try again.";
-        return; // Keep dialog open to show error
-      }
-    }
-
-    // Save other settings
+    // Save settings
     fainderMode.value = String(tempFainderMode.value);
     resultHighlighting.value = tempResultHighlighting.value;
+    fainderIndexName.value = tempFainderConfig.value;
 
     // Update route
     const route = useRoute();
@@ -860,6 +831,7 @@ async function saveSettings() {
         ...route.query,
         fainderMode: tempFainderMode.value,
         resultHighlighting: String(tempResultHighlighting.value),
+        fainderIndexName: String(fainderIndexName.value),
       },
     });
 

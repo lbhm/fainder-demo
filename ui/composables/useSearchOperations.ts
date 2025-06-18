@@ -19,6 +19,7 @@ export const useSearchOperations = () => {
     page = 1,
     fainderMode?: string,
     resultHighlighting?: boolean,
+    fainderIndexName?: string,
   ) => {
     isLoading.value = true;
     error.value = { message: "", details: null };
@@ -43,6 +44,7 @@ export const useSearchOperations = () => {
           per_page: perPage.value,
           fainder_mode: fainderMode || "low_memory",
           result_highlighting: resultHighlighting,
+          fainder_index_name: fainderIndexName || "default",
         }),
       });
 

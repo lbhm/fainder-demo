@@ -228,8 +228,14 @@ class PrefilteringExecutor(Transformer[Token, DocResult], Executor):
 
         self.reset(fainder_mode, enable_highlighting)
 
-    def reset(self, fainder_mode: FainderMode, enable_highlighting: bool = False) -> None:
+    def reset(
+        self,
+        fainder_mode: FainderMode,
+        enable_highlighting: bool = False,
+        fainder_index_name: str = "default",
+    ) -> None:
         logger.trace("Resetting executor")
+        self.fainder_index_name = fainder_index_name
         self.scores: dict[int, float] = defaultdict(float)
         self.fainder_mode = fainder_mode
         self.enable_highlighting = enable_highlighting
@@ -374,7 +380,12 @@ class PrefilteringExecutor(Transformer[Token, DocResult], Executor):
             len(hist_filter) if hist_filter is not None else "None",
         )
         result = self.fainder_index.search(
-            percentile, comparison, reference, self.fainder_mode, hist_filter
+            percentile,
+            comparison,
+            reference,
+            self.fainder_mode,
+            self.fainder_index_name,
+            hist_filter,
         )
         self.intermediate_results.add_col_id_results(
             write_group, result, self.metadata.doc_to_cols

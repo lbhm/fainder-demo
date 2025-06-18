@@ -74,9 +74,10 @@ class Engine:
         query: str,
         fainder_mode: FainderMode = FainderMode.LOW_MEMORY,
         enable_highlighting: bool = False,
+        fainder_index_name: str = "default",
     ) -> tuple[list[int], Highlights]:
         # Reset state for new query
-        self.executor.reset(fainder_mode, enable_highlighting)
+        self.executor.reset(fainder_mode, enable_highlighting, fainder_index_name)
 
         # Parse query
         parse_tree = self.parser.parse(query)

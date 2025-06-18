@@ -134,6 +134,7 @@ interface SearchParams {
   query: string;
   fainderMode: string;
   resultHighlighting: boolean;
+  fainderIndexName: string;
 }
 
 const { loadResults } = useSearchOperations();
@@ -187,6 +188,7 @@ async function searchData({
   query: searchQuery,
   fainderMode: newFainderMode,
   resultHighlighting,
+  fainderIndexName,
 }: SearchParams): Promise<void> {
   query.value = searchQuery;
   fainderMode.value = newFainderMode;
@@ -194,7 +196,13 @@ async function searchData({
   currentPage.value = 1;
   selectedResultIndex.value = 0;
 
-  await loadResults(searchQuery, 1, newFainderMode, resultHighlighting);
+  await loadResults(
+    searchQuery,
+    1,
+    newFainderMode,
+    resultHighlighting,
+    fainderIndexName,
+  );
 
   await navigateTo({
     path: "/results",
@@ -205,6 +213,7 @@ async function searchData({
       fainderMode: newFainderMode,
       resultHighlighting: String(resultHighlighting),
       theme: theme.global.name.value,
+      fainderIndexName: fainderIndexName,
     },
   });
 

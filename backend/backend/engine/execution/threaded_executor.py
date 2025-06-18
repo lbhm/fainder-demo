@@ -48,10 +48,16 @@ class ThreadedExecutor(Transformer[Token, DocResult], Executor):
         if self._thread_pool:
             self._thread_pool.shutdown(wait=True)
 
-    def reset(self, fainder_mode: FainderMode, enable_highlighting: bool = False) -> None:
+    def reset(
+        self,
+        fainder_mode: FainderMode,
+        enable_highlighting: bool = False,
+        fainder_index_name: str = "default",
+    ) -> None:
         self.scores = defaultdict(float)
         self.fainder_mode = fainder_mode
         self.enable_highlighting = enable_highlighting
+        self.fainder_index_name = fainder_index_name
 
     def execute(self, tree: ParseTree) -> DocResult:
         """Start processing the parse tree."""
@@ -125,7 +131,9 @@ class ThreadedExecutor(Transformer[Token, DocResult], Executor):
                 comparison,
                 reference,
             )
-            return self.fainder_index.search(percentile, comparison, reference, self.fainder_mode)
+            return self.fainder_index.search(
+                percentile, comparison, reference, self.fainder_mode, self.fainder_index_name
+            )
 
         logger.trace("Evaluating percentile term: {}", items)
 

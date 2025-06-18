@@ -29,6 +29,11 @@ export const useSearchState = () => {
     () => (route.query.fainderMode as string) || "low_memory",
   );
 
+  const fainderIndexName = useState(
+    "fainder-index-name",
+    () => (route.query.fainderIndexName as string) || "default",
+  );
+
   // Add perPage state
   const perPage = useState("per-page", () => 10);
 
@@ -50,5 +55,6 @@ export const useSearchState = () => {
     fainderMode,
     perPage,
     resultHighlighting: resultHighlighting,
+    fainderIndexName,
   };
 };
