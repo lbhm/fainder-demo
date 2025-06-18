@@ -18,16 +18,22 @@ Use cases for the dsl and comparison of different configurations.
 4. `KW('"lung cancer"') AND col(name("age"; 4) AND pp(0.7; le; 50))`
    → **with exact:** 18 results
    → **Runtime:**
-      - good config: **2 sec**
-      - bad config: **3 sec**
+      - big config: **2 sec**
+      - middle config: **2.45 sec**
+      - small config: **2.54 sec**
+      - bad_3 config: **3 sec**
 
    → **with full_recall:**
-      - good config: **18** results
-      - bad config: **63** results
+      - big config: **18** results
+      - middle config: **18** results
+      - small config: **18** results
+      - bad_3 config: **63** results
 
    → **with full_precision:**
-      - good config: **0** results
-      - bad config: **0** results
+      - big config: **0** results
+      - middle config: **0** results
+      - small config: **0** results
+      - bad_3 config: **0** results
 
 ---
 
@@ -44,16 +50,22 @@ Use cases for the dsl and comparison of different configurations.
 3. `KW('Cardiovascular') AND col(name("age"; 3) AND pp(0.75; le; 45))`
    → **with exact:** 11 results
    → **Runtime:**
-      - good config: **1.7 sec**
-      - bad config: **2.9 sec**
+      - big config: **1.7 sec**
+      - middle config: **2.4 sec**
+      - small config: **2.45 sec**
+      - bad_3 config: **2.9 sec**
 
    → **with full_recall:**
-      - good config: **11** results
-      - bad config: **42** results
+      - big config: **11** results
+      - middle config: **11** results
+      - small config: **12** results
+      - bad_3 config: **42** results
 
    → **with full_precision:**
-      - good config: **10** results
-      - bad config: **10** results
+      - big config: **10** results
+      - middle config: **10** results
+      - small config: **10** results
+      - bad_3 config: **10** results
 
 
 ## Cars
@@ -69,13 +81,19 @@ Use cases for the dsl and comparison of different configurations.
 3. `KW('"Car"') AND col(name("price"; 0) AND pp(1.0; le; 9000))`
    → **with exact:** 29 results
    → **Runtime:**
-      - good config: **1 sec**
-      - bad config: **1.2 sec**
+      - big config: **1 sec**
+      - middle config: **1.3 sec**
+      - small config: **1.3 sec**
+      - bad_3 config: **1.8 sec**
 
    → **with full_recall:**
-      - good config: **33** results
-      - bad config: **69** results
+      - big config: **33** results
+      - middle config: **42** results
+      - small config: **33** results
+      - bad_3 config: **69** results
 
    → **with full_precision:**
-      - good config: **14** results
-      - bad config: **14** results
+      - big config: **14** results
+      - middle config: **14** results
+      - small config: **14** results
+      - bad_3 config: **14** results
