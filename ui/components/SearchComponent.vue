@@ -862,10 +862,9 @@ async function saveSettings() {
       },
     });
 
-    // Close dialog after short delay to show success message
-    setTimeout(() => {
-      showSettings.value = false;
-    }, 1000);
+    // Close dialog without delay and search the current query
+    showSettings.value = false;
+    searchData();
   } finally {
     configChangeLoading.value = false;
   }
