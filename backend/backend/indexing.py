@@ -15,6 +15,7 @@ from fainder.preprocessing.percentile_index import create_index
 from fainder.typing import Histogram
 from fainder.utils import configure_run, save_output
 from loguru import logger
+from pydantic import DirectoryPath
 from sentence_transformers import SentenceTransformer
 
 from backend.config import Settings
@@ -47,7 +48,10 @@ def _prepare_document_for_tantivy(json_doc: dict[str, Any]) -> None:
 
 
 def generate_metadata(
-    croissant_path: Path, metadata_path: Path, tantivy_path: Path, return_documents: bool = True
+    croissant_path: DirectoryPath,
+    metadata_path: DirectoryPath,
+    tantivy_path: DirectoryPath,
+    return_documents: bool = True,
 ) -> tuple[
     list[tuple[np.uint32, Histogram]], dict[str, int], dict[int, dict[str, Any]], TantivyIndex
 ]:
