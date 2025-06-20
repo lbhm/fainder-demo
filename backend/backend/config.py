@@ -128,6 +128,8 @@ class Settings(BaseSettings):
     log_level: Literal["TRACE", "DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
+    _fainder_configs: FainderConfigs | None = None
+
     @classmethod
     @field_validator("metadata_file", mode="after")
     def metadata_file_type(cls, value: Path) -> Path:
@@ -188,8 +190,11 @@ class Settings(BaseSettings):
     @computed_field  # type: ignore[prop-decorator]
     @property
     def fainder_configs(self) -> FainderConfigs:
-        """Load Fainder configurations from the JSON file."""
-        config_data = load_json(self.fainder_config_path)
+        """Load Fainder configurations from the JSON file with caching."""
+        if self._fainder_configs is None:
+            config_data = load_json(self.fainder_config_path)
+            self._fainder_configs = FainderConfigs(configs=config_data)
+        return self._fainder_configs
         return FainderConfigs(configs=config_data)
 
     def fainder_rebinning_path_for_config(self, config_name: str) -> Path:

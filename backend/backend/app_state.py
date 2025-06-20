@@ -102,7 +102,7 @@ class ApplicationState:
 
         all_config_names = self.get_all_config_names(settings.fainder_config_path)
 
-        logger.info("Updating indices with current configuration '{}'", all_config_names)
+        logger.info("Updating indices with current configurations '{}'", all_config_names)
 
         (metadata, croissant_store, tantivy_index, fainder_index, hnsw_index, engine) = (
             self._recreate_indices(settings, all_config_names)
@@ -139,7 +139,7 @@ class ApplicationState:
     def _load_indices(
         self, settings: Settings, config_names: list[str]
     ) -> tuple[Metadata, CroissantStore, TantivyIndex, FainderIndex, HnswIndex, Engine]:
-        logger.info("Loading metadata and indices with configuration '{}'", config_names)
+        logger.info("Loading metadata and indices with configurations '{}'", config_names)
         with settings.metadata_path.open("rb") as f:
             metadata = Metadata.model_validate_json(f.read())
 

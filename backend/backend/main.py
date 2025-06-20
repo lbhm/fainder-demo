@@ -91,6 +91,16 @@ async def query(request: QueryRequest) -> QueryResponse:
 
     try:
         start_time = time.perf_counter()
+
+        fainder_index_name = request.fainder_index_name
+        if fainder_index_name not in app_state.settings.fainder_configs.configs:
+            fainder_index_name = next(iter(app_state.settings.fainder_configs.configs.keys()))
+            logger.warning(
+                "Using default Fainder index '{}' as '{}' is not available.",
+                fainder_index_name,
+                request.fainder_index_name,
+            )
+
         doc_ids, (doc_highlights, col_highlights) = app_state.engine.execute(
             query=request.query,
             fainder_mode=request.fainder_mode,
@@ -179,6 +189,9 @@ async def upload_files(files: list[UploadFile]) -> MessageResponse:
 async def update_indices() -> MessageResponse:
     """Recreate all indices from the current state of the Croissant store."""
     try:
+        # NOTE: Our approach increases memory usage since we load the new indices without deleting
+        # the old ones, we should consider optimizing this in the future
+
         app_state.update_indices()
         logger.info("Indices updated successfully")
         return MessageResponse(message="Indices updated successfully")
