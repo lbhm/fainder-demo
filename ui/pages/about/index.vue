@@ -133,6 +133,42 @@
   </v-main>
 </template>
 
-<script setup lang="ts">
-import "./style.css";
-</script>
+<style scoped>
+h1 {
+  font-size: 2em;
+  margin-bottom: 16px;
+}
+
+h2 {
+  font-size: 1.5em;
+  margin-bottom: 12px;
+}
+
+h3 {
+  font-size: 1.25em;
+  margin-bottom: 8px;
+}
+
+h4 {
+  margin-bottom: 8px;
+}
+
+p {
+  margin-bottom: 16px;
+}
+
+code {
+  font-family: monospace;
+  background-color: #f4f4f4;
+  color: #333;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+@media (prefers-color-scheme: dark) {
+  code {
+    background-color: #23272e;
+    color: #e6e6e6;
+  }
+}
+</style>
