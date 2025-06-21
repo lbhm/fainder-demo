@@ -195,7 +195,6 @@ class Settings(BaseSettings):
             config_data = load_json(self.fainder_config_path)
             self._fainder_configs = FainderConfigs(configs=config_data)
         return self._fainder_configs
-        return FainderConfigs(configs=config_data)
 
     def fainder_rebinning_path_for_config(self, config_name: str) -> Path:
         config = self.fainder_configs.configs.get(config_name)
