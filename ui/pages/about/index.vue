@@ -133,6 +133,20 @@
   </v-main>
 </template>
 
+<script setup>
+import { useTheme } from "vuetify";
+const theme = useTheme();
+
+const currentTheme = theme.global.name.value;
+
+watch(
+  () => theme.global.name.value,
+  (newTheme) => {
+    currentTheme = newTheme;
+  },
+);
+</script>
+
 <style scoped>
 h1 {
   font-size: 2em;
@@ -159,16 +173,9 @@ p {
 
 code {
   font-family: monospace;
-  background-color: #f4f4f4;
-  color: #333;
+  background-color: v-bind("currentTheme === 'dark' ? '#23272e' : '#f4f4f4'");
+  color: v-bind("currentTheme === 'dark' ? '#e6e6e6' : '#333'");
   padding: 2px 4px;
   border-radius: 4px;
-}
-
-@media (prefers-color-scheme: dark) {
-  code {
-    background-color: #23272e;
-    color: #e6e6e6;
-  }
 }
 </style>
