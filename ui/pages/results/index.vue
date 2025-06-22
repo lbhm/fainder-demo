@@ -744,6 +744,12 @@ const selectResult = (result: Types.Result) => {
     selectedFileIndex.value = 0; // Reset to first file when selecting new result
   }
 
+  // Scroll to top of the page when selecting a new result
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth",
+  });
+
   // Update URL with all necessary parameters
   navigateTo({
     path: "/results",
