@@ -744,14 +744,6 @@ const selectResult = (result: Types.Result) => {
     selectedFileIndex.value = 0; // Reset to first file when selecting new result
   }
 
-  // Scroll to top of the details container
-  nextTick(() => {
-    const detailsContainer = document.querySelector(".details-container");
-    if (detailsContainer) {
-      detailsContainer.scrollTop = 0;
-    }
-  });
-
   // Update URL with all necessary parameters
   navigateTo({
     path: "/results",
