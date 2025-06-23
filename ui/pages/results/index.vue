@@ -564,7 +564,7 @@
 
 <script setup lang="ts">
 import "./index.css";
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { Bar } from "vue-chartjs";
 import { useTheme } from "vuetify";
 import { useRoute, navigateTo } from "#imports";
