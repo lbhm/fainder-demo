@@ -105,7 +105,7 @@ async def query(request: QueryRequest) -> QueryResponse:
             query=request.query,
             fainder_mode=request.fainder_mode,
             enable_highlighting=request.result_highlighting,
-            fainder_index_name=request.fainder_index_name,
+            fainder_index_name=fainder_index_name,
         )
 
         # Calculate pagination

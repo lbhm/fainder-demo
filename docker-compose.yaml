@@ -14,10 +14,15 @@ services:
     environment:
       - FASTAPI_MODE=${FASTAPI_MODE:-run}
       - DATA_DIR=/app/data
+      - HF_HUB_CACHE=/app/data/${COLLECTION_NAME}/${EMBEDDING_DIR:-embeddings}/model_cache
       - COLLECTION_NAME=${COLLECTION_NAME:?COLLECTION_NAME is missing}
       - METADATA_FILE=${METADATA_FILE:-metadata.json}
       - CROISSANT_STORE_TYPE=${CROISSANT_STORE_TYPE:-dict}
-      - HF_HUB_CACHE=/app/data/${COLLECTION_NAME}/${EMBEDDING_DIR:-embeddings}/model_cache
+      - CROISSANT_CACHE_SIZE=${CROISSANT_CACHE_SIZE:-128}
+      - EXECUTOR_TYPE=${EXECUTOR_TYPE:-simple}
+      - FAINDER_CHUNK_LAYOUT=${FAINDER_CHUNK_LAYOUT:-round_robin}
+      - FAINDER_NUM_CHUNKS=${FAINDER_NUM_CHUNKS:-4}
+      - FAINDER_NUM_WORKERS=${FAINDER_NUM_WORKERS:-4}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     volumes:
       - ./data:/app/data
