@@ -747,7 +747,7 @@ const selectResult = (result: Types.Result) => {
   // Scroll to top of the page when selecting a new result
   window.scrollTo({
     top: 0,
-    behavior: "smooth",
+    behavior: "auto",
   });
 
   // Update URL with all necessary parameters
