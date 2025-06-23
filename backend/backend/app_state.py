@@ -289,7 +289,7 @@ class ApplicationState:
 
         save_histograms_parallel(
             hists,
-            settings.histogram_path,
+            settings.fainder_path,
             n_chunks=settings.fainder_num_chunks,
             chunk_layout=settings.fainder_chunk_layout,
         )

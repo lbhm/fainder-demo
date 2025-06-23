@@ -68,8 +68,6 @@ class CroissantStore(ABC):
             else:
                 raise CroissantError(f"Document with dataset slug {ref} already exists")
 
-        # Update mapping
-        self.doc_to_path[doc["id"]] = file_path
 
         # Save to file system
         dump_json(doc, file_path)
@@ -114,7 +112,6 @@ class DictCroissantStore(CroissantStore):
 
     def add_document(self, doc: Document) -> None:
         super().add_document(doc)
-        self.documents[doc["id"]] = doc
 
     def replace_documents(self, doc_to_path: list[str]) -> None:
         self.doc_to_path = self._rewrite_paths(doc_to_path)
