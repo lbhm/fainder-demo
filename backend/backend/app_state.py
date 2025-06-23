@@ -7,7 +7,12 @@ from loguru import logger
 from backend.config import IndexingError, Metadata, Settings, configure_logging
 from backend.croissant_store import CroissantStore, get_croissant_store
 from backend.engine import Engine
-from backend.indexing import generate_embedding_index, generate_fainder_indices, generate_metadata
+from backend.indexing import (
+    generate_embedding_index,
+    generate_fainder_indices,
+    generate_metadata,
+    save_histograms_parallel,
+)
 from backend.indices import FainderIndex, HnswIndex, TantivyIndex
 from backend.utils import load_json
 
@@ -281,6 +286,13 @@ class ApplicationState:
             conversion_paths[config_name] = settings.fainder_conversion_path_for_config(
                 config_name
             )
+
+        save_histograms_parallel(
+            hists,
+            settings.histogram_path,
+            n_chunks=settings.fainder_num_chunks,
+            chunk_layout=settings.fainder_chunk_layout,
+        )
 
         fainder_index = FainderIndex(
             rebinning_paths=rebinning_paths,
