@@ -137,12 +137,12 @@
 import { useTheme } from "vuetify";
 const theme = useTheme();
 
-const currentTheme = theme.global.name.value;
+const currentTheme = theme.global.name;
 
 watch(
-  () => theme.global.name.value,
+  () => theme.global.name,
   (newTheme) => {
-    currentTheme = newTheme;
+    currentTheme = newTheme.value;
   },
 );
 </script>
