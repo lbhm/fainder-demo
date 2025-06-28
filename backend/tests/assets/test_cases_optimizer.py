@@ -194,8 +194,8 @@ OPTIMIZER_CASES: dict[str, OptimizerCase] = {
         ),
     },
     "nested_and_or_not": {
-        # KW("a") OR KW("b") AND COL(NAME("x";0)) OR KW("c") OR NOT(KW("d")) AND
-        # NOT(COL(NAME("y";0))) AND NOT(NOT(KW("e"))) AND KW("f")
+        # KW("a") OR KW("b") AND COL(NAME("x";0)) OR KW("c")
+        # OR NOT(KW("d")) AND NOT(COL(NAME("y";0))) AND NOT(NOT(KW("e"))) AND KW("f")
         "input_tree": Tree(
             Token("RULE", "query"),
             [
@@ -329,18 +329,23 @@ OPTIMIZER_CASES: dict[str, OptimizerCase] = {
                 Tree(
                     "disjunction",
                     [
-                        Tree(Token("RULE", "keyword_op"), [Token("STRING", "(a) OR (c)")]),
                         Tree(
-                            "conjunction",
+                            Token("RULE", "disjunction"),
                             [
-                                Tree(Token("RULE", "keyword_op"), [Token("STRING", "b")]),
+                                Tree(Token("RULE", "keyword_op"), [Token("STRING", "(a) OR (c)")]),
                                 Tree(
-                                    Token("RULE", "col_op"),
+                                    "conjunction",
                                     [
+                                        Tree(Token("RULE", "keyword_op"), [Token("STRING", "b")]),
                                         Tree(
-                                            Token("RULE", "name_op"),
-                                            [Token("STRING", "x"), Token("INT", "0")],
-                                        )
+                                            Token("RULE", "col_op"),
+                                            [
+                                                Tree(
+                                                    Token("RULE", "name_op"),
+                                                    [Token("STRING", "x"), Token("INT", "0")],
+                                                )
+                                            ],
+                                        ),
                                     ],
                                 ),
                             ],
@@ -349,20 +354,26 @@ OPTIMIZER_CASES: dict[str, OptimizerCase] = {
                             "conjunction",
                             [
                                 Tree(
-                                    Token("RULE", "keyword_op"), [Token("STRING", "-(d) AND (f)")]
-                                ),
-                                Tree(
-                                    "negation",
+                                    Token("RULE", "conjunction"),
                                     [
+                                        Tree(
+                                            Token("RULE", "keyword_op"),
+                                            [Token("STRING", "-(d) AND (f)")],
+                                        ),
                                         Tree(
                                             "negation",
                                             [
                                                 Tree(
-                                                    Token("RULE", "keyword_op"),
-                                                    [Token("STRING", "e")],
+                                                    "negation",
+                                                    [
+                                                        Tree(
+                                                            Token("RULE", "keyword_op"),
+                                                            [Token("STRING", "e")],
+                                                        )
+                                                    ],
                                                 )
                                             ],
-                                        )
+                                        ),
                                     ],
                                 ),
                                 Tree(
