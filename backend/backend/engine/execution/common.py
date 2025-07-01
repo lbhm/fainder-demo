@@ -9,7 +9,7 @@ from loguru import logger
 from numpy.typing import NDArray
 
 from backend.config import ColumnArray, DocumentArray, DocumentHighlights, FainderMode, Highlights
-from backend.engine.constants import FILTERING_STOP_POINTS
+from backend.engine.constants import get_filtering_stop_point
 from backend.engine.conversion import doc_to_col_ids
 
 DocResult = tuple[DocumentArray, Highlights]
@@ -197,9 +197,10 @@ def exceeds_filtering_limit(
     ids: DocumentArray | ColumnArray,
     id_type: Literal["num_hist_ids", "num_col_ids", "num_doc_ids"],
     fainder_mode: FainderMode,
+    num_workers: int,
 ) -> bool:
     """Check if the number of IDs exceeds the filtering limit for the current mode."""
-    return len(ids) > FILTERING_STOP_POINTS[fainder_mode][id_type]
+    return ids.size > get_filtering_stop_point(fainder_mode, num_workers, id_type)
 
 
 def is_doc_result(val: Sequence[Any]) -> TypeGuard[Sequence[DocResult]]:

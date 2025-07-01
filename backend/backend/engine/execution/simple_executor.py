@@ -2,7 +2,7 @@ from collections import defaultdict
 from collections.abc import Sequence
 
 import numpy as np
-from lark import ParseTree, Token, Transformer
+from lark import ParseTree, Token, Transformer_NonRecursive
 from loguru import logger
 
 from backend.config import ColumnHighlights, DocumentHighlights, FainderMode, Metadata
@@ -13,7 +13,7 @@ from .common import ColResult, DocResult, TResult, junction, negate_array
 from .executor import Executor
 
 
-class SimpleExecutor(Transformer[Token, DocResult], Executor):
+class SimpleExecutor(Transformer_NonRecursive[Token, DocResult], Executor):
     """This transformer evaluates a parse tree bottom-up and computes the query result."""
 
     fainder_mode: FainderMode

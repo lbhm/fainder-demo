@@ -2,7 +2,6 @@ import os
 from collections import defaultdict
 from collections.abc import Sequence
 from concurrent.futures import Future, ThreadPoolExecutor
-from typing import Any
 
 import numpy as np
 from lark import ParseTree, Token, Transformer
@@ -63,8 +62,6 @@ class ThreadedExecutor(Transformer[Token, DocResult], Executor):
         """Start processing the parse tree."""
         # Create a new thread pool for this execution
 
-        self._thread_results: dict[int, Any] = {}
-
         result = self.transform(tree)
 
         logger.debug("Result of query execution: ", result)
@@ -73,7 +70,7 @@ class ThreadedExecutor(Transformer[Token, DocResult], Executor):
 
     def _resolve_item(self, item: TResult | Future[TResult]) -> TResult:
         """Resolve item if it's a Future, otherwise return the item itself."""
-        return item.result() if isinstance(item, Future) else item
+        return item.result(timeout=300) if isinstance(item, Future) else item
 
     def _resolve_items(self, items: Sequence[TResult | Future[TResult]]) -> list[TResult]:
         """Resolve all items in the list if they are futures."""
@@ -94,14 +91,7 @@ class ThreadedExecutor(Transformer[Token, DocResult], Executor):
             return result_docs, (highlights, np.array([], dtype=np.uint32))
 
         logger.trace("Evaluating keyword term: {}", items)
-
-        # Submit task to thread pool and store the future with a unique ID
-        task_id = id(items[0])
-        future = self._thread_pool.submit(_keyword_task, items[0])
-        self._thread_results[task_id] = future
-
-        # Get result from future (immediate, non-blocking as result might not be ready yet)
-        return future
+        return self._thread_pool.submit(_keyword_task, items[0])
 
     def name_op(self, items: list[Token]) -> Future[ColResult]:
         def _name_task(column: Token, k: int) -> ColResult:
@@ -114,13 +104,8 @@ class ThreadedExecutor(Transformer[Token, DocResult], Executor):
         column = items[0]
         k = int(items[1])
 
-        # Submit task to thread pool and store the future with a unique ID
-        task_id = id(items[0])
-        future = self._thread_pool.submit(_name_task, column, k)
-        self._thread_results[task_id] = future
-
-        # Return future (non-blocking)
-        return future
+        # Submit task to thread pool
+        return self._thread_pool.submit(_name_task, column, k)
 
     def percentile_op(self, items: list[Token]) -> Future[ColResult]:
         def _percentile_task(percentile: float, comparison: str, reference: float) -> ColResult:
@@ -142,62 +127,84 @@ class ThreadedExecutor(Transformer[Token, DocResult], Executor):
         reference = float(items[2])
 
         # Submit task to thread pool and store the future with a unique ID
-        task_id = id(items[0])
-        future = self._thread_pool.submit(_percentile_task, percentile, comparison, reference)
-        self._thread_results[task_id] = future
+        return self._thread_pool.submit(_percentile_task, percentile, comparison, reference)
 
-        # Return future (non-blocking)
-        return future
+    def col_op(self, items: Sequence[ColResult | Future[ColResult]]) -> Future[DocResult]:
+        def _col_op_task(items: Sequence[ColResult | Future[ColResult]]) -> DocResult:
+            logger.trace("Evaluating column term with items of length: {}", len(items))
 
-    def col_op(self, items: Sequence[ColResult | Future[ColResult]]) -> DocResult:
-        logger.trace("Evaluating column term with items of length: {}", len(items))
+            if len(items) != 1:
+                raise ValueError("Column term must have exactly one item")
 
-        if len(items) != 1:
-            raise ValueError("Column term must have exactly one item")
+            # Get actual result if it's a future
+            col_ids = self._resolve_item(items[0])
 
-        # Get actual result if it's a future
-        col_ids = self._resolve_item(items[0])
+            doc_ids = col_to_doc_ids(col_ids, self.metadata.col_to_doc)
+            if self.enable_highlighting:
+                return doc_ids, ({}, col_ids)
 
-        doc_ids = col_to_doc_ids(col_ids, self.metadata.col_to_doc)
-        if self.enable_highlighting:
-            return doc_ids, ({}, col_ids)
+            return doc_ids, ({}, np.array([], dtype=np.uint32))
 
-        return doc_ids, ({}, np.array([], dtype=np.uint32))
+        logger.trace("Evaluating column operation with items of length: {}", len(items))
 
-    def conjunction(self, items: Sequence[TResult | Future[TResult]]) -> TResult:
+        return self._thread_pool.submit(_col_op_task, items)
+
+    def conjunction(self, items: Sequence[TResult | Future[TResult]]) -> Future[TResult]:
+        def _conjunction_task(items: Sequence[TResult | Future[TResult]]) -> TResult:
+            """Task function for conjunction to be run in a thread."""
+            logger.trace("Thread executing conjunction with items of length: {}", len(items))
+
+            # Resolve all futures in items
+            resolved_items = self._resolve_items(items)
+
+            return junction(
+                resolved_items, "and", self.enable_highlighting, self.metadata.doc_to_cols
+            )
+
         logger.trace("Evaluating conjunction with items of length: {}", len(items))
 
-        # Resolve all futures in items
-        resolved_items = self._resolve_items(items)
+        return self._thread_pool.submit(_conjunction_task, items)
 
-        return junction(resolved_items, "and", self.enable_highlighting, self.metadata.doc_to_cols)
+    def disjunction(self, items: Sequence[TResult | Future[TResult]]) -> Future[TResult]:
+        def _disjunction_task(items: Sequence[TResult | Future[TResult]]) -> TResult:
+            """Task function for disjunction to be run in a thread."""
+            logger.trace("Thread executing disjunction with items of length: {}", len(items))
 
-    def disjunction(self, items: Sequence[TResult | Future[TResult]]) -> TResult:
+            # Resolve all futures in items
+            resolved_items = self._resolve_items(items)
+
+            return junction(
+                resolved_items, "or", self.enable_highlighting, self.metadata.doc_to_cols
+            )
+
         logger.trace("Evaluating disjunction with items of length: {}", len(items))
 
-        # Resolve all futures in items
-        resolved_items = self._resolve_items(items)
+        return self._thread_pool.submit(_disjunction_task, items)
 
-        return junction(resolved_items, "or", self.enable_highlighting, self.metadata.doc_to_cols)
+    def negation(self, items: Sequence[TResult | Future[TResult]]) -> Future[TResult]:
+        def _negation_task(items: Sequence[TResult | Future[TResult]]) -> TResult:
+            """Task function for negation to be run in a thread."""
+            logger.trace("Thread executing negation with items of length: {}", len(items))
 
-    def negation(self, items: Sequence[TResult | Future[TResult]]) -> TResult:
+            if len(items) != 1:
+                raise ValueError("Negation term must have exactly one item")
+
+            # Resolve the item if it's a future
+            item = self._resolve_item(items[0])
+
+            if isinstance(item, tuple):
+                to_negate, _ = item
+                doc_result = negate_array(to_negate, len(self.metadata.doc_to_cols))
+                # Result highlights are reset for negated results
+                doc_highlights: DocumentHighlights = {}
+                col_highlights: ColumnHighlights = np.array([], dtype=np.uint32)
+                return doc_result, (doc_highlights, col_highlights)  # type: ignore[return-value]
+
+            to_negate_cols = item
+            return negate_array(to_negate_cols, len(self.metadata.col_to_doc))
+
         logger.trace("Evaluating negation with items of length: {}", len(items))
-
-        if len(items) != 1:
-            raise ValueError("Negation term must have exactly one item")
-        # Resolve the item if it's a future
-        item = self._resolve_item(items[0])
-
-        if isinstance(item, tuple):
-            to_negate, _ = item
-            doc_result = negate_array(to_negate, len(self.metadata.doc_to_cols))
-            # Result highlights are reset for negated results
-            doc_highlights: DocumentHighlights = {}
-            col_highlights: ColumnHighlights = np.array([], dtype=np.uint32)
-            return doc_result, (doc_highlights, col_highlights)
-
-        to_negate_cols = item
-        return negate_array(to_negate_cols, len(self.metadata.col_to_doc))
+        return self._thread_pool.submit(_negation_task, items)
 
     def query(self, items: Sequence[DocResult | Future[DocResult]]) -> DocResult:
         logger.trace("Evaluating query with {} items", len(items))

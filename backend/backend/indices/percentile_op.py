@@ -69,6 +69,8 @@ class FainderIndex:
 
         self.parallel = num_workers > 1
 
+        self.num_workers = num_workers
+
         self.parallel_processor: ParallelHistogramProcessor | None = None
 
         if self.parallel and histogram_path is not None:
